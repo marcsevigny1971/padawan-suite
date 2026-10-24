@@ -1,0 +1,68 @@
+MESSAGER - messagerie du Projet Padawan (v2)
+=============================================
+
+Une petite messagerie conviviale, facon MSN Messenger, pour les gens qui ont la suite Padawan.
+
+Demarrer : menu de l'icone Padawan (zone de notification) > Messager...  ou raccourci Bureau "Messager".
+Au premier lancement, choisis ton pseudo. C'est tout : AUCUN mot de passe.
+
+Identite sans mot de passe
+  Messager cree une cle secrete au hasard sur ton PC, protegee par Windows (DPAPI, liee a ton compte).
+  Le serveur ne garde qu'une empreinte (hash) de cette cle. Si tu reinstalles Windows, tu choisis
+  simplement un nouveau pseudo.
+
+Fonctions
+  - Contacts : bouton "Ajouter un contact" + pseudo exact de la personne.
+  - Statut : Disponible / Absent / Occupe / Invisible (Invisible = tes contacts te voient "Absent").
+  - "Verifier aux" : 5 s, 15 s, 30 s, 1 min, 5 min ou Perso (3 a 3600 s).
+    Plus c'est long, moins ca charge le serveur. "Pause si pas dispo" arrete les verifications
+    quand tu es Occupe ou Invisible.
+  - Reactions : coeur, pouce, rire... (boutons sous la conversation, ou le petit "+" sous un message).
+  - Liens cliquables + apercu (titre, image, description) : YouTube, X, Facebook, Odysee, sites web.
+    Bouton "Lire ici (sans l'appli)" : lecture via yt-dlp + ffplay (deja installes par la suite).
+  - Images, videos, PDF, fichiers (max 15 Mo par fichier).
+  - Messages vocaux : bouton "Vocal" pour enregistrer, "Arreter et envoyer"; bouton "Ecouter" pour jouer.
+  - Notification Windows a l'arrivee d'un message (pas quand tu es Occupe).
+  - Fermer la fenetre (X) = Messager reste en arriere-plan pour te notifier.
+
+Serveur
+  Par defaut : https://marcsevigny.ca/messager/
+  Reglages > Serveur : tu peux mettre ton propre serveur (reseau prive, autre serveur SQL).
+  Le PC ne parle QU'A l'API PHP : aucun mot de passe MySQL n'est jamais sur ton PC.
+
+Heberger ton propre serveur Messager
+  Fichiers dans app\web_sources\ (en .php.txt pour ne jamais s'executer par accident) :
+    messager_api.php.txt, messager_lib.php.txt, messager_media.php.txt,
+    messager_index.php.txt, messager_htaccess.txt, messager_config.exemple.php.txt
+  1. Copie api.php, messager_lib.php, media.php, index.php, .htaccess dans un dossier web PUBLIC
+     (ex. C:\web\messager\) en enlevant le suffixe .txt (et le prefixe messager_ pour api/media/index).
+  2. Copie messager_config.exemple.php HORS du web (ex. C:\web_private\messager\messager_config.php)
+     et remplis tes infos MySQL. Les tables msg_* se creent seules au premier appel.
+  3. Les medias sont gardes hors web (C:\web_private\messager\media) et servis par media.php
+     seulement aux membres de la conversation.
+  Ne mets JAMAIS de .php ni la config dans un dossier FTP public.
+
+Protection anti-abus : limite de requetes par minute, taille max des fichiers, pseudo valide.
+
+Donnees locales : %LOCALAPPDATA%\Padawan\Messager (config, cle, cache des medias).
+Test : python messager2.py --check    |   python messager2.py --smoke-api
+
+
+Nouveau dans la v2
+------------------
+- SALON GENERAL : par defaut, ce que tu ecris est PUBLIC (tout le monde sur le serveur le lit).
+- PRIVE : clique sur une personne dans la liste de gauche (En ligne / Hors ligne) pour lui ecrire
+  en prive. La bande coloree au-dessus de la zone d'ecriture dit toujours a qui tu ecris
+  (vert = tout le monde, orange = prive). Bouton "Retour au Salon general".
+- Entree = Envoyer ; Maj+Entree = nouvelle ligne ; Fleche haut = modifier ton dernier message ;
+  Echap = annuler une reponse/modification.
+- Clic droit sur un message : Repondre (citation), Reagir, Copier, Ecrire en prive,
+  Modifier / Supprimer (tes messages seulement). Double-clic = coeur.
+- "X ecrit..." en direct, pastilles de non-lus, fondu des nouveaux messages, defilement doux,
+  bouton "nouveaux messages", barre des taches et icone Messager qui clignotent.
+- Emojis, glisser-deposer de fichiers, Ctrl+V pour coller une image, recherche (Chercher),
+  son on/off (cloche), theme (palette : Norton bleu / Sombre / Clair).
+- La fenetre se souvient de sa taille et position ; la zone d'ecriture reste toujours visible.
+- Icone Messager pres de l'horloge : Ouvrir, Salon, statut, Quitter.
+- Reglages : "Supprimer mon compte" (efface ton compte et tes messages du serveur).
+- "Invisible" = tu apparais hors ligne pour les autres.

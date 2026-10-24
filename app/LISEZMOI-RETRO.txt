@@ -1,0 +1,169 @@
+RETRO 1.4 - Le coin du vieux nostalgique (Projet Padawan)
+=======================================================
+Lanceur Commodore 64 / MS-DOS / Windows 98, avec bibliotheque, pochettes et ecran « READY. ».
+
+EMULATEURS (installes A LA DEMANDE, depuis les sources officielles)
+  Commodore 64 : VICE       https://vice-emu.sourceforge.io/   (versions GitHub de l'equipe VICE)
+  MS-DOS       : DOSBox-X   https://dosbox-x.com/              (GitHub joncampbell123, sinon winget)
+  Windows 98   : 86Box      https://86box.net/                 (GitHub 86Box)
+  Installes dans C:\web_private\retro\emulateurs (sans C:\web : %LOCALAPPDATA%\Padawan\Retro).
+
+BIBLIOTHEQUE
+  - Glisse tes fichiers dans la fenetre (ou « + Ajouter ») :
+      C64 : .d64 .d71 .d81 .g64 .prg .t64 .tap .crt
+      DOS : .exe .com .bat, un dossier de jeu (« + Dossier DOS », monte en C:), .img/.ima (disquette A:),
+            .iso/.cue (CD en D:), .vhd (disque dur)
+      Win98 : « + Machine Win98 » cree une machine 86Box ; insere ton CD/ISO Windows 98 par le menu Media d'86Box.
+  - Double-clic ou Entree = lancer. Clic droit = renommer, pochette, systeme, favori, ouvrir le dossier, retirer.
+  - Pochettes : la tienne (png/jpg/gif) ou une pochette generee automatiquement facon boite des annees 80.
+  - Donnees : Documents\Padawan\Retro (bibliotheque.json, pochettes, machines_win98).
+
+AMBIANCE
+  Ecran C64 « READY. » anime au demarrage (clic ou Echap pour passer), bandes de chargement,
+  petits bruits de lecteur de disquette, themes C64 / DOS / Norton (bouton Theme ou F9).
+  F1 Aide, F2 Renommer, F3 Pochette, F4 Systeme, F5 Lancer, F6 Favori, F7 Ajouter, F8 Retirer, F9 Theme, F10 Quitter.
+
+LEGALITE
+  Aucun ROM, jeu ni systeme protege n'est inclus. Tu fournis tes propres jeux, ton CD Windows 98
+  et les ROMs BIOS d'86Box. Bouton « Sources legales » : CSDb, itch.io (homebrew C64/DOS),
+  Classic DOS Games, DOS Games Archive, FreeDOS, GOG, documentation ROMs 86Box, CD shareware (archive.org).
+
+LIMITES
+  - 86Box : la machine se configure dans ses propres reglages (premier lancement) ; il lui faut des ROMs BIOS.
+  - Sans Internet, l'installation des emulateurs est reportee ; la bibliotheque fonctionne toujours.
+
+=== NOUVEAU DANS RÉTRO 1.1 ===
+- « ▶ Ouvrir » : lance chaque émulateur vide (C64 READY., invite DOS Z:\>, gestionnaire de machines 86Box).
+- « 🎁 Pack de démarrage » : 6 jeux gratuits et légaux (archive.org) : Basic Tetris, 64 Breakout, Reiner's PD Nr. 01 (C64),
+  Light Cycle, Tetrill, Hugo II (DOS). Chaque dossier contient SOURCE.txt (licence + lien).
+- Dossier « Mes jeux » (C:\web_private\retro\jeux, sinon Documents\Padawan\Retro\Mes jeux) scanné au démarrage.
+- Fiche d'édition par jeu (Ctrl+E ou clic droit) : titre, système, année, éditeur, catégories/collections, notes,
+  pochette (choisir, coller Ctrl+V, glisser), arguments de lancement. F2 = renommer sur place. Dupliquer. Ctrl+Z = annuler.
+- Glisser une pochette sur une autre pour réordonner. Filtres Récents / Favoris / catégories, recherche dans tout.
+- Temps de jeu et dernière partie sous chaque pochette ; grandes pochettes.
+- ⚙ Options : plein écran, filtre CRT, manette USB, chemins des émulateurs (aucun fichier à éditer à la main).
+- 💾 Sauvegarder / Restaurer la bibliothèque (zip daté). Guide Win98 intégré, ROMs 86Box depuis le dépôt officiel.
+- Messages clairs si un émulateur manque ou plante ; journaux emu_*.log dans C:\web_private\retro\logs.
+
+=== NOUVEAU DANS RÉTRO 1.2 ===
+- Assistant de bienvenue au premier lancement : « Tout installer » (3 émulateurs + jeux gratuits) en un clic.
+- Interface simplifiée : gros boutons, infobulles, outils avancés dans le menu (Fichier, Jeux gratuits, Réglages, Aide).
+- Plein écran par défaut (VICE, DOSBox-X, machines 86Box) et fenêtre Rétro maximisée ; un bandeau indique comment sortir.
+- Jeux gratuits par catégories (cocher puis Télécharger) : scène démo (Second Reality, Edge of Disgrace), jeux C64 gratuits,
+  classiques DOS shareware (Commander Keen 1 et 4, Wolfenstein 3D ép. 1, DOOM ép. 1, Duke Nukem II), petits jeux DOS.
+- Plus de gel de la fenêtre : tout le travail lourd tourne en arrière-plan. Barre F1-F10 toujours visible.
+
+=== NOUVEAU DANS RÉTRO 1.3 ===
+- Menu « Atelier » : programmer en BASIC C64 (disquette atelier.d64 en lecteur 8 : SAVE"NOM",8 / LOAD"NOM",8)
+  et en BASIC DOS avec Bywater BASIC (licence GNU GPL v2) ; ton propre QBASIC.EXE peut être utilisé.
+- Collection « Listings de magazines » : 14 classiques de BASIC Computer Games (Super Star Trek, Lunar Lander,
+  Hammurabi, Le pendu…) prêts à jouer en un double-clic, version C64 et version DOS (dépôt coding-horror, Unlicense).
+- Coller un listing (même tiré d'un magazine) : converti avec petcat, enregistré sur la disquette et lancé.
+- Explorateur « Mes programmes » : lancer, renommer, exporter. Liens vers les magazines d'époque sur archive.org.
+- Réglages : « Tester ma manette » (Xbox / XInput) et choix du port 1 ou 2 pour le C64.
+- Important : ferme VICE normalement (croix ou Alt+Q) pour que la disquette soit bien enregistrée.
+
+=== NOUVEAU DANS RÉTRO 1.3.1 ===
+- Gros bouton rouge « ⏹ Fermer le jeu » et raccourci Ctrl+Alt+Q qui marche même en plein écran.
+- Un seul jeu à la fois : en lançant un autre jeu, Rétro propose de fermer proprement l'ancien (les SAVE sont gardés).
+- En quittant Rétro, les jeux ouverts sont fermés proprement.
+- VICE : la croix ferme sans question ; Alt+Q = quitter ; F12 (ou Alt+D) = plein écran oui/non.
+- Les émulateurs ne restent plus « toujours au-dessus ».
+
+=== NOUVEAU DANS RÉTRO 1.4 (23 octobre 2026) : l'ATELIER DOS « comme dans le temps » ===
+CORRECTIFS
+  - Clavier : DOSBox-X essayait une disposition « ca » qui n'existe pas (erreur au démarrage). Rétro impose
+    maintenant le clavier DOS « cf » (canadien français, comme ton clavier Windows). Au choix dans ⚙ Options :
+    Canadien français / Américain (US) / France (AZERTY).
+  - Super Star Trek (et Animal, Le Pendu) : la conversion pour bwBASIC coupait STOP en « S TO P » → le jeu
+    s'arrêtait tout de suite (« ILLEGAL COMMAND »). Corrigé, et les .prg C64 ont été refaits.
+  - Les jeux de 1978 attendent des MAJUSCULES : les réponses tapées en minuscules (srs, nav, oui…) sont
+    maintenant acceptées (UCASE$ ajouté après chaque INPUT de texte des listings DOS).
+
+BOUTON « 💾 Atelier DOS »  (aussi menu Atelier)
+  Ton PC DOS d'époque, persistant : C: = C:\web_private\retro\atelier\dos   ·   D: = listings de magazines.
+  Menu d'accueil en couleur (ANSI) en français ; tape MENU pour y revenir.
+    1 Volkov Commander (le clone de Norton Commander)   2 Dos Navigator   3 DOS Shell
+    4 EDIT   5 BASIC interactif   6 Listings des magazines   7 Compiler en .EXE (QB NOM)
+    8 Jeux libres (NetHack, GNU Chess, Flappy Bird)   9 Art ANSI (ANSiMat)   0 Aide-mémoire
+  Commandes : RUNBAS NOM (lance NOM.BAS), QB NOM (compile en .EXE), LIRE NOM (lit un listing),
+  ZIP/UNZIP (comme PKZIP/PKUNZIP), 7ZA, ARJ, TREE, DELTREE, XCOPY, MEM, MYSYSINF, TDE, DOSSHELL.
+  Tes programmes : C:\MESPROGS (sur ton PC : atelier\dos\MESPROGS). Rien ne se perd entre deux sessions.
+  Capture d'écran DOSBox-X : F11+F5 → Images\Retro captures.
+
+BOUTON « ⌨ Taper » : « Taper comme dans le temps »
+  Le listing du magazine à gauche (papier jauni, avec les petites sommes de contrôle à la Compute!),
+  ton clavier à droite (écran bleu comme EDIT). Chaque ligne est vérifiée quand tu fais Entrée (vert = bon,
+  rouge = faute), F5 vérifie tout, compteur de caractères/minute. « ▶ Lancer dans DOS » enregistre dans
+  C:\MESPROGS et lance ton programme avec RUNBAS.
+
+POURQUOI PAS QBASIC, QB45, GW-BASIC, PKZIP, THEDRAW ?
+  QBasic, QuickBASIC 4.5 et GW-BASIC appartiennent à Microsoft : ils ne sont PAS libres de redistribution
+  (les sites « abandonware » n'ont aucun droit de les donner). PKZIP est un shareware commercial (PKWARE),
+  et TheDraw n'a jamais été publié sous une licence claire de libre redistribution. Rétro les remplace par :
+    QBasic/GW-BASIC → Bywater BASIC 3.30 (interpréteur, GPL v2)
+    QB45 (compilateur) → FreeBASIC 1.10 pour DOS, option -lang qb (GPL v2)   [commande QB]
+    PKZIP/PKUNZIP → Info-ZIP ZIP 3.0 / UNZIP 6.0 (licence Info-ZIP), 7-Zip DOS, ARJ libre
+    Norton Commander → Volkov Commander 4.99 (BSD 2 clauses), Dos Navigator 2 (open source)
+    ANSI.SYS → NANSI.SYS (GPL v2) ; DOSBox-X interprète aussi l'ANSI tout seul ; ANSiMat pour voir l'art ANSI
+  Si tu possèdes TON QBASIC.EXE (vieux CD MS-DOS/Windows 95), menu Atelier → « Utiliser mon propre QBASIC.EXE ».
+
+LICENCES DE LA BOÎTE À OUTILS (vérifiées dans les fichiers APPINFO\*.LSM, sources incluses dans FDOS\SOURCE)
+  Volkov Commander 4.99.09 BSD-2 · Dos Navigator 2.14 open source (type BSD) · FreeDOS Shell GPL v2 ·
+  Doszip GPL v2 · FreeDOS EDIT GPL v2 · TDE domaine public · NANSI GPL v2 · ANSiMat GPL v3 · FoxType GPL v2 ·
+  Info-ZIP ZIP/UNZIP licence Info-ZIP · 7-Zip domaine public/LGPL · ARJ GPL v2 · DELTREE/XCOPY/TREE/MORE/
+  CHOICE/MEM GPL · MYSYSINF GPL · V8Power GPL v2+ · bwBASIC 3.30 GPL v2 · FreeBASIC 1.10.1 GPL v2 ·
+  CWSDPMI GPL v2 · NetHack NGPL · GNU Chess GPL v2 · Flappy Bird DOS MIT.
+  Téléchargés depuis les dépôts FreeDOS (fd.lod.bz, sinon ibiblio.org). Aide-mémoire : C:\AIDE.TXT.
+
+=== RÉTRO 1.4 - SUITE : GW-BASIC, PASCAL, C, LIBRAIRIES, IMPORT/EXPORT ===
+LE VRAI GW-BASIC (légal !)
+  En 2020, Microsoft a publié le code source de GW-BASIC sous licence MIT (github.com/microsoft/GW-BASIC).
+  Rétro installe GWBASIC.EXE assemblé depuis ce code par le projet communautaire tkchia/GW-BASIC
+  (codeberg.org/tkchia/GW-BASIC, version 20261005, commit 1432e385). Forge a reconstruit ce dépôt
+  lui-même avec JWasm/JWlink : les .EXE sont identiques octet pour octet à la version publiée.
+  Rétro vérifie l'empreinte SHA-256 avant de les installer.
+    GWBASIC.EXE  ceb0c57c1c31981844a2e41b375cd14f77630e3e200419fe746b501d21dcf333
+    GWBASICA.EXE 1a7b92b1aaf893e7f040190b8fa728e3c5b4dd82caaded8fefd0a471f669f7f7 (expérimental : TIMER, MKDIR…)
+  Dans l'atelier : C:\GWBASIC (LICENSE.TXT = licence MIT, SOURCE.TXT = provenance). Menu G, RUNGW NOM.
+  Limites : pas de port série (COM), et le crayon optique, la manette et l'imprimante sont peu testés.
+  Les vieux jeux attendent des MAJUSCULES : Rétro active Verr. Maj avant de lancer GW-BASIC.
+  ⚙ Options → « BASIC DOS » : GW-BASIC (par défaut) ou bwBASIC (qui accepte aussi les minuscules).
+  Les fichiers GW-BASIC enregistrés en binaire (SAVE sans ,A) s'ouvrent toujours dans GW-BASIC.
+  MS-DOS 4.0 (MIT) : pas ajouté. DOSBox-X fournit déjà les commandes DOS, et FreeDOS couvre les outils
+  utiles. Pour s'en servir, il faudrait construire une disquette et démarrer dessus, ce qui demande beaucoup
+  de travail pour presque rien de nouveau (les sources de 4.0 servent surtout à étudier le code).
+
+PASCAL ET C  (menu Atelier → « Installer Pascal et C », ≈150 Mo à télécharger, ≈200 Mo sur le disque)
+  Free Pascal 3.2.2 (GPL v2) : TP NOM.PAS = IDE plein écran fp, comme Turbo Pascal 7 (F9 compiler,
+  Ctrl+F9 exécuter, Alt+X quitter). PASC NOM = compile en ligne. Unités CRT, GRAPH, DOS incluses.
+  DJGPP 2.05 + GCC 12.2 + RHIDE 1.5 (GPL) : TC NOM.C = IDE comme Turbo C. CC NOM = compile en ligne.
+  Exemples : C:\MESPROGS\PASCAL\BONJOUR.PAS et C:\MESPROGS\C\bonjour.c (compilés et testés).
+  Pour la taille, Rétro n'installe pas les sources, LTO, gdb, les traductions ni les docs info.
+  Les sources sont sur les dépôts FreeDOS (fd.lod.bz / ibiblio.org).
+  Turbo Pascal et Turbo C de Borland ne sont PAS fournis : ce sont des logiciels commerciaux, et les
+  versions « gratuites » d'Embarcadero ne permettaient pas de les redonner. Si tu as les tiens (tes
+  disquettes), importe-les : ils iront dans C:\PERSO (voir plus bas).
+
+LIBRAIRIES (C:\LIBS, chacune avec un exemple compilé et testé)
+  C      Allegro 4.2 (giftware ; le paquet FreeDOS indique GPL v2) : CC ALLEGDEM ALLEGRO
+         VGA13H.H, mini-librairie VGA 320x200 + souris écrite pour Rétro (MIT) : CC VGADEMO
+  Pascal unités GRAPH / CRT de Free Pascal : GRAPHDEM.PAS (graphisme), MUSIQUE.PAS (haut-parleur PC)
+  BASIC  ROUTINES.BAS (domaine public, lignes 9000+) : centrer, cadre, pause, hasard, majuscules.
+         MERGE "C:\LIBS\BASIC\ROUTINES.BAS" dans GW-BASIC ; exemple DEMOLIB.BAS.
+  Menu de l'atelier : L = librairies, B = écran BBS « Padawan BBS » (clin d'œil ANSI, pas de vrai modem).
+
+📥 IMPORTER MES VIEUX TRUCS  (bouton 📥 Importer, menu Atelier, glisser-déposer)
+  Accepte un dossier, des fichiers ou un .zip : .BAS (texte ou GW-BASIC binaire), .prg, .d64, .t64,
+  .com/.exe, .txt de listings. Rétro COPIE (tes originaux ne bougent jamais) vers
+  C:\web_private\retro\atelier\mes_programmes\c64 ou \dos, convertit l'encodage (UTF-8 → page 437)
+  et les fins de ligne (CR/LF), et devine C64 ou DOS (POKE 53280, {CLR}… = C64 ; CLS, COLOR, LOCATE… = DOS).
+  Un listing C64 en texte devient un .prg. Tout arrive dans la collection « Mes vieux trucs » :
+  double-clic pour lancer, clic droit → ✎ Modifier la fiche (titre, notes).
+📤 EXPORTER (clic droit sur une fiche) : .zip (fichier + fiche), .bas texte, .prg ou disquette .d64.
+
+DOSSIER PRIVÉ C:\PERSO  (atelier\dos\PERSO)
+  Les logiciels d'époque que tu importes (.EXE/.COM, ex. QB45 de tes disquettes) vont dans C:\PERSO.
+  Ce dossier est dans le PATH, et un lanceur NOM.BAT est créé pour chaque programme.
+  Ce dossier est PRIVÉ : il contient le marqueur _PRIVE_NE_PAS_DISTRIBUER.TXT et doit être EXCLU
+  du zip, de l'exe d'installation et de toute copie pour les collègues.

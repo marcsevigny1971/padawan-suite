@@ -1,0 +1,4 @@
+﻿Exemple PHP Facteur — NE PAS déployer tel quel sur un site public.
+1) Copie facteur_commande_exemple.php sur TON serveur (hors dépôt public si possible).
+2) Change FACTEUR_PASS et colle la clé hex (Facteur > Commandes à distance, affichée une seule fois).
+3) Protège l''accès (HTTPS + mot de passe). La page sert un .padawan signé en téléchargement.

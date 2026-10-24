@@ -1,0 +1,58 @@
+CHANTIER 1 - Serveurs a la demande (Projet Padawan)
+====================================================
+Chantier installe, SEULEMENT si tu le demandes, un petit serveur complet sur ton PC
+pour faire tourner les outils web de la suite Padawan (Messager, Boite Facteur) :
+
+  Web   : Apache (Apache Lounge, binaires officiels Windows) OU Caddy, + PHP (windows.php.net)
+  SQL   : MariaDB (zip portable officiel, downloads.mariadb.org)
+  FTP   : pyftpdlib (portable, Python)  - ou FileZilla Server via winget (bouton)
+  MQTT  : Mosquitto (winget, sinon installateur officiel mosquitto.org) - pour NodeMCU/ESP
+  Docker: WSL2 (wsl --install) + Docker Desktop (winget Docker.DockerDesktop, sinon installateur officiel docker.com)
+
+Rien n'est installe par defaut. Lancement : menu de l'icone Padawan > Chantier, ou raccourci Bureau.
+
+DOSSIERS
+  C:\web\                      pages web (DocumentRoot)
+  C:\web\FTP_HOME\             public (racine du FTP)
+  C:\web_private\chantier\     binaires (bin), config (conf), donnees SQL (data), journaux (logs),
+                               secrets_chantier.json (mots de passe generes, acces reserve a ton compte)
+  Sans C:\web : Documents\Padawan\Chantier\web et %LOCALAPPDATA%\Padawan\Chantier\private
+
+UTILISATION
+  1. Choisis un service, clique « Installer » (telechargement depuis la source officielle, SHA256 verifie
+     pour PHP et MariaDB quand il est publie).
+  2. Le voyant : vert pulse = en marche, rouge = installe mais arrete, cercle vide = non installe.
+  3. ▶ Demarrer, ■ Arreter, 🗑 Desinstaller. Le port est modifiable a cote des boutons.
+  4. MariaDB demarre ? « Creer base + utilisateur SQL » : base « padawan », utilisateur « padawan »,
+     mot de passe genere (jamais affiche : bouton « Copier mot de passe SQL »).
+  5. « Deployer les outils web » : copie les pages Messager et Boite Facteur GENERIQUES dans C:\web\messager
+     et C:\web\facteur, et ecrit leurs configs dans C:\web_private\messager et C:\web_private\facteur.
+     Aucune adresse de serveur, aucune cle, aucune page de test ne sont incluses.
+     - Messager : dans Messager, Parametres > serveur prive : http://NOM-DU-PC:PORT/messager/
+     - Facteur : exporte facteur_cle.php depuis Facteur (Boites SQL > Exporter) dans C:\web\facteur
+
+PORTS - on ne casse rien
+  Chantier ne touche JAMAIS un port deja utilise ni un serveur existant (Apache/XAMPP/MySQL...).
+  Si 80 ou 3306 sont pris, il propose 8080 ou 3307. F6 montre l'etat des ports.
+  « Arreter » n'arrete que les processus lances par Chantier.
+
+THEME NORTON COMMANDER
+  F9 bascule le theme bleu facon Norton. Touches : F1 Aide, F2 Installer, F3 Demarrer, F4 Arreter,
+  F5 Rafraichir, F6 Ports, F7 Outils web, F8 Desinstaller, F9 Theme, F10 Quitter, fleches haut/bas.
+
+SANS INTERNET
+  Chantier s'ouvre et gere ce qui est deja installe ; l'installation affiche simplement « Pas d'Internet ».
+
+PREPARER UN PC
+  Bouton « Preparer un PC » : liens officiels (Rufus, ISO Windows 11, support ASUS) + guide court.
+
+LIMITES
+  - WSL2 + Docker : demande les droits administrateur (UAC) et souvent un REDEMARRAGE de Windows entre WSL2
+    et Docker ; virtualisation activee dans le BIOS ; 8 Go de RAM conseilles. Docker Desktop est gratuit pour un usage
+    personnel ou une petite entreprise (voir les conditions sur docker.com). Voyant vert = Docker Desktop en marche.
+  - Apache Lounge demande le Visual C++ Redistributable (installe via winget si possible).
+  - Caddy ignore les .htaccess : Chantier bloque lui-meme les fichiers *config*.php et *_lib.php.
+  - Mosquitto via winget / installateur peut demander une autorisation administrateur (UAC).
+  - Pare-feu Windows : accepte la question la premiere fois si tes collegues doivent se connecter.
+  - Les services ne demarrent pas avec Windows (lance-les depuis Chantier).
+Journaux : C:\web_private\chantier\logs (chantier.log + un fichier par service).

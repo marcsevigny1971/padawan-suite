@@ -1,0 +1,59 @@
+{
+ "paquet": {
+  "nom": "Exemple : ménage des Téléchargements",
+  "auteur": "Projet Padawan",
+  "version": 1,
+  "description": "Règles d'exemple. Elles arrivent DÉSACTIVÉES : relis-les, ajuste les dossiers, puis active."
+ },
+ "regles": [
+  {
+   "nom": "Images de Téléchargements → Images\\Téléchargées",
+   "actif": false,
+   "note": "Range les images téléchargées.",
+   "actions": [
+    {
+     "type": "deplacer",
+     "dest": "%USERPROFILE%\\Pictures\\Telechargees"
+    }
+   ],
+   "extensions": [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "webp"
+   ],
+   "intervalle": 120
+  },
+  {
+   "nom": "Installateurs (.exe/.msi) → Téléchargements\\Installateurs",
+   "actif": false,
+   "note": "Regroupe les installateurs pour les retrouver (ou les supprimer) plus tard.",
+   "actions": [
+    {
+     "type": "deplacer",
+     "dest": "%USERPROFILE%\\Downloads\\Installateurs"
+    }
+   ],
+   "extensions": [
+    "exe",
+    "msi"
+   ],
+   "intervalle": 300
+  },
+  {
+   "nom": "Vieux fichiers (> 60 jours) → Téléchargements\\_Vieux",
+   "actif": false,
+   "note": "Ménage doux : rien n'est effacé, seulement déplacé.",
+   "actions": [
+    {
+     "type": "deplacer",
+     "dest": "%USERPROFILE%\\Downloads\\_Vieux"
+    }
+   ],
+   "masque": "*",
+   "age_min": 5184000,
+   "intervalle": 3600
+  }
+ ]
+}

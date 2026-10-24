@@ -1,0 +1,99 @@
+SETUP PADAWAN (kit complet)
+
+Double-cliquez sur setup_padawan.bat depuis Projet Padawan.
+
+Le setup configure TOUJOURS :
+- dependances pip (pystray, Pillow, plyer, requests, beautifulsoup4, ddgs, yt-dlp, tkinterdnd2,
+  pypdf, sounddevice, soundfile, numpy)
+  + yt-dlp mis a jour a chaque setup (pip install -U yt-dlp) + curl_cffi optionnel
+- ffmpeg ET ffprobe (verifies tous les deux ; winget Gyan.FFmpeg silencieux, sinon zip gyan.dev)
+  + ffplay verifie (son du lecteur integre de l Archiveur 5, fourni par le meme paquet)
+- PATH utilisateur (HKCU) : Python + Scripts, ffmpeg\bin, Ollama (sans setx, sans doublons)
+- demarrage Windows : cle HKCU\...\Run\Padawan uniquement (pythonw + padawan39.py)
+  (supprime Startup\Padawan.bat s il existe) ; le tray lance archiveur5.py (repli v4/v3/v2/v1)
+- raccourcis Bureau : Padawan, Gestionnaire de fichiers, Archiveur (archiveur5.py, avec .ico), Arsenal (arsenal1.ico),
+  Grimoire (grimoire1.ico)
+
+Aussi :
+- transcription locale optionnelle : faster-whisper [O/N, defaut N dans 20 s]
+  (videos sans sous-titres, 100 % sur le PC ; gros telechargement)
+- lecteur video externe optionnel : VLC / mpv detectes ; sinon proposition winget VideoLAN.VLC
+  [O/N, defaut N] - pas necessaire : l Archiveur 5 a son propre lecteur integre (ffmpeg + ffplay)
+- Ollama (winget Ollama.Ollama si absent) + pull dolphin3:8b optionnel [O/N]
+- recap final : python, pip, ffmpeg, ffprobe, ffplay, ollama, version yt-dlp, Pillow, plyer,
+  pystray, requests, curl_cffi, beautifulsoup4, tkinterdnd2, faster-whisper, lecteur,
+  pypdf, sounddevice, soundfile, cle Run, raccourcis Archiveur, Arsenal, Grimoire et Facteur
+
+Fichiers cles :
+- padawan39.py + padawan_tray.py + systemtray.py (alias)
+- gestionnaire_fichiers5.py
+- archiveur5.py (archives : C:\web\FTP_HOME\ARCHIVEUR\ ; reprend les archives v4 telles quelles)
+  ARCHIVER : X, Facebook, YouTube, TikTok, Instagram... ET n importe quelle page web
+    (article de presse, Wikipedia...) : lecture propre, page complete hors ligne, PDF, capture, texte ;
+    X : texte, images, video, auteur et fil (messages precedents) ; videos en MP4 H.264 + AAC
+  LECTEUR INTEGRE dans l apercu (image + son, barre de position, +/-10 s, volume, grande fenetre)
+  TRANSCRIPTION horodatee depuis les sous-titres (clic = lecture a cet endroit, recherche),
+    Whisper local en option ; la recherche de l historique fouille aussi les transcriptions
+  OUTILS MEDIA : capture d image, extrait video, MP3, GIF anime (dossier extraits/)
+  FAVORIS et COLLECTIONS (clic droit, selection multiple), tags, notes, renommer
+  OUTILS : verifier les archives (+ reparation), originaux encore en ligne ?, statistiques,
+    export ZIP a partager, catalogue CSV (Excel), mise a jour de yt-dlp, index global HTML
+  INTERFACE : themes Norton (defaut) / Sombre / Clair, taille du texte (Ctrl+molette, Ctrl +/-/0),
+    glisser-deposer, aide F1, plein ecran, adaptee aux petits ecrans (1024x576)
+  FIABILITE : formats ouverts (MP4, JPG, HTML, TXT, JSON), index sauvegarde automatiquement
+    (_sauvegardes\), une seule instance, aucune console
+  ligne de commande (python archiveur5.py --help) : --verify [--repair], --check-online,
+    --export-zip, --export-catalog, --stats, --page URL, --transcript, --fix-codecs ...
+  reglages : archiveur_config.json ; journal : archiveur.log
+
+- arsenal1.py : ARSENAL, le tiroir a outils (aussi dans le menu du tray : « Arsenal… »)
+  669 entrees pretes : Mes outils, favoris web (Favoris.php), Web pratique (liens verifies),
+    Securite (Defender, pare-feu), Reparation (sfc, DISM, chkdsk), Nettoyage, Reseau (Mon IP),
+    Systeme, Processus/services, Comptes, Peripheriques (imprimante, son, ecran, Bluetooth),
+    Disques (BitLocker, SMART), Outils Windows (GodMode), Parametres ms-settings, Consoles,
+    Developpement (Python, pip, git, Arduino), Ollama, yt-dlp & ffmpeg, raccourcis clavier, aide-memoire
+  recherche instantanee (tape directement), palette Ctrl+Espace (Ctrl+Alt+Espace partout),
+    tuiles ou liste, resultat des commandes dans la fenetre (copiable), lancement admin (UAC)
+    avec la commande exacte affichee, confirmation obligatoire des actions dangereuses
+  gestion : + Ajouter (assistant + Tester), glisser-deposer, F2, categories, favoris, masquer,
+    selection multiple, Ctrl+Z, import Favoris.php / signets Chrome-Edge / JSON, export JSON/HTML
+  donnees : arsenal.json (+ _sauvegardes_arsenal\) ; journal : arsenal.log ; une seule instance
+  ligne de commande : python arsenal1.py --list | --check | --smoke | --run-capture ID
+
+- grimoire1.py : GRIMOIRE, le carnet de recherche par sujets (aussi dans le tray : « Grimoire… »)
+  tout y va : notes, liens web, videos, images, documents (PDF, Word, texte), sons, memos vocaux,
+    fichiers, citations avec source, captures de page web complete (HTML + PDF + image)
+  SUJETS en arbre : sous-sujets, couleur et icone, epingler, glisser pour deplacer, F2 renommer,
+    fusionner, corbeille avec restauration ; sujets de depart (Geopolitique, Recettes, Sante,
+    Technologies informatiques, Savoir-faire, Nature et jardinage, Autonomie / Survie,
+    Energie libre / HHO, Sciences, Histoire, Finances, Bricolage et maison,
+    Lectures et videos a voir, Idees et projets) : vides, renommables, supprimables
+  AJOUTER : Ctrl+V intelligent (lien, image, texte, fichiers), glisser-deposer depuis l Explorateur,
+    bouton « + Ajouter », clic droit partout, modeles de fiches (source, protocole, plante, recette),
+    import d un dossier, memo vocal (si un micro est branche)
+  VUES : liste, cartes (vignettes), chronologique ; mode lecture ; selection multiple,
+    deplacer/copier, etiquettes, favoris, liens entre fiches [[titre]] et retroliens
+  RECHERCHE Ctrl+F dans tout (titres, notes, texte des PDF/pages, OCR des images, transcriptions)
+    avec filtres (type, etiquette, periode) et surlignage
+  OUTILS : OCR des images (Windows), transcription des memos (faster-whisper, optionnel),
+    statistiques, verification, export HTML / ZIP, sauvegardes automatiques, Ctrl+Z
+  depuis l Archiveur 5 : clic droit sur une archive > « Envoyer au Grimoire »
+  INTERFACE : themes Norton / Sombre / Clair, Ctrl+molette, aide F1, bulles d aide, plein ecran,
+    adapte aux petits ecrans ; une seule instance, aucune console
+  donnees : C:\web\FTP_HOME\GRIMOIRE\ (grimoire.db + medias\ + _sauvegardes\ + exports\) ;
+    journal : grimoire.log
+  ligne de commande : python grimoire1.py --check | --smoke |
+    --ajouter LIEN_OU_FICHIER_OU_TEXTE --sujet "Sante/Plantes medicinales" [--titre ... --note ...]
+
+Les fenetres enfants partent cachees ; seule la console du setup reste visible.
+
+
+Facteur
+-------
+Surveillant de dossiers et commandes a distance signees (.padawan).
+Donnees : C:\web\FTP_HOME\FACTEUR\ (cle DPAPI dans %LOCALAPPDATA%\Padawan\Facteur).
+Lance au demarrage par le tray Padawan (--cache). Voir LISEZMOI-FACTEUR.txt.
+Sources PHP : web_sources\*.php.txt (deployer hors FTP_HOME seulement). Voir LISEZMOI-BOITE-SQL.txt.
+
+NOUVEAU (21 oct. 2026) : Chantier (chantier1.py) - serveurs web/SQL/FTP/MQTT a la demande, voir LISEZMOI-CHANTIER.txt.
+Retro (retro1.py) - lanceur C64/DOS/Win98, voir LISEZMOI-RETRO.txt. Les deux sont dans le menu de l'icone Padawan.

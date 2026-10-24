@@ -1,0 +1,24 @@
+﻿# Facteur (facteur1.py) : watchdog (surveillance evenementielle), pywin32 (DPAPI optionnel)
+# Dependances Padawan39 + tray + Archiveur 5 + Gestionnaire (stdlib)
+# Archiveur 5 : yt-dlp (mis a jour a chaque setup), Pillow (apercu, lecteur integre), plyer (notifications),
+#   beautifulsoup4 (pages web), tkinterdnd2 (glisser-deposer)
+# + ffmpeg/ffprobe/ffplay (installes par le setup via winget Gyan.FFmpeg)
+# Grimoire (grimoire1.py) : pypdf (texte des PDF), sounddevice + soundfile + numpy (memos vocaux),
+#   + Pillow, requests, beautifulsoup4, tkinterdnd2 deja listes ci-dessous
+# Optionnel (question O/N du setup) : faster-whisper (transcription locale, Archiveur et Grimoire)
+beautifulsoup4>=4.12
+ddgs>=9.0
+numpy>=1.26
+Pillow>=10.0
+plyer>=2.1
+pypdf>=4.0
+pystray>=0.19
+requests>=2.31
+sounddevice>=0.4
+soundfile>=0.12
+tkinterdnd2>=0.4
+yt-dlp>=2026.8.0
+watchdog>=4.0
+pywin32>=306; sys_platform == 'win32'
+pymysql>=1.1
+

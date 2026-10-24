@@ -1,0 +1,46 @@
+Facteur - Projet Padawan
+========================
+
+C'est quoi ?
+------------
+Ton assistant de rangement. Il surveille un dossier (Téléchargements au départ)
+et s'occupe tout seul des nouveaux fichiers : ranger, envoyer au Grimoire ou à
+l'Archiveur, mettre de côté les vieux fichiers. Rien n'est effacé pour de vrai :
+au pire, un fichier va dans _Traités.
+
+Pour commencer
+--------------
+1. Ouvre Facteur (icône Padawan > Facteur).
+2. Tableau de bord > « Ma première règle » : 3 petites étapes
+   (quel dossier, quels fichiers, quoi en faire) + un aperçu avant d'activer.
+3. « Créer et activer ». C'est tout.
+
+Plus de règles : onglet Règles, ou Règles > Bibliothèque de modèles.
+Partager : Fichier > Exporter / Importer un paquet de règles
+(les règles importées arrivent en pause).
+
+Où sont les données ?
+---------------------
+C:\web\FTP_HOME\FACTEUR\  (ou %USERPROFILE%\Documents\Padawan\Facteur)
+  facteur_config.json   réglages
+  facteur.log           journal
+  _Traités\             fichiers mis de côté
+
+Démarrage
+---------
+Facteur démarre avec Padawan, discrètement. Dans le menu de l'icône Padawan,
+la pastille verte/jaune le met en marche ou en pause.
+
+Mode avancé (facultatif)
+------------------------
+Pour piloter ce PC depuis ton site web (commandes à distance, boîtes SQL).
+Caché par défaut : Options > « Mode avancé ». Tant qu'il est éteint, Facteur ne
+reçoit rien de l'extérieur. La clé de connexion n'est créée que sur demande
+(bouton « Créer ma clé »). Pages web : voir web_sources\ et LISEZMOI-BOITE-SQL.txt
+(à déployer hors de FTP_HOME seulement).
+
+Lancement manuel
+----------------
+  pythonw facteur1.py           fenêtre
+  pythonw facteur1.py --cache   en arrière-plan
+  python  facteur1.py --smoke   petit test automatique

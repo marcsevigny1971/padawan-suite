@@ -1,0 +1,53 @@
+PADAWAN SUITE - PREMIERS PAS EN 5 MINUTES
+=========================================
+
+Le guide s'ouvre tout seul au premier demarrage (case "Ne plus afficher" en bas).
+Pour le revoir : clic droit sur l'icone Padawan (pres de l'horloge) > "Premiers pas".
+
+LES 6 ETAPES
+------------
+1. L'icone Padawan : clic droit = tous les outils de la suite. Une seule icone.
+2. Tableau de bord : ce qui tourne, tes serveurs, mises a jour, "Rapport de probleme".
+3. Recherche Padawan (Ctrl+Alt+R) : UNE recherche dans Grimoire + archives video
+   + Arsenal + tes dossiers. Double-clic = ouvre au bon endroit.
+4. Archiveur (copies de videos et pages web) + Grimoire (notes, liens, medias par sujets).
+5. Arsenal : des centaines d'outils Windows et tes favoris, en un clic.
+6. Coffre Padawan : toutes tes donnees dans un seul .zip date, et restauration.
+
+SCENARIOS CONCRETS
+------------------
+A) Archiver une video YouTube et la retrouver dans le Grimoire
+   1. Copie le lien de la video (Ctrl+C).
+   2. Archiveur > "Coller et archiver" (ou Ctrl+V) : video, image, description, texte.
+   3. Clic droit sur l'archive > "Envoyer au Grimoire" : fiche creee dans "A classer".
+   4. Plus tard : Ctrl+Alt+R, tape un mot du titre -> l'archive et la fiche apparaissent.
+
+B) Monter un dossier de recherche
+   Grimoire > nouveau sujet > glisse liens, PDF, images, notes, memos vocaux.
+   Tout est cherchable, meme le texte des PDF. Etiquettes pour relier les sujets.
+
+C) Ranger Telechargements tout seul
+   Facteur > "Ma premiere regle" : 3 etapes simples (quel dossier, quels
+   fichiers, quoi en faire) et un apercu avant d'activer. C'est tout.
+   Plus d'idees : Regles > Bibliotheque de modeles.
+
+D) Installer ta boite a outils
+   Arsenal : tape "reseau", "disque", "capture"... Etoile tes favoris.
+   Arsenal > Importer > "Paquet d'exemple / paquet recu" : lot d'outils pret.
+   Rien ne se lance tout seul a l'import.
+
+E) Poser une question a l'IA sans internet
+   Padawan IA (Ollama local). Dans Recherche Padawan, "Demander a Padawan" resume
+   ce qui a ete trouve dans tes donnees (si Ollama n'est pas la, la recherche marche quand meme).
+
+F) Changer de PC sans rien perdre
+   Coffre Padawan > Exporter (videos en option, c'est lourd).
+   Sur l'autre PC : installe Padawan, Coffre > Restaurer.
+   Avant d'ecraser, Coffre copie ce qui etait la dans %APPDATA%\Padawan\coffre_securite.
+   Tes mots de passe restent sur ton PC, ils ne vont pas dans le coffre.
+
+RACCOURCIS UTILES
+-----------------
+  Ctrl+Alt+R  Recherche Padawan (raccourci du Bureau cree par l'installation)
+  F1          Aide dans la plupart des outils
+  Echap       Ferme Recherche / Premiers pas

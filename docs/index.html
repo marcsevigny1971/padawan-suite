@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Padawan Suite — la boîte à outils qu'on ne veut plus lâcher</title>
+<style>
+:root{--bg:#070b1a;--bg2:#0d1430;--card:#111a3d;--line:#24336b;--ink:#eef3ff;--mut:#a9b6dd;--teal:#2ee6d6;--gold:#ffd23f;--pink:#ff5fa2;--blue:#4f8cff;--green:#3ddc84}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font:16px/1.65 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;color:var(--ink);background:radial-gradient(1200px 600px at 80% -10%,#1b2a6b 0,transparent 60%),radial-gradient(900px 500px at -10% 20%,#0f4d5a 0,transparent 55%),var(--bg)}
+a{color:var(--teal)}
+.wrap{max-width:1180px;margin:auto;padding:0 22px}
+header.hero{padding:90px 0 60px;text-align:center;position:relative;overflow:hidden}
+.badge{display:inline-block;padding:6px 14px;border:1px solid var(--line);border-radius:99px;color:var(--gold);font-size:.85rem;letter-spacing:.08em;text-transform:uppercase;background:#0b1233aa}
+h1{font-size:clamp(2.4rem,6vw,4.6rem);line-height:1.05;margin:18px 0 10px;background:linear-gradient(90deg,var(--teal),var(--blue),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:1.25rem;color:var(--mut);max-width:780px;margin:0 auto 28px}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.btn{padding:13px 22px;border-radius:12px;font-weight:700;text-decoration:none;border:1px solid var(--line);color:var(--ink);background:#14204d}
+.btn.main{background:linear-gradient(90deg,var(--teal),var(--blue));color:#04101f;border:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:46px auto 0;max-width:900px}
+.stat{background:#0e1738cc;border:1px solid var(--line);border-radius:16px;padding:16px}
+.stat b{display:block;font-size:2rem;color:var(--gold)}.stat span{color:var(--mut);font-size:.9rem}
+nav.toc{position:sticky;top:0;z-index:5;background:#070b1ae6;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.toc .wrap{display:flex;gap:6px;overflow-x:auto;padding:10px 22px;white-space:nowrap}
+nav.toc a{color:var(--mut);text-decoration:none;padding:6px 12px;border-radius:8px;font-size:.92rem}
+nav.toc a:hover{background:#16224f;color:var(--ink)}
+section{padding:70px 0 20px}
+h2{font-size:clamp(1.7rem,3.5vw,2.5rem);margin:0 0 8px}
+h2 small{display:block;font-size:1rem;color:var(--teal);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.sub{color:var(--mut);max-width:820px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-top:26px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}
+.mini h3{margin:6px 0;font-size:1.1rem}.mini p{margin:0;color:var(--mut)}
+.ico{font-size:1.8rem}
+.tool{background:linear-gradient(180deg,#111a3d,#0c1431);border:1px solid var(--line);border-radius:22px;padding:30px;margin-top:26px;position:relative;overflow:hidden}
+.tool:before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--c,var(--teal))}
+.tool header{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.tool .big{font-size:2.6rem;width:70px;height:70px;display:grid;place-items:center;border-radius:18px;background:#0a1028;border:1px solid var(--line)}
+.tool h3{margin:0;font-size:1.6rem}.tool .tag{color:var(--c,var(--teal));font-weight:600}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-top:18px}
+.cols h4{margin:0 0 6px;color:var(--gold);font-size:.95rem;text-transform:uppercase;letter-spacing:.06em}
+ul{margin:0;padding-left:20px}li{margin:3px 0}
+.uc li::marker{content:"➜  ";color:var(--c,var(--teal))}
+kbd{background:#0a1028;border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:1px 6px;font:600 .85em Consolas,monospace;color:var(--gold)}
+.pill{display:inline-block;font-size:.78rem;padding:2px 9px;border-radius:99px;background:#0a1028;border:1px solid var(--line);color:var(--mut);margin:2px}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:24px}
+.why div{padding:22px;border-radius:18px;background:linear-gradient(135deg,#13225a,#0d1638);border:1px solid var(--line)}
+.why b{font-size:1.15rem;display:block;margin-bottom:6px}
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.95rem}
+th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}th{color:var(--gold)}
+.steps{counter-reset:s;display:grid;gap:14px;margin-top:20px}
+.steps div{counter-increment:s;padding:18px 18px 18px 70px;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px}
+.steps div:before{content:counter(s);position:absolute;left:18px;top:16px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--teal);color:#04101f;font-weight:800}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-top:12px}
+summary{cursor:pointer;font-weight:700}details p{color:var(--mut);margin:10px 0 0}
+.norton{font-family:Consolas,monospace;background:#0000aa;color:#fff;border:2px solid #00aaaa;border-radius:6px;padding:14px;margin-top:20px;overflow-x:auto;font-size:.9rem}
+.norton .y{color:#ffff55}.norton .c{color:#55ffff}
+footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid var(--line);margin-top:70px}
+@media print{nav.toc{display:none}body{background:#fff;color:#000}.tool,.mini,.why div,details,.steps div,.stat{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+ <div class="wrap">
+  <span class="badge">Projet Padawan · Suite 2026.10.23 · Fait au Québec</span>
+  <h1>Padawan Suite</h1>
+  <p class="lead">Une seule icône près de l'horloge. Derrière elle : un assistant IA 100&nbsp;% local, un archiveur de vidéos et de pages web, un carnet de recherche, un tiroir de 669 outils Windows, une messagerie d'équipe, des serveurs web à la demande, une machine à remonter le temps (C64, DOS, Win98)… et tout ça <b>gratuit, en français, sans compte et sans droits d'administrateur</b>.</p>
+  <div class="cta"><a class="btn main" href="#telecharger">⬇ Télécharger</a><a class="btn" href="#outils">Voir les 11 outils</a><a class="btn" href="#pourquoi">Pourquoi c'est un must</a></div>
+  <div class="stats">
+   <div class="stat"><b>11</b><span>programmes intégrés</span></div>
+   <div class="stat"><b>1</b><span>seule icône dans le tray</span></div>
+   <div class="stat"><b>669</b><span>outils prêts dans Arsenal</span></div>
+   <div class="stat"><b>0 $</b><span>logiciels libres et légaux</span></div>
+   <div class="stat"><b>0</b><span>mot de passe à retenir</span></div>
+  </div>
+ </div>
+</header>
+
+<nav class="toc"><div class="wrap">
+ <a href="#apercu">Aperçu</a><a href="#premiers-pas">Premiers pas</a><a href="#nouveautes">Nouveautés</a><a href="#padawan">Padawan IA</a><a href="#tableau">Tableau de bord</a><a href="#archiveur">Archiveur</a><a href="#grimoire">Grimoire</a><a href="#arsenal">Arsenal</a><a href="#gestionnaire">Fichiers</a><a href="#messager">Messager</a><a href="#facteur">Facteur</a><a href="#chantier">Chantier</a><a href="#retro">Rétro</a><a href="#ensemble">Ensemble</a><a href="#pourquoi">Pourquoi</a><a href="#installer">Installer</a><a href="#faq">FAQ</a><a href="#telecharger">Télécharger</a><a href="#ressources">GitHub</a>
+</div></nav>
+
+<main class="wrap">
+
+<section id="apercu">
+ <h2><small>Vue d'ensemble</small>C'est quoi, au juste ?</h2>
+ <p class="sub">La Padawan Suite est une famille d'applications Windows écrites en Python, pensées pour travailler <b>ensemble</b>. Elles partagent le même style (le célèbre thème bleu « Norton Commander », plus Sombre et Clair), les mêmes réflexes clavier (<kbd>F1</kbd> aide, <kbd>F2</kbd> renommer, <kbd>Ctrl</kbd>+<kbd>V</kbd> intelligent, glisser-déposer partout) et la même philosophie : <b>tes données restent sur ton PC, dans des formats ouverts</b>.</p>
+ <div class="norton">┌─────────── <span class="y">Icône Padawan (zone de notification)</span> ───────────┐<br>
+│ <span class="c">Padawan</span> - Ouvrir / Afficher        │ <span class="c">Messager…</span>                    │<br>
+│ <span class="c">Tableau de bord de la suite…</span>    │ <span class="c">Chantier (serveurs)…</span>         │<br>
+│ <span class="c">Gestionnaire de fichiers…</span>       │ <span class="c">Rétro (C64 / DOS / Win98)…</span>   │<br>
+│ <span class="c">Archiveur…  Arsenal…  Grimoire…</span> │ <span class="c">Facteur</span> (pastille verte/jaune)│<br>
+│ ☑ Démarrer avec Windows          │ Quitter Padawan              │<br>
+└──────────────────────────────────────────────────────────────┘</div>
+ <div class="grid">
+  <div class="mini"><span class="ico">🔒</span><h3>Local d'abord</h3><p>L'IA tourne sur ta machine (Ollama). Tes archives, notes et fichiers ne partent nulle part.</p></div>
+  <div class="mini"><span class="ico">🧩</span><h3>Des outils qui se parlent</h3><p>Une archive de l'Archiveur s'envoie au Grimoire d'un clic droit ; Facteur et le Tableau de bord surveillent le tout.</p></div>
+  <div class="mini"><span class="ico">🪶</span><h3>Discret</h3><p>Une seule icône, des lancements silencieux sans console, une seule instance par programme.</p></div>
+  <div class="mini"><span class="ico">🇨🇦</span><h3>En français, d'ici</h3><p>Interface, aide et voix (fr-CA en priorité) pensées pour nous.</p></div>
+ </div>
+</section>
+
+<section id="premiers-pas">
+ <h2><small>Premiers pas</small>Opérationnel en 5 minutes</h2>
+ <p class="sub">Au premier démarrage, un guide s'ouvre tout seul (case « Ne plus afficher » en bas). Chaque étape a un bouton qui ouvre directement le bon outil. Pour le revoir : icône Padawan → <b>🚀 Premiers pas</b>. Le même guide existe en texte : <code>LISEZMOI-PREMIERS-PAS.txt</code>.</p>
+ <div class="steps">
+  <div><b>L'icône Padawan</b> près de l'horloge : clic droit, et chaque outil de la suite est là.</div>
+  <div><b>Le Tableau de bord</b> : ce qui tourne, tes serveurs, les mises à jour, le « Rapport de problème ».</div>
+  <div><b>Trouver n'importe quoi</b> : <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> ouvre Recherche Padawan, qui fouille toute la suite d'un coup.</div>
+  <div><b>Garder ce qui compte</b> : l'Archiveur copie les vidéos et les pages web, le Grimoire range tes notes par sujets.</div>
+  <div><b>Tes outils en un clic</b> : Arsenal, avec des centaines d'outils Windows et tes favoris.</div>
+  <div><b>Dormir tranquille</b> : Coffre Padawan met toutes tes données dans un seul .zip daté.</div>
+ </div>
+ <table style="margin-top:18px">
+  <tr><th colspan="2">Scénario type : archiver une vidéo YouTube et la retrouver dans le Grimoire</th></tr>
+  <tr><td>1</td><td>Copie le lien de la vidéo (<kbd>Ctrl</kbd>+<kbd>C</kbd>).</td></tr>
+  <tr><td>2</td><td><b>Archiveur</b> → « Coller et archiver » (ou <kbd>Ctrl</kbd>+<kbd>V</kbd>) : la vidéo, l'image, la description et le texte sont gardés.</td></tr>
+  <tr><td>3</td><td>Clic droit sur l'archive → « Envoyer au Grimoire » : une fiche est créée dans « À classer ».</td></tr>
+  <tr><td>4</td><td>Trois mois plus tard : <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd>, un mot du titre, et <b>Recherche Padawan</b> te montre l'archive et la fiche. Double-clic : c'est ouvert.</td></tr>
+ </table>
+</section>
+
+<section id="nouveautes">
+ <h2><small>Nouveautés</small>La suite devient vraiment une suite</h2>
+ <div class="grid">
+  <div class="mini" style="border-color:var(--teal)"><span class="ico">🔎</span><h3>Recherche Padawan</h3><p>Une seule barre de recherche pour le <b>Grimoire</b> (lu sans jamais être modifié), les <b>archives</b> de l'Archiveur (titres, descriptions, transcriptions), l'<b>Arsenal</b> et les <b>dossiers</b> de ton choix. Les résultats sont regroupés, sans tenir compte des accents, et un double-clic ouvre le bon outil. Raccourci <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd>.</p><p style="margin-top:8px"><b>🤖 Demander à Padawan</b> : si l'IA locale (Ollama) est installée, elle résume ce qui a été trouvé dans tes données. Sans Ollama, la recherche marche quand même.</p></div>
+  <div class="mini" style="border-color:var(--gold)"><span class="ico">🗄</span><h3>Coffre Padawan</h3><p>Toutes tes données en un seul .zip daté : le Grimoire avec ses médias, les fiches, images et textes de l'Archiveur (vidéos en option, car c'est lourd), l'Arsenal, les réglages de Padawan, les règles de Facteur et la bibliothèque de Rétro.</p><p style="margin-top:8px"><b>Restaurer</b> sur le même PC ou un nouveau : rien n'est effacé, et ce qui est remplacé est d'abord copié en sécurité. Tes mots de passe restent sur ton PC, ils ne vont pas dans le coffre.</p></div>
+  <div class="mini" style="border-color:var(--green)"><span class="ico">🎁</span><h3>Paquets à partager</h3><p><b>Arsenal</b> et <b>Facteur</b> importent et exportent des « paquets » (.json) d'outils ou de règles, à s'échanger entre collègues. Rien ne se lance tout seul à l'import : les outils reçus te demandent un petit OK la première fois, et les règles Facteur arrivent en pause avec un aperçu. Des paquets d'exemple sont fournis dans le dossier <code>paquets</code>.</p></div>
+  <div class="mini" style="border-color:#b48cff"><span class="ico">🚀</span><h3>Guide Premiers pas</h3><p>Une fenêtre de bienvenue avec 6 étapes et 6 scénarios concrets : archiver, faire une recherche, ranger Téléchargements, monter sa boîte à outils, utiliser l'IA hors ligne, changer de PC. Chaque bouton ouvre le bon outil.</p></div>
+ </div>
+</section>
+
+<section id="outils">
+ <h2><small>Les outils</small>Onze programmes, une seule suite</h2>
+ <p class="sub">Chaque carte explique à quoi sert l'outil, ce qu'il sait faire et comment on s'en sert vraiment, au bureau comme à la maison.</p>
+
+ <article class="tool" id="padawan" style="--c:var(--teal)">
+  <header><div class="big">🤖</div><div><h3>Padawan — l'assistant IA local</h3><div class="tag">Ton « cousin local de Grok », qui tourne sur ton PC</div></div></header>
+  <div class="cols">
+   <div><h4>Fonctions</h4><ul>
+    <li>Discussion avec un modèle IA local via <b>Ollama</b> (ex. dolphin3:8b) : aucune donnée envoyée en ligne.</li>
+    <li>Démarrage automatique d'Ollama, installation et téléchargement du modèle avec ton accord, voyant d'état (vérification → chargement → prêt).</li>
+    <li><b>Chasse</b> : recherche web multi-sources (web, Québec, tech, nouvelles, Arduino, nature), profondeur réglable, « Creuser top 3 ».</li>
+    <li>Conclusions structurées « En bref / À retenir / Sources » avec liens cliquables.</li>
+    <li>Mémoire, tâches et missions ; notifications Windows ; défilement intelligent.</li>
+    <li>Thèmes Norton / Sombre / Clair, plein écran ; <kbd>Échap</kbd> ou X = cacher dans le tray.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Rédiger ou reformuler un courriel délicat sans coller de contenu confidentiel dans un service en ligne.</li>
+    <li>Faire une recherche rapide sur un sujet et obtenir un résumé sourcé.</li>
+    <li>Expliquer un message d'erreur, un script, une commande.</li>
+    <li>Fonctionne même sans Internet une fois le modèle téléchargé.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="tableau" style="--c:var(--gold)">
+  <header><div class="big">🧭</div><div><h3>Tableau de bord 1.0</h3><div class="tag">La tour de contrôle de la suite</div></div></header>
+  <div class="cols">
+   <div><h4>Fonctions</h4><ul>
+    <li>Liste des programmes de la suite, leur version et s'ils sont en marche.</li>
+    <li>Serveurs du PC détectés (lecture seule) et liens rapides.</li>
+    <li>Vérification des mises à jour qui ne plante jamais hors ligne.</li>
+    <li><b>Rapport de problème</b> : zip des journaux avec les secrets automatiquement masqués.</li>
+    <li><kbd>F1</kbd> aide · <kbd>F5</kbd> rafraîchir · <kbd>F10</kbd> quitter.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Voir d'un coup d'œil si tout roule après une mise à jour.</li>
+    <li>Envoyer un rapport de bogue propre à la personne qui t'aide, sans risquer d'y laisser un mot de passe.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="archiveur" style="--c:var(--pink)">
+  <header><div class="big">🎞️</div><div><h3>Archiveur 5</h3><div class="tag">Ce qui est en ligne aujourd'hui peut disparaître demain. Pas chez toi.</div></div></header>
+  <div class="cols">
+   <div><h4>Archiver</h4><ul>
+    <li><b>Coller et archiver</b> : <kbd>Ctrl</kbd>+<kbd>V</kbd> d'un lien et c'est parti (YouTube, X, Facebook, TikTok, Instagram…).</li>
+    <li><b>N'importe quelle page web</b> : version lecture propre, page complète hors ligne, PDF, capture, texte.</li>
+    <li>Posts X : texte, images, vidéo, auteur et fil de discussion.</li>
+    <li>Vidéos en <b>MP4 H.264 + AAC</b> (lisibles partout), conversion auto des formats exotiques.</li>
+    <li>Qualité (meilleure, 720p, 480p, audio MP3), sous-titres FR/EN, lots de liens, détection des doublons, surveillance du presse-papiers.</li>
+   </ul></div>
+   <div><h4>Exploiter</h4><ul>
+    <li><b>Lecteur intégré</b> (image + son, ±10 s, volume, grande fenêtre).</li>
+    <li><b>Transcription horodatée</b> cliquable ; Whisper local en option ; la recherche fouille aussi les transcriptions.</li>
+    <li>Outils média : capture d'image, extrait vidéo, MP3, GIF animé.</li>
+    <li>Tags, notes, favoris, collections, renommer, recherche, statistiques.</li>
+    <li>Vérifier/réparer les archives, savoir si l'original est encore en ligne, export ZIP, catalogue CSV (Excel), index global HTML.</li>
+    <li>Envoi au Grimoire d'un clic droit.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Garder la preuve d'une publication avant qu'elle soit effacée.</li>
+    <li>Conserver une formation ou un tutoriel vidéo pour le revoir hors ligne.</li>
+    <li>Retrouver la phrase exacte dite à la 14<sup>e</sup> minute d'une vidéo grâce à la transcription.</li>
+    <li>Partager un dossier d'archives avec un collègue en un ZIP.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="grimoire" style="--c:#b48cff">
+  <header><div class="big">📚</div><div><h3>Grimoire</h3><div class="tag">Ton deuxième cerveau, classé par sujets</div></div></header>
+  <div class="cols">
+   <div><h4>Tout y va</h4><ul>
+    <li>Notes en texte riche (titres, listes, cases à cocher, citations), liens entre fiches <code>[[titre]]</code> et rétroliens.</li>
+    <li>Liens web (titre et miniature récupérés), vidéos, images, PDF, Word, sons, <b>mémos vocaux</b>, citations avec source, captures de pages complètes.</li>
+    <li>Arbre de sujets et sous-sujets : couleur, icône, épingles, fusion, corbeille avec restauration.</li>
+    <li>Modèles de fiches (source, protocole, plante, recette…), import d'un dossier entier.</li>
+   </ul></div>
+   <div><h4>Retrouver</h4><ul>
+    <li>Recherche plein texte instantanée <kbd>Ctrl</kbd>+<kbd>F</kbd> (sans souci des accents) dans les titres, notes, texte des PDF, <b>OCR des images</b> et transcriptions.</li>
+    <li>Vues liste, cartes, chronologie ; mode lecture ; filtres et surlignage.</li>
+    <li>Export HTML autonome ou ZIP, sauvegardes automatiques, <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Centraliser la doc d'un dossier ou d'un projet (liens, captures, PDF, notes de réunion).</li>
+    <li>Monter une base de connaissances : procédures, astuces, contacts de fournisseurs.</li>
+    <li>À la maison : recettes, jardin, rénovations, lectures à faire.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="arsenal" style="--c:var(--green)">
+  <header><div class="big">🧰</div><div><h3>Arsenal</h3><div class="tag">669 outils, commandes et raccourcis Windows, à un clic</div></div></header>
+  <div class="cols">
+   <div><h4>Le tiroir</h4><ul>
+    <li>Catégories prêtes : Sécurité (Defender, pare-feu), Réparation (sfc, DISM, chkdsk), Nettoyage, Réseau (Mon IP), Système, Processus et services, Périphériques, Disques (BitLocker, SMART), GodMode, Paramètres, Consoles, Développement, raccourcis clavier, aide-mémoire…</li>
+    <li>Liens, programmes, dossiers, scripts .bat/.ps1/.py, commandes CMD et PowerShell.</li>
+   </ul></div>
+   <div><h4>Le confort</h4><ul>
+    <li>Recherche instantanée : tape, c'est trouvé. Palette <kbd>Ctrl</kbd>+<kbd>Espace</kbd> (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Espace</kbd> de partout).</li>
+    <li>Résultat des commandes affiché dans la fenêtre (copiable), lancement admin avec la commande exacte montrée, une petite confirmation avant les actions délicates.</li>
+    <li>Ajout par assistant avec bouton Tester, favoris, glisser-déposer, <kbd>Ctrl</kbd>+<kbd>Z</kbd>, import des signets Chrome/Edge, export JSON/HTML.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Dépanner un poste sans chercher la bonne commande sur Google.</li>
+    <li>Lancer un scan Defender, vider les fichiers temporaires, voir son IP en deux secondes.</li>
+    <li>Regrouper les sites et outils de l'équipe au même endroit.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="gestionnaire" style="--c:#55ffff">
+  <header><div class="big">🗂️</div><div><h3>Gestionnaire de fichiers</h3><div class="tag">Le Norton Commander d'antan, version moderne</div></div></header>
+  <div class="cols">
+   <div><h4>Fonctions</h4><ul>
+    <li>Deux panneaux : dossiers à gauche, fichiers à droite.</li>
+    <li>Tout au clavier : <kbd>Tab</kbd>, flèches, <kbd>Inser</kbd> nouveau dossier, <kbd>Suppr</kbd>/<kbd>F8</kbd>, <kbd>Espace</kbd> sélection multiple, <kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd>.</li>
+    <li>Souris aussi : Ctrl/Maj+clic, double-clic, menu clic droit.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Trier rapidement un gros dossier de téléchargements.</li>
+    <li>Pour les nostalgiques du clavier : tout faire sans lâcher les touches.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="messager" style="--c:var(--blue)">
+  <header><div class="big">💬</div><div><h3>Messager v2</h3><div class="tag">L'esprit MSN Messenger, pour les gens qui ont la suite</div></div></header>
+  <div class="cols">
+   <div><h4>Fonctions</h4><ul>
+    <li><b>Aucun mot de passe</b> : tu choisis un pseudo, une clé secrète protégée par Windows fait le reste.</li>
+    <li><b>Salon général</b> public + conversations <b>privées</b> (bande verte = tout le monde, orange = privé).</li>
+    <li>Statuts (Disponible, Absent, Occupé, Invisible), « X écrit… », pastilles de non-lus, notifications Windows.</li>
+    <li>Réactions, réponses citées, modifier/supprimer ses messages, emojis, recherche.</li>
+    <li>Images, vidéos, PDF, fichiers (15 Mo), <b>messages vocaux</b>, aperçus de liens et lecture des vidéos sans quitter l'appli.</li>
+    <li>Fréquence de vérification réglable ; possibilité d'héberger <b>son propre serveur</b> (déployable avec Chantier).</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Un canal rapide entre collègues, sans compte infonuagique à créer.</li>
+    <li>Envoyer une capture ou un vocal en deux secondes.</li>
+    <li>Le bouton « Supprimer mon compte » efface ton compte et tes messages.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="facteur" style="--c:#ff9f43">
+  <header><div class="big">📬</div><div><h3>Facteur</h3><div class="tag">Ton assistant de rangement : les nouveaux fichiers se rangent tout seuls</div></div></header>
+  <p class="sub" style="margin:6px 0 14px">Imagine un facteur qui passe dans ton dossier Téléchargements : chaque nouveau fichier est trié et mis à la bonne place, sans que tu y penses. Rien n'est effacé pour de vrai : au pire, un fichier est mis de côté dans <code>_Traités</code>, d'où tu peux le reprendre.</p>
+  <div class="cols">
+   <div><h4>Ma première règle, en 3 étapes</h4><ul>
+    <li><b>1. Quel dossier ?</b> Téléchargements, ou un autre de ton choix.</li>
+    <li><b>2. Quels fichiers ?</b> PDF, images, vidéos, vieux fichiers… un simple choix.</li>
+    <li><b>3. Quoi en faire ?</b> Les ranger dans un dossier, les envoyer au Grimoire ou à l'Archiveur, ou les mettre de côté après quelques jours.</li>
+    <li>Un <b>aperçu</b> te montre ce qui serait fait avant d'activer quoi que ce soit.</li>
+   </ul></div>
+   <div><h4>Quand tu veux aller plus loin</h4><ul>
+    <li>Onglet Règles : horaires, intervalles, taille ou âge des fichiers, plusieurs actions à la suite.</li>
+    <li>Bibliothèque de modèles prêts (trier par type, archiver les vieux fichiers…).</li>
+    <li>Paquets de règles à partager entre collègues : ils arrivent en pause, tu les actives quand tu veux.</li>
+    <li>Doux pour ton PC : priorité basse, pause si la batterie est faible ou le PC occupé, « Pause globale » d'un clic.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Les factures PDF vont toutes seules dans « Documents\Factures ».</li>
+    <li>Les vidéos téléchargées partent à l'Archiveur.</li>
+    <li>Téléchargements ne déborde plus : ce qui traîne depuis 30 jours est mis de côté.</li>
+   </ul></div>
+  </div>
+  <p class="sub" style="margin-top:12px"><b>Mode avancé (facultatif)</b> : pour ceux qui ont leur propre site web, Facteur peut aussi recevoir des commandes à distance. C'est caché par défaut dans Options, et tant que ce mode est éteint, Facteur ne reçoit rien de l'extérieur. La plupart des gens n'en ont jamais besoin.</p>
+ </article>
+
+ <article class="tool" id="chantier" style="--c:#ffd23f">
+  <header><div class="big">🏗️</div><div><h3>Chantier 1.1</h3><div class="tag">Un serveur complet sur ton PC… seulement si tu le demandes</div></div></header>
+  <div class="cols">
+   <div><h4>Services à la demande</h4><ul>
+    <li><b>Web</b> : Apache (Apache Lounge) ou Caddy, + PHP officiel.</li>
+    <li><b>SQL</b> : MariaDB portable, base et utilisateur créés en un clic (mot de passe généré, jamais affiché).</li>
+    <li><b>FTP</b> : pyftpdlib portable ou FileZilla Server. <b>MQTT</b> : Mosquitto pour NodeMCU/ESP.</li>
+    <li><b>Docker</b> : WSL2 + Docker Desktop (si la virtualisation est permise).</li>
+    <li>Téléchargements depuis les sources officielles, SHA-256 vérifié.</li>
+   </ul></div>
+   <div><h4>Sans rien casser</h4><ul>
+    <li>Ne touche <b>jamais</b> un port déjà utilisé ni un serveur existant (XAMPP, MySQL…) : ils apparaissent « déjà installé ». Propose 8080/3307 au besoin.</li>
+    <li>Voyants clairs, <kbd>F6</kbd> état des ports, thème Norton avec <kbd>F1</kbd>–<kbd>F10</kbd>.</li>
+    <li>« Déployer les outils web » : pages génériques du Messager et de la Boîte Facteur, configs gardées hors du dossier public.</li>
+    <li>Bouton « Préparer un PC » : Rufus, ISO Windows 11, guide court.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Monter un serveur Messager privé pour l'équipe sur le réseau local.</li>
+    <li>Apprendre PHP/SQL ou tester un site sans rien installer de permanent.</li>
+    <li>Brancher des capteurs ESP/Arduino via MQTT.</li>
+   </ul></div>
+  </div>
+ </article>
+
+ <article class="tool" id="retro" style="--c:#ff5fa2">
+  <header><div class="big">🕹️</div><div><h3>Rétro 1.4</h3><div class="tag">Commodore 64 · MS-DOS · Windows 98 — et un vrai atelier de programmation d'époque</div></div></header>
+  <div class="cols">
+   <div><h4>Lanceur et bibliothèque</h4><ul>
+    <li>Émulateurs installés à la demande depuis les sources officielles : <b>VICE</b> (C64), <b>DOSBox-X</b> (DOS), <b>86Box</b> (Win98). Assistant « Tout installer » en un clic.</li>
+    <li>Glisser-déposer des jeux (.d64, .prg, .exe, .iso, .img…), pochettes générées façon boîte des années 80, temps de jeu, favoris, collections.</li>
+    <li>Jeux <b>gratuits et légaux</b> : démos (Second Reality), shareware (Commander Keen, Wolfenstein 3D ép. 1, DOOM ép. 1, Duke Nukem II), homebrew C64.</li>
+    <li>Écran « READY. » animé, bruits de disquette, filtre CRT, manette Xbox, gros bouton « Fermer le jeu » (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Q</kbd>).</li>
+   </ul></div>
+   <div><h4>L'Atelier DOS « comme dans le temps »</h4><ul>
+    <li>PC DOS persistant avec menu ANSI en français : Volkov Commander, Dos Navigator, DOS Shell, EDIT, archiveurs ZIP/7-Zip/ARJ…</li>
+    <li><b>Le vrai GW-BASIC</b>, construit depuis le code source publié par Microsoft sous licence MIT (empreinte SHA-256 vérifiée), plus Bywater BASIC.</li>
+    <li><b>FreeBASIC</b> (mode QB) pour compiler en .EXE, <b>Free Pascal</b> (IDE façon Turbo Pascal), <b>DJGPP GCC 12 + RHIDE</b> (façon Turbo C).</li>
+    <li>Librairies avec exemples : Allegro 4.2, mini-librairie VGA, GRAPH/CRT, routines BASIC.</li>
+    <li>« Taper comme dans le temps » : recopier un listing de magazine avec sommes de contrôle ligne par ligne. 14 classiques prêts (Super Star Trek, Lunar Lander, Hammurabi…).</li>
+    <li><b>Importer</b> tes vieux .BAS, .prg, .d64 (conversion d'encodage automatique) et <b>exporter</b> en .zip, .bas, .prg ou .d64.</li>
+   </ul></div>
+   <div><h4>Cas d'usage</h4><ul class="uc">
+    <li>Faire découvrir la programmation aux jeunes comme on l'a apprise.</li>
+    <li>Ressusciter tes programmes BASIC des années 80.</li>
+    <li>Une pause dîner sur Commander Keen entre deux réunions 😉</li>
+    <li>100 % légal : aucun ROM ni logiciel commercial fourni.</li>
+   </ul></div>
+  </div>
+ </article>
+</section>
+
+<section id="ensemble">
+ <h2><small>La magie</small>Ensemble, ils valent plus que la somme des parties</h2>
+ <table>
+  <tr><th>Scénario</th><th>Comment la suite s'en occupe</th></tr>
+  <tr><td>Une vidéo importante circule</td><td><b>Archiveur</b> la sauvegarde en MP4 + transcription → clic droit « Envoyer au <b>Grimoire</b> » dans le bon sujet → partage via <b>Messager</b>.</td></tr>
+  <tr><td>Un poste fait des siennes</td><td><b>Arsenal</b> lance sfc/DISM/Defender → <b>Tableau de bord</b> produit un rapport de problème sans secrets.</td></tr>
+  <tr><td>L'équipe veut sa messagerie privée</td><td><b>Chantier</b> installe Apache + PHP + MariaDB → « Déployer les outils web » → chacun pointe son <b>Messager</b> dessus.</td></tr>
+  <tr><td>Un document arrive par courriel</td><td><b>Facteur</b> le range automatiquement et peut te l'annoncer à voix haute.</td></tr>
+  <tr><td>Une question technique</td><td><b>Padawan</b> fait la chasse aux sources et résume ; le résultat va dans le <b>Grimoire</b>.</td></tr>
+ </table>
+</section>
+
+<section id="pourquoi">
+ <h2><small>L'argumentaire</small>Pourquoi c'est un must</h2>
+ <div class="why">
+  <div><b>💸 Gratuit, vraiment</b>Pas d'abonnement, pas de version « Pro ». Uniquement des composants libres ou officiels.</div>
+  <div><b>🔐 Confidentiel</b>IA locale, archives locales, notes locales. Tes données restent chez toi.</div>
+  <div><b>🛡️ Sans admin</b>Installation par utilisateur. Rien ne touche au système sans ta permission explicite (UAC affiché avec la commande exacte).</div>
+  <div><b>⚡ Gain de temps</b>669 outils indexés, recherche instantanée partout, raccourcis clavier cohérents d'un programme à l'autre.</div>
+  <div><b>🧱 Formats ouverts</b>MP4, JPG, HTML, TXT, JSON, SQLite : tes données te survivent, même sans la suite.</div>
+  <div><b>🔄 Sauvegarde automatique</b>Index et bases sauvegardés avec rotation, <kbd>Ctrl</kbd>+<kbd>Z</kbd> presque partout, corbeille avec restauration.</div>
+  <div><b>🌐 Fonctionne hors ligne</b>Rien ne plante sans Internet : les installations sont simplement reportées.</div>
+  <div><b>🎨 Agréable</b>Thème Norton nostalgique, Sombre ou Clair, taille du texte réglable, adapté aux petits écrans.</div>
+ </div>
+</section>
+
+<section id="installer">
+ <h2><small>Installation</small>Prêt en deux minutes, sans droits d'administrateur</h2>
+ <div class="steps">
+  <div><b>Télécharge</b> (liens dans la section <a href="#telecharger">Téléchargement</a>) <code>Padawan-Setup.exe</code> (installateur un fichier, recommandé) ou <code>Padawan-Projet.zip</code> (version de secours : décompresser puis lancer <code>INSTALLER.bat</code>).</div>
+  <div><b>Double-clique.</b> Si Windows SmartScreen s'affiche : « Informations complémentaires » → « Exécuter quand même » (l'installateur n'est pas signé numériquement, c'est normal pour un projet maison).</div>
+  <div><b>Réponds aux questions</b> : Python et les dépendances s'installent, ffmpeg est vérifié, les raccourcis Bureau sont créés. Options : Ollama + modèle IA, transcription locale (faster-whisper), lecteur VLC.</div>
+  <div><b>C'est fait !</b> L'icône Padawan apparaît près de l'horloge. Clic → choisis ton outil. Chantier et Rétro n'installent rien tant que tu ne le demandes pas.</div>
+ </div>
+ <p class="sub" style="margin-top:18px">Désinstallation : <code>Desinstaller.bat</code> retire raccourcis et démarrage automatique sans toucher à tes données. Configuration conseillée : Windows 10/11, 8 Go de RAM (16 Go pour l'IA locale confortable).</p>
+</section>
+
+<section id="faq">
+ <h2><small>FAQ</small>Questions fréquentes</h2>
+ <details><summary>Est-ce que ça ralentit mon PC ?</summary><p>Non. Seuls l'icône et Facteur (en pause d'un clic) tournent en arrière-plan. Les serveurs de Chantier ne démarrent jamais tout seuls.</p></details>
+ <details><summary>Mes données sont-elles envoyées quelque part ?</summary><p>Non. L'IA, l'Archiveur, le Grimoire et Rétro travaillent localement. Seul le Messager communique avec un serveur, et tu peux héberger le tien.</p></details>
+ <details><summary>Dois-je créer un compte ou retenir un mot de passe ?</summary><p>Non. Le Messager utilise une clé générée et protégée par Windows ; tu choisis seulement un pseudo.</p></details>
+ <details><summary>Windows Defender va-t-il bloquer l'installation ?</summary><p>L'installateur a été analysé et est propre. Comme il n'est pas signé, SmartScreen peut demander une confirmation la première fois.</p></details>
+ <details><summary>Il me faut l'IA pour utiliser le reste ?</summary><p>Non. Ollama est optionnel ; tous les autres outils fonctionnent sans.</p></details>
+ <details><summary>Les jeux et logiciels de Rétro, c'est légal ?</summary><p>Oui : uniquement des logiciels libres, du code publié par Microsoft sous licence MIT (GW-BASIC) et des jeux gratuits/shareware autorisés. Aucun ROM commercial n'est inclus ; tu fournis les tiens si tu en possèdes.</p></details>
+ <details><summary>Je fais comment pour sauvegarder ?</summary><p>Ouvre <b>Coffre Padawan</b> (icône Padawan → Coffre) → « Exporter » : tout tient dans un seul .zip daté, que tu copies où tu veux. Pour revenir en arrière ou changer de PC : « Restaurer ». Grimoire, Archiveur et Arsenal gardent en plus leurs propres sauvegardes automatiques.</p></details>
+ <details><summary>Comment retrouver quelque chose quand je ne sais plus dans quel outil c'est ?</summary><p><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> : Recherche Padawan cherche partout en même temps (Grimoire, archives, Arsenal, tes dossiers).</p></details>
+ <details><summary>Je peux partager mes outils ou mes règles avec un collègue ?</summary><p>Oui, avec un paquet .json : Arsenal → Exporter → Sélection en JSON, ou Facteur → Fichier → Exporter les règles. Ton collègue l'importe ; rien ne s'exécute à l'import, et les règles arrivent désactivées.</p></details>
+ <details><summary>Un problème ?</summary><p>Ouvre le Tableau de bord → « Rapport de problème », et envoie le zip (les secrets y sont masqués). Chaque programme a aussi son aide <kbd>F1</kbd>.</p></details>
+</section>
+
+<section id="telecharger">
+ <h2><small>Téléchargement</small>Prends-la maintenant</h2>
+ <div class="grid">
+  <div class="mini" style="border-color:var(--teal)"><span class="ico">⬇️</span><h3>Padawan-Setup.exe <span class="pill">recommandé</span></h3><p>Installateur Windows, par utilisateur, sans droits admin.<br>3,35 Mo (3 513 556 octets) · version du 23 oct. 2026</p><p style="margin-top:12px"><a class="btn main" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Setup.exe" download>Télécharger l'installateur</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : BB257E6F2EA040B76BADBC94510A90F5E2B51B6F6D760C74933B31E1F1EB7860</p></div>
+  <div class="mini"><span class="ico">🗜️</span><h3>Padawan-Projet.zip <span class="pill">secours</span></h3><p>Même contenu : « Extraire tout » puis <code>INSTALLER.bat</code>.<br>1,41 Mo (1 474 441 octets) · version du 23 oct. 2026</p><p style="margin-top:12px"><a class="btn" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Projet.zip" download>Télécharger le ZIP</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : 92CFEC0CADCA2DF1F399C02CFEC26E4FC4BFD0C629C2A53B7D17B54BA942F727</p></div>
+  <div class="mini"><span class="ico">🌐</span><h3>Le site</h3><p>Tout le reste des projets est sur <a href="https://marcsevigny.ca/">marcsevigny.ca</a>. La suite Padawan se trouve <b>tout en bas de la page, dans la section Padawan</b>.</p><p style="margin-top:12px"><a class="btn" href="https://marcsevigny.ca/">Visiter marcsevigny.ca</a></p></div>
+ </div>
+ <p class="sub" style="margin-top:14px">Les mêmes fichiers sont aussi offerts sur <a href="https://marcsevigny.ca/FTP_HOME/SECTION%20PYTHON/Projet%20Padawan/PRESENTATION-PADAWAN.html">marcsevigny.ca</a>.<!--mirror--></p>
+ <p class="sub" style="margin-top:6px">Vérifier l'empreinte (facultatif) : dans PowerShell, <code>Get-FileHash .\Padawan-Setup.exe</code> doit afficher le même SHA256.</p>
+</section>
+
+<section id="ressources">
+ <h2><small>Ressources</small>📚 La Padawan Suite sur GitHub</h2>
+ <p class="sub">Le projet a aussi sa page publique sur GitHub : le code, les nouvelles versions et une boîte à suggestions. Pas besoin de compte pour télécharger.</p>
+ <div class="grid">
+  <div class="mini" style="border-color:var(--teal)"><span class="ico">🏠</span><h3>Page du projet</h3><p>Le code source, le guide et l'historique des changements.</p><p style="margin-top:12px"><a class="btn main" href="https://github.com/marcsevigny1971/padawan-suite">Ouvrir sur GitHub</a></p></div>
+  <div class="mini"><span class="ico">⬆️</span><h3>Mises à jour</h3><p>La dernière version de l'installateur est toujours ici. Réinstaller par-dessus garde tes données.</p><p style="margin-top:12px"><a class="btn" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest">Voir les versions</a></p></div>
+  <div class="mini"><span class="ico">💡</span><h3>Idées et petits soucis</h3><p>Une idée, une question, quelque chose qui accroche ? Écris-le simplement, en français (compte GitHub gratuit requis pour écrire).</p><p style="margin-top:12px"><a class="btn" href="https://github.com/marcsevigny1971/padawan-suite/issues">Suggestions</a></p></div>
+ </div>
+</section>
+</main>
+<footer><a href="https://marcsevigny.ca/">marcsevigny.ca</a> (section Padawan, tout en bas) · <a href="https://github.com/marcsevigny1971/padawan-suite">GitHub</a> · Padawan Suite · version 2026.10.23 · conçue par Marc Sevigny, au Québec · Que la Force soit avec ton PC ✨</footer>
+</body>
+</html>

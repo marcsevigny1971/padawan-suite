@@ -1,0 +1,22 @@
+PAQUETS PADAWAN - partager des outils (Arsenal) et des regles (Facteur)
+=====================================================================
+
+Un paquet est un simple fichier .json qu'on s'echange entre collegues (courriel, cle USB...).
+
+ARSENAL
+  - Creer : Arsenal > Exporter > "Selection en JSON" (ou une categorie : clic droit > Exporter cette categorie).
+  - Importer : Arsenal > Importer > "Paquet d'exemple / paquet recu...".
+  - Tranquille : rien ne se lance a l'import et les doublons sont ignores. Les commandes recues
+    te demandent un petit OK avant de tourner la premiere fois (tu peux l'enlever ensuite).
+
+FACTEUR
+  - Creer : Facteur > Fichier > "Exporter les regles..." (la partie "a distance" n'est jamais exportee).
+  - Importer : Facteur > Fichier > "Importer un paquet de regles...".
+  - Tranquille : les regles recues arrivent en pause, avec un apercu. Tu les actives quand tu veux.
+
+EXEMPLES DANS CE DOSSIER
+  arsenal_exemple_apprendre.json  - liens d'apprentissage + 2 commandes Windows en lecture seule
+  facteur_exemple_menage.json     - 3 regles de rangement des Telechargements (en pause)
+
+Format : un paquet peut contenir un bloc "paquet" : {"nom", "auteur", "version", "description"}
+qui s'affiche avant l'import.

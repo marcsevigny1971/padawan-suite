@@ -1,0 +1,53 @@
+PROJET PADAWAN - INSTALLATION
+=============================
+
+Ce paquet installe toute la famille Padawan sur un PC Windows 10 ou 11 :
+  - Padawan : l'assistant de recherche (IA locale avec Ollama), icône tray
+  - Gestionnaire de fichiers
+  - Archiveur : vidéos et pages web en MP4 lisibles partout
+  - Arsenal : lanceur de favoris, programmes, commandes et outils
+  - Grimoire : carnet de recherche par sujets (base de départ incluse)
+  - Facteur : surveillant de dossiers, Boîte SQL, notifications, voix Windows,
+    démarrage automatique (pastille verte/jaune dans le tray Padawan)
+  - Messager : clavardage entre utilisateurs Padawan (Salon public, privés,
+    réactions, liens, images, vocaux) ; serveur marcsevigny.ca par défaut,
+    modifiable dans ses Réglages
+
+Aucun droit administrateur n'est nécessaire.
+
+INSTALLER
+---------
+1. Version .zip (recommandée) : clic droit > Extraire tout, puis double-clic
+   sur INSTALLER.bat. (Padawan-Setup.exe fait la même chose, mais certains
+   antivirus le bloquent car il n'est pas signé.)
+2. Si Windows affiche « Windows a protégé votre ordinateur » (SmartScreen) :
+   « Informations complémentaires » puis « Exécuter quand même ».
+3. Répondez aux questions (Entrée = défaut) :
+   - Dossier d'installation (défaut %LOCALAPPDATA%\Padawan)
+   - Installer Ollama + le modèle d'IA ? (optionnel)
+4. L'installeur :
+   - installe Python 3 s'il manque ;
+   - installe les modules pip (dont watchdog, pymysql pour Facteur) et ffmpeg ;
+   - crée les raccourcis Bureau + Menu Démarrer ;
+   - enregistre Padawan et Facteur au démarrage Windows (HKCU Run) ;
+   - crée le dossier de données Facteur (sans clé ni URL de pont : Facteur
+     génère sa propre clé DPAPI au premier lancement) ;
+   - lance Padawan à la fin.
+
+SANS SERVEUR / SANS INTERNET
+----------------------------
+Aucun serveur local (XAMPP, MySQL, C:\web) n'est requis. Les données vont dans
+Documents\Padawan\<programme> (et %LOCALAPPDATA%\Padawan pour les clés).
+Sans Internet, Messager affiche « Serveur injoignable » et réessaie seul ;
+la Boîte SQL de Facteur reste désactivée tant qu'elle n'est pas configurée.
+
+Facteur
+-------
+Pastille dans le menu du tray : VERT = actif, JAUNE = passif (arrêt + pas au démarrage).
+Voix : onglet Distant de Facteur (français Canada en priorité si installé).
+Pages web du pont : voir web_sources\ (fichiers .txt) — déployer HORS de FTP_HOME.
+
+DÉSINSTALLER
+------------
+Paramètres > Applications > Projet Padawan, ou Desinstaller.bat dans le dossier.
+Les données (Documents\Padawan, Grimoire, etc.) sont gardées sauf si vous demandez le contraire.

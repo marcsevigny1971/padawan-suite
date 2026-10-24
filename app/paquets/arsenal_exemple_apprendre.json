@@ -1,0 +1,182 @@
+{
+ "app": "Arsenal",
+ "format": 1,
+ "paquet": {
+  "nom": "Exemple : apprendre et créer",
+  "auteur": "Projet Padawan",
+  "version": 1,
+  "description": "Liens d'apprentissage gratuits et quelques commandes Windows sans risque. Rien n'est lancé à l'import ; les commandes demandent confirmation."
+ },
+ "categories": [
+  {
+   "id": "paquet_exemples",
+   "name": "Paquet d'exemple",
+   "icon": "🎁"
+  }
+ ],
+ "entries": [
+  {
+   "name": "Khan Academy (FR)",
+   "type": "url",
+   "target": "https://fr.khanacademy.org/",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Apprendre",
+   "desc": "Cours gratuits : maths, sciences, programmation.",
+   "icon": "🎓",
+   "icon_file": "",
+   "tags": [
+    "apprendre"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": false,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "Python - tutoriel officiel (FR)",
+   "type": "url",
+   "target": "https://docs.python.org/fr/3/tutorial/",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Apprendre",
+   "desc": "Le tutoriel Python officiel en français.",
+   "icon": "🐍",
+   "icon_file": "",
+   "tags": [
+    "python",
+    "apprendre"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": false,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "MDN - Apprendre le Web",
+   "type": "url",
+   "target": "https://developer.mozilla.org/fr/docs/Learn",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Apprendre",
+   "desc": "HTML, CSS et JavaScript expliqués pas à pas.",
+   "icon": "🌐",
+   "icon_file": "",
+   "tags": [
+    "web",
+    "apprendre"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": false,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "Photopea (éditeur photo en ligne)",
+   "type": "url",
+   "target": "https://www.photopea.com/",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Créer",
+   "desc": "Éditeur d'images gratuit dans le navigateur.",
+   "icon": "🖼",
+   "icon_file": "",
+   "tags": [
+    "image"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": false,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "Excalidraw (schémas)",
+   "type": "url",
+   "target": "https://excalidraw.com/",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Créer",
+   "desc": "Tableau blanc pour dessiner des schémas rapides.",
+   "icon": "✏",
+   "icon_file": "",
+   "tags": [
+    "schema"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": false,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "Infos système (msinfo32)",
+   "type": "file",
+   "target": "msinfo32.exe",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Windows",
+   "desc": "Le résumé complet du PC (lecture seule).",
+   "icon": "💻",
+   "icon_file": "",
+   "tags": [
+    "systeme"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": true,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  },
+  {
+   "name": "Espace disque (dossiers lourds)",
+   "type": "ps",
+   "target": "Get-PSDrive -PSProvider FileSystem | Format-Table Name,@{n='Libre (Go)';e={[math]::Round($_.Free/1GB,1)}},@{n='Utilisé (Go)';e={[math]::Round($_.Used/1GB,1)}}",
+   "args": "",
+   "cwd": "",
+   "category": "paquet_exemples",
+   "group": "Windows",
+   "desc": "Affiche l'espace libre de chaque disque (lecture seule).",
+   "icon": "💽",
+   "icon_file": "",
+   "tags": [
+    "disque"
+   ],
+   "admin": false,
+   "console": "keep",
+   "confirm": true,
+   "danger": false,
+   "fav": false,
+   "hidden": false,
+   "ask": [],
+   "requires": ""
+  }
+ ]
+}
