@@ -258,3 +258,12 @@ en priorite), bouton Tester. Voir facteur_readme.txt.
 
 NOUVEAU (21 oct. 2026) : Chantier (chantier1.py) - serveurs web/SQL/FTP/MQTT a la demande, voir LISEZMOI-CHANTIER.txt.
 Retro (retro1.py) - lanceur C64/DOS/Win98, voir LISEZMOI-RETRO.txt. Les deux sont dans le menu de l'icone Padawan.
+
+RESSOURCES / GITHUB
+-------------------
+La Padawan Suite a sa page publique sur GitHub :
+  Page du projet      : https://github.com/marcsevigny1971/padawan-suite
+  Mises a jour        : https://github.com/marcsevigny1971/padawan-suite/releases/latest
+  Idees, suggestions  : https://github.com/marcsevigny1971/padawan-suite/issues
+  Presentation        : https://marcsevigny1971.github.io/padawan-suite/
+Raccourcis : icone Padawan > "Ressources / GitHub", Premiers pas (en bas), Arsenal > Web pratique.

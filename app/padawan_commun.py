@@ -98,6 +98,28 @@ def pythonw():
     return exe
 
 
+# Ressources en ligne de la suite (page publique GitHub)
+GITHUB_URL = "https://github.com/marcsevigny1971/padawan-suite"
+GITHUB_RELEASES = GITHUB_URL + "/releases/latest"
+GITHUB_ISSUES = GITHUB_URL + "/issues"
+PRESENTATION_URL = "https://marcsevigny1971.github.io/padawan-suite/"
+RESSOURCES = [  # (libelle, url, description)
+    ("\U0001f3e0 Page du projet", GITHUB_URL, "Le code, le guide et les nouveaut\u00e9s."),
+    ("\u2b06 Mises \u00e0 jour", GITHUB_RELEASES, "La derni\u00e8re version de l'installateur."),
+    ("\U0001f4a1 Id\u00e9es et suggestions", GITHUB_ISSUES, "Une id\u00e9e, une question, un petit souci ?"),
+    ("\u2728 Pr\u00e9sentation compl\u00e8te", PRESENTATION_URL, "Tous les outils, en d\u00e9tail."),
+]
+
+
+def open_url(url):
+    """Ouvre un lien dans le navigateur par defaut. Retourne True si ok."""
+    try:
+        import webbrowser
+        return bool(webbrowser.open(url, new=2))
+    except Exception:
+        return open_path(url)
+
+
 PROGRAMMES = {  # cle : (fichier, nom)
     "padawan": ("padawan39.py", "Padawan IA"),
     "tableau": ("tableau_bord.py", "Tableau de bord"),

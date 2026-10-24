@@ -51,3 +51,12 @@ DÉSINSTALLER
 ------------
 Paramètres > Applications > Projet Padawan, ou Desinstaller.bat dans le dossier.
 Les données (Documents\Padawan, Grimoire, etc.) sont gardées sauf si vous demandez le contraire.
+
+RESSOURCES ET MISES À JOUR
+--------------------------
+Page du projet (GitHub) : https://github.com/marcsevigny1971/padawan-suite
+Dernière version        : https://github.com/marcsevigny1971/padawan-suite/releases/latest
+Idées et suggestions    : https://github.com/marcsevigny1971/padawan-suite/issues
+Présentation complète   : https://marcsevigny1971.github.io/padawan-suite/
+Pour mettre à jour : réinstallez la nouvelle version par-dessus, vos données restent là.
+Ces liens sont aussi dans l'icône Padawan > « Ressources / GitHub ».

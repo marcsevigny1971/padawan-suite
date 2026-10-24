@@ -1023,6 +1023,24 @@ def setup_tray(
         on_recherche = _suite_app("recherche_padawan.py", "Recherche Padawan")
         on_coffre = _suite_app("coffre_padawan.py", "Coffre Padawan")
 
+        def _open_web(url):
+            def _h(icon=None, item=None):
+                def _go():
+                    try:
+                        import webbrowser
+                        webbrowser.open(url, new=2)
+                    except Exception as e:
+                        log(f"lien web: {e}")
+                threading.Thread(target=_go, daemon=True).start()
+            return _h
+        _gh = "https://github.com/marcsevigny1971/padawan-suite"
+        ressources_menu = pystray.Menu(
+            TrayMenuItem("\U0001f3e0 Page du projet (GitHub)", _open_web(_gh)),
+            TrayMenuItem("\u2b06 Mises \u00e0 jour (derni\u00e8re version)", _open_web(_gh + "/releases/latest")),
+            TrayMenuItem("\U0001f4a1 Id\u00e9es et suggestions", _open_web(_gh + "/issues")),
+            TrayMenuItem("\u2728 Pr\u00e9sentation compl\u00e8te", _open_web("https://marcsevigny1971.github.io/padawan-suite/")),
+        )
+
         _install_pastille_patch(log)
         _fac_item = TrayMenuItem(
             lambda item: "Facteur : actif (clic = passif)" if is_facteur_running()
@@ -1050,6 +1068,8 @@ def setup_tray(
             TrayMenuItem("R\u00e9tro (C64 / DOS / Win98)\u2026", on_retro),
             TrayMenuItem("Facteur…", on_facteur),
             _fac_item,
+            pystray.Menu.SEPARATOR,
+            TrayMenuItem("\U0001f4da Ressources / GitHub", ressources_menu),
             pystray.Menu.SEPARATOR,
             TrayMenuItem("Démarrer avec Windows", on_toggle_startup, checked=startup_checked),
             pystray.Menu.SEPARATOR,

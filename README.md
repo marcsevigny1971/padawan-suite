@@ -53,6 +53,7 @@ Ces liens sont aussi dans la suite : clic droit sur l'icône Padawan > **📚 Re
 
 - `app/` : les programmes de la suite (Python + Tk), leurs icônes et leurs guides `LISEZMOI-*.txt`.
 - `installer_padawan.ps1`, `INSTALLER.bat` : l'installation de secours (version .zip).
+- `installer/padawan.iss` : le script Inno Setup qui fabrique `Padawan-Setup.exe`.
 - `docs/` : la page de présentation, publiée avec GitHub Pages.
 
 Les réglages personnels, les clés, les journaux et les pages de serveur ne sont pas dans ce dépôt. Chaque installation crée ses propres réglages sur son PC.

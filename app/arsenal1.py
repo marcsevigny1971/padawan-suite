@@ -56,7 +56,7 @@ except ImportError:  # pragma: no cover
 APP_NAME = "Arsenal"
 APP_FILE_VER = 1
 APP_TITLE = "Arsenal"          # titre de fenetre sans numero (FindWindow)
-SEED_VERSION = 1               # contenu initial : les nouvelles entrees futures s'ajoutent sans ecraser
+SEED_VERSION = 2               # contenu initial : les nouvelles entrees futures s'ajoutent sans ecraser
 IS_WIN = sys.platform.startswith("win")
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -1451,6 +1451,11 @@ def seed_content() -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
 
     def W(gr, sid, name, url, desc, icon="🌐"):
         add(c, sid, name, "url", url, desc, icon, gr, tags=["web"])
+    gr = "Padawan Suite (ressources)"
+    W(gr, "padawan_github", "Padawan Suite sur GitHub", "https://github.com/marcsevigny1971/padawan-suite", "La page du projet : le code, le guide et les nouveautés.", "🏠")
+    W(gr, "padawan_releases", "Padawan — mises à jour", "https://github.com/marcsevigny1971/padawan-suite/releases/latest", "La dernière version de l'installateur (réinstaller par-dessus garde tes données).", "⬆")
+    W(gr, "padawan_issues", "Padawan — idées et suggestions", "https://github.com/marcsevigny1971/padawan-suite/issues", "Une idée, une question, un petit souci ? Écris-le ici.", "💡")
+    W(gr, "padawan_presentation", "Padawan — présentation complète", "https://marcsevigny1971.github.io/padawan-suite/", "Tous les outils de la suite, en détail.", "✨")
     gr = "Sécurité & vérification"
     W(gr, "virustotal", "VirusTotal", "https://www.virustotal.com/gui/home/upload", "Analyse un fichier, un lien ou une empreinte avec 70 antivirus.", "🦠")
     W(gr, "hibp", "Have I Been Pwned", "https://haveibeenpwned.com/", "Ton courriel a-t-il fuité dans un piratage ?", "🔓")

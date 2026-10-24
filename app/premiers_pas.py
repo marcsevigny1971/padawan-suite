@@ -195,6 +195,18 @@ def run_gui():
         for lab, key in boutons:
             btn(row, lab, lambda k=key: go(k), accent=True).pack(side="left", padx=4)
 
+    tk.Label(body, text="\U0001f4da Ressources et mises \u00e0 jour", bg=C["BG"], fg=C["ACC2"],
+             font=("Segoe UI", 14, "bold")).pack(anchor="w", padx=18, pady=(16, 4))
+    rcard = tk.Frame(body, bg=C["CARD"], padx=14, pady=10)
+    rcard.pack(fill="x", padx=18, pady=6)
+    tk.Label(rcard, text="La Padawan Suite a sa page publique sur GitHub : les nouvelles versions, le guide complet "
+             "et une bo\u00eete \u00e0 suggestions. Ces liens sont aussi dans l'ic\u00f4ne Padawan > "
+             "\u00ab Ressources / GitHub \u00bb.", bg=C["CARD"], fg=C["TEXT"], font=("Segoe UI", 10),
+             wraplength=840, justify="left").pack(anchor="w")
+    rrow = tk.Frame(rcard, bg=C["CARD"]); rrow.pack(anchor="e", pady=(6, 0))
+    for lab, url, _d in getattr(pc, "RESSOURCES", []):
+        btn(rrow, lab, lambda u=url: pc.open_url(u), accent=lab.startswith("\U0001f3e0")).pack(side="left", padx=4)
+
     tk.Label(body, text="Astuce : le fichier LISEZMOI-PREMIERS-PAS.txt contient ce guide en texte, \u00e0 imprimer ou \u00e0 partager.",
              bg=C["BG"], fg=C["DIM"], font=("Segoe UI", 9, "italic")).pack(anchor="w", padx=18, pady=(10, 16))
 
