@@ -50,6 +50,20 @@ New-AppShortcut "Tableau de bord Padawan" "tableau_bord.py" "padawan_tray.ico"
 New-AppShortcut "Premiers pas Padawan" "premiers_pas.py" "padawan_tray.ico"
 New-AppShortcut "Coffre Padawan" "coffre_padawan.py" "padawan_tray.ico"
 New-AppShortcut "Recherche Padawan" "recherche_padawan.py" "padawan_tray.ico"
+New-AppShortcut "Journal de bord" "journal_bord.py" "journal_bord.ico"
+# Journal : Ctrl+Alt+J (Bureau) ; « Coller dans le journal » Ctrl+Alt+K (menu Demarrer > Padawan, sans encombrer le Bureau)
+$jl = Join-Path $desktop "Journal de bord.lnk"
+if (Test-Path $jl) { $s = $ws.CreateShortcut($jl); $s.Hotkey = "CTRL+ALT+J"; $s.Save(); Write-Host "  Ctrl+Alt+J -> Journal de bord" }
+$jp = Join-Path $Root "journal_bord.py"
+if (Test-Path $jp) {
+  $smJ = Join-Path ([Environment]::GetFolderPath("Programs")) "Padawan"
+  New-Item -ItemType Directory -Force $smJ | Out-Null
+  $s = $ws.CreateShortcut((Join-Path $smJ "Coller dans le journal.lnk"))
+  $s.TargetPath = $PythonW; $s.Arguments = '"' + $jp + '" --coller'; $s.WorkingDirectory = $Root
+  $s.Description = "Colle le presse-papiers dans l'entree du jour du Journal de bord"
+  $ji = Join-Path $Root "journal_bord.ico"; if (Test-Path $ji) { $s.IconLocation = $ji }
+  $s.Hotkey = "CTRL+ALT+K"; $s.Save(); Write-Host "  Ctrl+Alt+K -> Coller dans le journal"
+}
 # Ctrl+Alt+R : raccourci clavier Windows sur le raccourci du Bureau seulement (pas de doublon)
 $rl = Join-Path $desktop "Recherche Padawan.lnk"
 if (Test-Path $rl) { $s = $ws.CreateShortcut($rl); $s.Hotkey = "CTRL+ALT+R"; $s.Save(); Write-Host "  Ctrl+Alt+R -> Recherche Padawan" }

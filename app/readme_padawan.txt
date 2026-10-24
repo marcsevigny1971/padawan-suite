@@ -15,6 +15,7 @@ avec UNE seule icône dans la barre système (le tray) : Padawan.
   Archiveur        — archive vidéos / pages web dans FTP_HOME\ARCHIVEUR
   Arsenal          — tiroir à outils (commandes, scripts, Defender…)
   Grimoire         — carnet de recherche par sujets (notes, liens, médias)
+  Journal de bord  — journal privé du capitaine (voir LISEZMOI-JOURNAL.txt)
   Facteur          — surveille des dossiers + commandes à distance / Boîte SQL
 
 Tout le code vit sous :
@@ -24,6 +25,7 @@ Les données (donc tes backups) :
   C:\web\FTP_HOME\ARCHIVEUR\
   C:\web\FTP_HOME\GRIMOIRE\
   C:\web\FTP_HOME\FACTEUR\
+  C:\web_private\journal\   (Journal de bord : hors de FTP_HOME, jamais publié sur le web)
   (+ arsenal.json à côté des programmes)
 
 

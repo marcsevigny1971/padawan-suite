@@ -2,7 +2,7 @@
 """
 Coffre Padawan 1.0 - Projet Padawan
 Sauvegarde globale de TES donnees de la suite dans un seul .zip date, et restauration (meme PC ou autre PC).
-Contenu : Grimoire (base + medias), Archiveur (index, fiches, images, textes ; videos/audio en option car lourds),
+Contenu : Grimoire (base + medias), Journal de bord (entrees, pieces, liens permanents, scellees chiffrees), Archiveur (index, fiches, images, textes ; videos/audio en option car lourds),
 Arsenal, reglages Padawan (config, memoire, taches), Facteur (regles et dossiers, SANS la partie a distance ni
 les boites SQL), Retro (bibliotheque, reglages, mes_programmes), reglages Premiers pas / Recherche.
 Jamais : cles, mots de passe, .dpapi, config Messager, atelier\\dos\\PERSO, journaux, sauvegardes internes.
@@ -48,6 +48,13 @@ def retro_priv():
     return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Padawan", "Retro")
 
 
+def journal():
+    """Journal de bord (meme logique que journal_bord.py)."""
+    if hasattr(pc, "journal_dir"):
+        return pc.journal_dir()
+    return os.path.join(os.path.expanduser("~"), "Documents", "Padawan", "Journal")
+
+
 def sources(videos=False):
     """[(logique, chemin, type)] type: file | tree | db | facteur | archiveur"""
     h = here()
@@ -69,6 +76,11 @@ def sources(videos=False):
         ("retro/sauvegardes", os.path.join(retro(), "sauvegardes"), "tree"),
         ("retro_atelier/mes_programmes", os.path.join(retro_priv(), "atelier", "mes_programmes"), "tree"),
         ("retro_atelier/sauvegardes_parties", os.path.join(retro_priv(), "sauvegardes_parties"), "tree"),
+        ("journal/journal.db", os.path.join(journal(), "journal.db"), "db"),
+        ("journal/medias", os.path.join(journal(), "medias"), "tree"),
+        ("journal/liens", os.path.join(journal(), "liens"), "tree"),
+        ("journal/scelles", os.path.join(journal(), "scelles"), "tree"),
+        ("reglages/journal.json", os.path.join(pc.settings_dir(), "journal.json"), "file"),
         ("reglages/premiers_pas.json", os.path.join(pc.settings_dir(), "premiers_pas.json"), "file"),
         ("reglages/recherche.json", os.path.join(pc.settings_dir(), "recherche.json"), "file"),
     ]
@@ -135,7 +147,7 @@ def export(dest_dir, videos=False, progress=None):
         with zipfile.ZipFile(out + ".part", "w", zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as z:
             for i, (lg, path, mode) in enumerate(items):
                 if mode == "db":   # copie coherente meme si le Grimoire est ouvert
-                    snap = os.path.join(tmpd, "grimoire.db")
+                    snap = os.path.join(tmpd, os.path.basename(path))
                     src = sqlite3.connect("file:" + path.replace("\\", "/") + "?mode=ro", uri=True)
                     dst = sqlite3.connect(snap)
                     src.backup(dst); dst.close(); src.close()
@@ -215,7 +227,7 @@ def restore(zpath, progress=None):
                 else:
                     new.pop("archive_root", None)
                 data = json.dumps(new, ensure_ascii=False, indent=2).encode("utf-8")
-            extra = [dst + "-wal", dst + "-shm"] if name == "grimoire/grimoire.db" else []
+            extra = [dst + "-wal", dst + "-shm"] if name in ("grimoire/grimoire.db", "journal/journal.db") else []
             for p in [dst] + extra:
                 if os.path.isfile(p):
                     bk = os.path.join(safety, *(name.split("/")[:-1] + [os.path.basename(p)]))
@@ -266,7 +278,7 @@ def run_gui():
 
     card = tk.Frame(root, bg=C["CARD"], padx=14, pady=12); card.pack(fill="x", padx=18, pady=12)
     tk.Label(card, text="Exporter", bg=C["CARD"], fg=C["ACC2"], font=("Segoe UI", 13, "bold")).pack(anchor="w")
-    tk.Label(card, text="Grimoire (base + m\u00e9dias) \u00b7 Archiveur (fiches, images, textes) \u00b7 Arsenal \u00b7 r\u00e9glages Padawan, "
+    tk.Label(card, text="Grimoire (base + m\u00e9dias) \u00b7 Journal de bord \u00b7 Archiveur (fiches, images, textes) \u00b7 Arsenal \u00b7 r\u00e9glages Padawan, "
              "Facteur (r\u00e8gles), R\u00e9tro. Jamais de mot de passe ni de cl\u00e9.", bg=C["CARD"], fg=C["TEXT"],
              wraplength=680, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 6))
     row = tk.Frame(card, bg=C["CARD"]); row.pack(fill="x")
@@ -293,7 +305,7 @@ def run_gui():
     card2 = tk.Frame(root, bg=C["CARD"], padx=14, pady=12); card2.pack(fill="x", padx=18)
     tk.Label(card2, text="Restaurer", bg=C["CARD"], fg=C["ACC2"], font=("Segoe UI", 13, "bold")).pack(anchor="w")
     tk.Label(card2, text="Remet les fichiers du coffre \u00e0 leur place. Rien n'est effac\u00e9 : ce qui est remplac\u00e9 est "
-             "d'abord copi\u00e9 en s\u00e9curit\u00e9. Ferme Grimoire et Arsenal avant.", bg=C["CARD"], fg=C["TEXT"],
+             "d'abord copi\u00e9 en s\u00e9curit\u00e9. Ferme Grimoire, Journal et Arsenal avant.", bg=C["CARD"], fg=C["TEXT"],
              wraplength=680, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 6))
     mk(card2, "Restaurer un coffre\u2026", lambda: do_restore(), True).pack(anchor="e")
 

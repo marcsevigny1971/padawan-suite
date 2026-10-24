@@ -23,7 +23,7 @@ def default_settings():
     home = os.path.expanduser("~")
     folders = [os.path.join(home, "Documents"), os.path.join(home, "Desktop")]
     return {"dossiers": [f for f in folders if os.path.isdir(f)], "sources": {"grimoire": True, "archiveur": True,
-            "arsenal": True, "fichiers": True}, "ollama_url": "http://127.0.0.1:11434", "modele": ""}
+            "arsenal": True, "fichiers": True, "journal": True}, "ollama_url": "http://127.0.0.1:11434", "modele": ""}
 
 
 def terms_of(q):
@@ -134,6 +134,34 @@ def search_arsenal(q):
     return out[:MAX_PER_SOURCE]
 
 
+def search_journal(q):
+    """Journal de bord (lecture seule) : jamais les entrees scellees ni supprimees."""
+    terms = terms_of(q)
+    db = os.path.join(pc.journal_dir() if hasattr(pc, "journal_dir") else "", "journal.db")
+    out = []
+    if not terms or not os.path.isfile(db):
+        return out
+    con = sqlite3.connect("file:" + db.replace("\\", "/") + "?mode=ro", uri=True, timeout=3)
+    try:
+        emb = {}
+        for eid, name, title, url, tr in con.execute("SELECT entry_id, name, title, url, transcript FROM embeds"):
+            emb[eid] = emb.get(eid, "") + " " + " ".join(str(x or "") for x in (name, title, url, tr))
+        for (eid, created, title, body, tags, lieu, mood) in con.execute(
+                "SELECT id, created, title, body, tags, lieu, mood FROM entries WHERE sealed=0 AND deleted=0"):
+            clean = re.sub("\u27e6e:[0-9a-f]+\u27e7", " ", str(body or ""))
+            clean = re.sub(r"\\(.)", r"\1", re.sub(r"\*\*|(?<!\\)_|\]\([^)]*\)|\[", "", clean))
+            hay = pc.norm(" ".join(str(x or "") for x in (title, clean, tags, lieu, emb.get(eid, ""))))
+            if match_all(terms, hay):
+                out.append({"source": "Journal", "icon": "\U0001f4d3", "title": title or clean.strip()[:60] or "(entr\u00e9e)",
+                            "detail": f"{str(created)[:10]} \u00b7 {mood or ''} {lieu or ''}".strip(),
+                            "snippet": snippet(clean, terms), "score": score(terms, title, hay), "url": "", "path": "",
+                            "id": eid})
+    finally:
+        con.close()
+    out.sort(key=lambda r: -r["score"])
+    return out[:MAX_PER_SOURCE]
+
+
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", "$recycle.bin", "appdata", "_sauvegardes", "perso"}
 
 
@@ -166,7 +194,7 @@ def search_all(q, st=None, log=None):
     src = st.get("sources", {})
     res, errs = [], []
     jobs = [("grimoire", lambda: search_grimoire(q)), ("archiveur", lambda: search_archiveur(q)),
-            ("arsenal", lambda: search_arsenal(q)), ("fichiers", lambda: search_files(q, st.get("dossiers", [])))]
+            ("arsenal", lambda: search_arsenal(q)), ("journal", lambda: search_journal(q)), ("fichiers", lambda: search_files(q, st.get("dossiers", [])))]
     for name, fn in jobs:
         if not src.get(name, True):
             continue
@@ -232,6 +260,8 @@ def open_result(r, parent=None):
             pc.open_path(r["url"]); return
     if s == "Arsenal":
         pc.launch("arsenal"); return
+    if s == "Journal":
+        pc.launch("journal", "--ouvrir", r.get("id", "")); return
     if s == "Fichiers" and r.get("path"):
         pc.open_path(r["path"]); return
     if r.get("url"):
@@ -279,7 +309,7 @@ def run_gui(initial=""):
     srcbar = tk.Frame(root, bg=C["BG"]); srcbar.pack(fill="x", padx=10, pady=(6, 0))
     svars = {}
     for key, lab in (("grimoire", "\U0001f4d6 Grimoire"), ("archiveur", "\U0001f3ac Archiveur"),
-                     ("arsenal", "\U0001f9f0 Arsenal"), ("fichiers", "\U0001f4c4 Fichiers")):
+                     ("arsenal", "\U0001f9f0 Arsenal"), ("journal", "\U0001f4d3 Journal"), ("fichiers", "\U0001f4c4 Fichiers")):
         v = tk.BooleanVar(value=st["sources"].get(key, True)); svars[key] = v
         tk.Checkbutton(srcbar, text=lab, variable=v, bg=C["BG"], fg=C["TEXT"], selectcolor=C["ENTRY"],
                        activebackground=C["BG"], activeforeground=C["TEXT"], font=("Segoe UI", 10)).pack(side="left", padx=4)
@@ -429,7 +459,7 @@ def run_gui(initial=""):
 def main():
     a = sys.argv[1:]
     if "--sources" in a:
-        print("Grimoire :", pc.grimoire_db()); print("Archiveur :", pc.archiveur_root()); print("Arsenal :", pc.arsenal_json())
+        print("Grimoire :", pc.grimoire_db()); print("Archiveur :", pc.archiveur_root()); print("Arsenal :", pc.arsenal_json()); print("Journal :", pc.journal_dir())
         print("Dossiers :", pc.load_settings(SETTINGS, default_settings()).get("dossiers"))
         return 0
     if "--q" in a:

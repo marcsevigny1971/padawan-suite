@@ -1,0 +1,73 @@
+﻿JOURNAL DE BORD — Padawan Suite
+================================
+« Journal de bord du capitaine, date stellaire… »
+Ton journal personnel : privé par défaut, vivant, et facile à partager quand TU le décides.
+
+OUVRIR
+  - Icône Padawan (près de l'horloge) > « Journal de bord »
+  - Ctrl+Alt+J n'importe où : une nouvelle entrée s'ouvre
+  - Ctrl+Alt+K n'importe où : ce que tu viens de copier va dans l'entrée du jour,
+    sans ouvrir de grande fenêtre (aussi : icône Padawan > « Coller dans le journal »)
+  - Le journal s'ouvre en grand (fenêtre agrandie). F11 : vrai plein écran,
+    Échap (ou F11) pour revenir. Il se souvient de ta dernière façon de l'ouvrir.
+
+ÉCRIRE
+  - Écris, c'est tout : chaque mot s'enregistre tout seul.
+  - « Consigner » (Ctrl+S) pose le sceau de cire : l'entrée est enregistrée.
+  - Titre, date et heure (modifiables), lieu, étiquettes, humeur et météo en un clic.
+  - B / I / T / • : gras, italique, sous-titre, puce.
+
+COLLER N'IMPORTE QUOI (Ctrl+V)
+  - du texte, ou du texte enrichi copié d'une page web ou de Word (gras, liens, images) ;
+  - une adresse web : elle devient une carte « lien » ;
+  - une capture d'écran (Win+Maj+S) ou une image copiée ;
+  - des fichiers copiés dans l'Explorateur (ou glisse-les dans l'entrée).
+
+LIENS PERMANENTS
+  Sur une carte lien : « Rendre ce lien permanent ». Le journal garde une copie de la page
+  sur ton PC (page complète, version lecture, capture, PDF ; vidéo YouTube avec yt-dlp).
+  Le lien d'origine ET la copie restent dans l'entrée : même si la page disparaît, tu l'as.
+
+MÉMOS VOCAUX
+  « Vocal » : parle, puis « Terminer et ajouter ». Le mémo se réécoute dans l'entrée.
+  Si la transcription locale (faster-whisper) est installée, un bouton « Transcrire » apparaît.
+
+RETROUVER
+  - Chronologie, Calendrier (les jours avec une entrée sont colorés), « Ce jour-là »
+    (tes souvenirs des autres années à la même date).
+  - La barre de recherche fouille tout : textes, étiquettes, lieux, liens, copies de pages.
+  - Recherche Padawan (Ctrl+Alt+R) trouve aussi tes entrées.
+
+PARTAGER (seulement ce que tu choisis)
+  - Partager > Page web : une page .html autonome (images et vocaux inclus), à envoyer à qui tu veux.
+  - PDF, paquet .zip complet, texte à coller, Grimoire, Messager.
+  - UN PASSAGE : sélectionne-le à la souris. Une petite barre apparaît :
+    « Copier ce passage » (texte + images, à coller dans un courriel ou Word),
+    « Texte seul », « Mini-page ». Ctrl+C fait la même chose que « Copier ce passage ».
+  Un partage ne contient JAMAIS les autres entrées ni les entrées scellées.
+
+IA LOCALE (facultatif, Ollama)
+  Menu IA : « Résumé de ma semaine » et « Pose une question à ton journal ».
+  Tout se passe sur ton PC (modèle de Padawan, dolphin3:8b par défaut).
+
+INTIMITÉ
+  - Tes entrées restent sur ce PC. Sur le PC de Marc : C:\web_private\journal (hors du web).
+    Ailleurs : Documents\Padawan\Journal.
+  - Mode avancé (case en bas à droite) :
+      * Verrou : un code demandé à l'ouverture (une porte contre les curieux).
+      * Sceller une entrée : texte et pièces chiffrés avec TA phrase secrète. Elle n'est
+        gardée nulle part : note-la dans un endroit sûr. Une entrée scellée n'apparaît ni
+        dans la recherche ni dans les partages. « Desceller » la remet en clair.
+      * Liens permanents automatiques ; copie aussi sur la Wayback Machine (internet).
+  - Coffre Padawan sauvegarde et restaure tout le journal (entrées scellées comprises,
+    toujours chiffrées).
+
+ANIMATIONS
+  Saut en vitesse de distorsion à l'ouverture, sceau de cire, onde du micro, rayon de copie
+  des liens, capsule qui se verrouille, confettis d'étoiles aux grandes étapes…
+  Toutes courtes, passables d'un clic, et désactivables : case « Animations » en bas.
+
+RACCOURCIS
+  Ctrl+N nouvelle entrée · Ctrl+S consigner · Ctrl+F chercher · Ctrl+B gras · Ctrl+I italique
+  Ctrl+V coller n'importe quoi · Ctrl+C copier le passage choisi · F1 ce guide
+  F11 plein écran · Échap quitter le plein écran

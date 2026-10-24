@@ -76,6 +76,20 @@ def facteur_dir():
     return data_dir("Facteur", "FACTEUR")
 
 
+def journal_dir():
+    """Journal de bord : JOURNAL_DATA / PADAWAN_DATA\\Journal, sinon C:\\web_private\\journal (PC de Marc,
+    hors de FTP_HOME qui est publie sur le web), sinon Documents\\Padawan\\Journal."""
+    env = os.environ.get("JOURNAL_DATA", "").strip()
+    if env:
+        return env
+    root = os.environ.get("PADAWAN_DATA", "").strip()
+    if root:
+        return os.path.join(root, "Journal")
+    if IS_WIN and os.path.isdir(r"C:\web"):
+        return r"C:\web_private\journal"
+    return os.path.join(os.path.expanduser("~"), "Documents", "Padawan", "Journal")
+
+
 def retro_dir():
     p = r"C:\web_private\retro"
     if os.path.isdir(p):
@@ -125,6 +139,7 @@ PROGRAMMES = {  # cle : (fichier, nom)
     "tableau": ("tableau_bord.py", "Tableau de bord"),
     "archiveur": ("archiveur5.py", "Archiveur"),
     "grimoire": ("grimoire1.py", "Grimoire"),
+    "journal": ("journal_bord.py", "Journal de bord"),
     "arsenal": ("arsenal1.py", "Arsenal"),
     "facteur": ("facteur1.py", "Facteur"),
     "gestionnaire": ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers"),

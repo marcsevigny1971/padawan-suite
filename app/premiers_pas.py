@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Premiers pas 1.0 - Projet Padawan
-Guide « Premiers pas en 5 minutes » : la suite en 6 etapes et 6 scenarios concrets, chacun avec
+Guide « Premiers pas en 5 minutes » : la suite en 7 etapes et 6 scenarios concrets, chacun avec
 un bouton qui ouvre le bon outil. S'affiche au premier lancement (case « Ne plus afficher au demarrage »),
 toujours accessible depuis l'icone Padawan > Premiers pas.
 Options : --auto (ne s'ouvre que si la case n'est pas cochee), --selftest
@@ -24,7 +24,10 @@ ETAPES = [
      "Grimoire range tes notes, liens et m\u00e9dias par sujets.", "archiveur"),
     ("5", "Tes outils en un clic", "Arsenal : des centaines d'outils Windows et tes favoris, "
      "class\u00e9s, cherchables, lan\u00e7ables en un clic.", "arsenal"),
-    ("6", "Dormir tranquille", "Coffre Padawan met toutes tes donn\u00e9es dans un seul .zip dat\u00e9, "
+    ("6", "Ton journal de bord", "Le journal du capitaine : tes pens\u00e9es, m\u00e9mos vocaux, photos et liens "
+     "rendus permanents. Priv\u00e9 par d\u00e9faut, facile \u00e0 partager quand tu veux. Ctrl+Alt+J pour \u00e9crire, "
+     "Ctrl+Alt+K pour y coller ce que tu viens de copier.", "journal"),
+    ("7", "Dormir tranquille", "Coffre Padawan met toutes tes donn\u00e9es dans un seul .zip dat\u00e9, "
      "et sait les remettre en place sur un autre PC.", "coffre"),
 ]
 
@@ -55,6 +58,14 @@ SCENARIOS = [
      ["Ouvre Padawan IA (Ollama local) : tes questions restent sur ton PC.",
       "Dans Recherche Padawan, le bouton \u00ab Demander \u00e0 Padawan \u00bb r\u00e9sume ce que tu as trouv\u00e9 dans tes donn\u00e9es."],
      [("Ouvrir Padawan IA", "padawan"), ("Recherche Padawan", "recherche")]),
+    ("\U0001f4d3 Tenir ton journal de bord (et partager un passage)",
+     ["Ctrl+Alt+J (ou ic\u00f4ne Padawan > Journal de bord) : une nouvelle entr\u00e9e s'ouvre, avec la date stellaire.",
+      "Colle n'importe quoi (Ctrl+V) : texte, capture d'\u00e9cran, image, fichier ou lien. Un lien devient une carte : "
+      "\u00ab Rendre ce lien permanent \u00bb en garde une copie sur ton PC.",
+      "\U0001f399 Vocal pour un m\u00e9mo parl\u00e9 ; humeur, m\u00e9t\u00e9o, lieu et \u00e9tiquettes en un clic. Tout s'enregistre tout seul.",
+      "Pour partager : s\u00e9lectionne un passage > \u00ab Copier ce passage \u00bb, ou Partager > Page web / PDF. "
+      "Seul ce que tu choisis part, jamais le reste du journal."],
+     [("Ouvrir le Journal", "journal")]),
     ("\U0001f5c4 Changer de PC sans rien perdre",
      ["Ouvre Coffre Padawan > \u00ab Exporter \u00bb : un seul .zip dat\u00e9 (Grimoire, archives, Arsenal, r\u00e9glages).",
       "Sur l'autre PC : installe Padawan, ouvre Coffre > \u00ab Restaurer \u00bb et choisis le .zip.",
@@ -90,7 +101,7 @@ def run_splash(seconds=4.5):
     sub = cv.create_text(cx, 228, text="", fill=C["DIM"], font=("Segoe UI", 10))
     cv.create_text(cx, 280, text="clic pour passer", fill="#4a5b7a", font=("Segoe UI", 8))
     msgs = ["Padawan \u00b7 ton assistant IA local", "Grimoire \u00b7 tes notes et recherches", "Archiveur \u00b7 tes vid\u00e9os et pages web",
-            "Facteur \u00b7 range tes fichiers tout seul", "Arsenal \u00b7 ta bo\u00eete \u00e0 outils", "Recherche \u00b7 Ctrl+Alt+R partout",
+            "Facteur \u00b7 range tes fichiers tout seul", "Journal de bord \u00b7 ton r\u00e9cit de capitaine", "Arsenal \u00b7 ta bo\u00eete \u00e0 outils", "Recherche \u00b7 Ctrl+Alt+R partout",
             "Tout reste sur ton PC. On y va !"]
     t0 = _t.time()
     done = [False]
@@ -171,11 +182,12 @@ def run_gui():
                       relief="flat", font=("Segoe UI", 10, "bold"), padx=10, pady=4, cursor="hand2")
         return b
 
-    tk.Label(body, text="Les 6 \u00e9tapes", bg=C["BG"], fg=C["ACC2"], font=("Segoe UI", 14, "bold")).pack(anchor="w", padx=18, pady=(14, 4))
+    tk.Label(body, text="Les 7 \u00e9tapes", bg=C["BG"], fg=C["ACC2"], font=("Segoe UI", 14, "bold")).pack(anchor="w", padx=18, pady=(14, 4))
     grid = tk.Frame(body, bg=C["BG"]); grid.pack(fill="x", padx=12)
     for i, (num, titre, texte, key) in enumerate(ETAPES):
         card = tk.Frame(grid, bg=C["CARD"], padx=12, pady=10)
-        card.grid(row=i // 2, column=i % 2, sticky="nsew", padx=6, pady=6)
+        last_alone = i == len(ETAPES) - 1 and len(ETAPES) % 2 == 1
+        card.grid(row=i // 2, column=i % 2, columnspan=2 if last_alone else 1, sticky="nsew", padx=6, pady=6)
         grid.columnconfigure(i % 2, weight=1)
         tk.Label(card, text=f"{num}. {titre}", bg=C["CARD"], fg=C["ACC"], font=("Segoe UI", 12, "bold")).pack(anchor="w")
         tk.Label(card, text=texte, bg=C["CARD"], fg=C["TEXT"], font=("Segoe UI", 10), wraplength=400,

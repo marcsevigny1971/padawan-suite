@@ -7,6 +7,12 @@ Une seule petite icône turquoise près de l'horloge, et toute la suite est là 
 
 ---
 
+## ✨ Nouveautés v1.1 — Journal de bord (24 octobre 2026)
+
+- 📓 **Journal de bord** : le journal du capitaine, privé par défaut. `Ctrl+V` colle n'importe quoi (texte, lien, image, capture, fichier), `Ctrl+Alt+K` envoie ce que tu viens de copier dans l'entrée du jour, les liens deviennent permanents, les mémos vocaux se glissent dans les entrées, et tu partages seulement le passage que tu choisis.
+- 🗣️ **Padawan plus vivant** : des réponses plus développées, en sections, qui finissent par **💡 Pour aller plus loin**. Nouveau cerveau par défaut : **dolphin3:8b**, et le menu **Style : Court / Équilibré / Développé**.
+- 🔎 La Recherche Padawan trouve aussi tes entrées du journal, et le Tableau de bord, Premiers pas et le menu de l'icône connaissent le nouvel outil.
+
 ## ⬇️ Installer en 3 gestes
 
 1. Va sur la page **[Releases](https://github.com/marcsevigny1971/padawan-suite/releases/latest)** et télécharge **`Padawan-Setup.exe`**.
@@ -24,12 +30,13 @@ Une seule petite icône turquoise près de l'horloge, et toute la suite est là 
 
 | Outil | En deux mots |
 |---|---|
-| 🤖 **Padawan IA** | Un assistant qui discute avec toi grâce à une IA installée sur ton PC (Ollama). Tes questions restent chez toi. |
+| 🤖 **Padawan IA** | Un assistant vivant qui discute avec toi grâce à une IA installée sur ton PC (Ollama, dolphin3:8b par défaut). Réponses courtes, équilibrées ou développées, avec un « 💡 Pour aller plus loin ». Tes questions restent chez toi. |
 | 🧭 **Tableau de bord** | La vue d'ensemble : ce qui tourne, les mises à jour et un bouton « Rapport de problème ». |
 | 🚀 **Premiers pas** | Un guide de 5 minutes, avec des boutons qui ouvrent le bon outil au bon endroit. |
 | 🔎 **Recherche Padawan** | `Ctrl+Alt+R` : cherche partout à la fois (Grimoire, archives, Arsenal, dossiers). |
 | 🗄️ **Coffre Padawan** | Toutes tes données dans un seul .zip daté, et la remise en place sur un autre PC. |
 | 🎞️ **Archiveur** | Garde une copie des vidéos et pages web (YouTube, X, Facebook…) en MP4 lisible partout. |
+| 📓 **Journal de bord** | Ton journal de capitaine : texte, liens permanents, images, mémos vocaux, recherche éclair, « Ce jour-là », entrées scellées et partage d'un seul passage. `Ctrl+Alt+J` |
 | 📚 **Grimoire** | Ton deuxième cerveau : notes, liens, PDF, images et mémos vocaux classés par sujets. |
 | 🧰 **Arsenal** | Des centaines d'outils, commandes et raccourcis Windows, à un clic. |
 | 🗂️ **Gestionnaire de fichiers** | Deux panneaux, tout au clavier, à la Norton Commander. |

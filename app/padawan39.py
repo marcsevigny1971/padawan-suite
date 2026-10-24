@@ -81,13 +81,13 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 MEM_FILE, CFG_FILE = os.path.join(BASE, "memory.json"), os.path.join(BASE, "config.json")
 CACHE_FILE, LOG_FILE = os.path.join(BASE, "search_cache.json"), os.path.join(BASE, "errors.log")
 TASKS_FILE = os.path.join(BASE, "tasks.json")
-OLLAMA, MODEL, TIMEOUT = "http://127.0.0.1:11434", "huihui_ai/qwen2.5-abliterate:7b", 240
-MODEL_FALLBACK = "dolphin3:8b"
+OLLAMA, MODEL, TIMEOUT = "http://127.0.0.1:11434", "dolphin3:8b", 240
+MODEL_FALLBACK = "huihui_ai/qwen2.5-abliterate:7b"
 # Catalogue Ollama NON CENSURÉS (famille Dolphin / uncensored explicites).
 # Évite Llama Guard / modèles « aligned » comme défaut. 70b = gros, optionnel.
 UNCENSORED_MODELS = (
-    "huihui_ai/qwen2.5-abliterate:7b",   # défaut v39h - Qwen2.5 7B non censuré, bon français (4,7 Go)
-    "dolphin3:8b",                       # ancien défaut
+    "dolphin3:8b",                       # défaut v39g (2026-10-24, choix de Marc) - plus vivant, meilleures précautions
+    "huihui_ai/qwen2.5-abliterate:7b",   # ancien défaut v39h - Qwen2.5 7B (4,7 Go)
     "dolphin-mistral:latest",
     "dolphin-phi:latest",                # petit Dolphin uncensored
     "wizard-vicuna-uncensored:latest",   # classic uncensored
@@ -896,7 +896,7 @@ def _strip_sources_section(text: str) -> str:
     i = 0
     src_re = re.compile(r"^(?:\*\*)?Sources(?:\*\*)?\s*:?\s*$", re.I)
     other_re = re.compile(
-        r"^(?:\*\*)?(?:En bref|À retenir|A retenir|Flou|Ça change|Ca change|Prochaine coupe|Ce qu)\b",
+        r"^(?:\*\*)?(?:En bref|À retenir|A retenir|Flou|Ça change|Ca change|Prochaine coupe|Ce qu|Mon take|Pour aller plus loin|💡|#)",
         re.I,
     )
     while i < len(lines):
@@ -923,12 +923,17 @@ def _strip_query_echo(text: str, query: str) -> str:
     if len(qn) < 8:
         return text
     out: List[str] = []
+    seen_lines = 0  # v39g: anti-écho seulement en ouverture
     for line in text.split("\n"):
         stripped = line.strip()
         if not stripped:
             out.append(line)
             continue
         if re.match(r"^(?:\*\*|#+)?\s*(?:En bref|À retenir|A retenir|Sources)\b", stripped, re.I):
+            out.append(line)
+            continue
+        seen_lines += 1
+        if seen_lines > 3:
             out.append(line)
             continue
         content = re.sub(r"^[-*•]\s+", "", stripped)
@@ -2490,17 +2495,33 @@ class RoleRouter:
 
 # ── Longueur des réponses / options génération (v39f) ─────────────────────────
 LENGTH_LEVELS = ("courte", "normale", "detaillee")
-LENGTH_LABELS = {"courte": "Courte", "normale": "Normale", "detaillee": "Détaillée"}
-LENGTH_NUM_PREDICT = {"courte": 512, "normale": 1536, "detaillee": 3072}
+LENGTH_LABELS = {"courte": "Court", "normale": "Équilibré", "detaillee": "Développé"}
+LENGTH_NUM_PREDICT = {"courte": 768, "normale": 1536, "detaillee": 3072}
 LENGTH_HIST_TURNS = {"courte": 6, "normale": 10, "detaillee": 16}
+# v39g "vivant": style chaleureux et développé + conclusion qui ouvre (demande de Marc 2026-10-24)
+STYLE_VIVANT = (
+    " STYLE VIVANT: tu es un guide passionné et chaleureux, pas un dictionnaire. "
+    "Ouvre par une phrase d'accroche qui donne envie (un fait étonnant, une image, un lien avec le quotidien). "
+    "Explique avec des exemples concrets, des anecdotes, des comparaisons parlantes et des astuces pratiques. "
+    "Fais des liens avec les passions de Marc quand c'est naturel (nature et plantes du Québec, "
+    "rétro-informatique, Arduino/électronique, santé alternative), sans forcer. "
+    "Santé et plantes: donne les usages traditionnels ET les vraies précautions (toxicité, doses, "
+    "interactions, grossesse) et dis quand consulter un pro. "
+    "Termine TOUJOURS par une courte section **💡 Pour aller plus loin**: une idée connexe surprenante, "
+    "une question à explorer ou une prochaine étape pratique (1 à 3 puces)."
+)
 LENGTH_INSTR = {
-    "courte": " LONGUEUR: réponse courte et directe (3-6 phrases ou quelques puces).",
-    "normale": " LONGUEUR: réponse complète mais efficace (environ 200-400 mots), structurée.",
-    "detaillee": (" LONGUEUR: réponse DÉTAILLÉE et approfondie (souvent 500-1000 mots si le sujet le mérite), "
-                  "bien structurée avec sections, exemples concrets et explications. "
-                  "Pour une simple salutation ou question triviale, reste naturel et bref."),
+    "courte": (" LONGUEUR: réponse courte mais chaleureuse (4 à 8 phrases ou quelques puces), jamais sèche. "
+               "Finis par une seule ligne **💡 Pour aller plus loin**."),
+    "normale": (" LONGUEUR: réponse équilibrée (environ 300 à 500 mots): accroche, 2 ou 3 parties claires "
+                "avec exemples et astuces, puis **💡 Pour aller plus loin**."),
+    "detaillee": (" LONGUEUR: réponse DÉVELOPPÉE et généreuse (souvent 600 à 1000 mots si le sujet le mérite): "
+                  "accroche, sections ### bien expliquées, exemples concrets, anecdotes, astuces et pièges, "
+                  "puis **💡 Pour aller plus loin**. Question factuelle rapide (une date, un chiffre, une définition simple): "
+                  "réponds d'abord directement en 1-2 phrases, ajoute un peu de contexte vivant et garde la conclusion. "
+                  "Simple salutation: reste naturel et bref."),
 }
-GEN: Dict[str, Any] = {"level": "detaillee", "num_ctx": None, "temperature": 0.6}
+GEN: Dict[str, Any] = {"level": "detaillee", "num_ctx": None, "temperature": 0.7}
 
 
 def _detect_num_ctx() -> int:
@@ -2548,7 +2569,7 @@ def gen_options(temperature: Optional[float] = None) -> Dict[str, Any]:
         except Exception:
             GEN["num_ctx"] = 4096
     return {
-        "temperature": GEN.get("temperature", 0.6) if temperature is None else temperature,
+        "temperature": GEN.get("temperature", 0.7) if temperature is None else temperature,
         "num_predict": LENGTH_NUM_PREDICT[gen_level()],
         "num_ctx": int(GEN["num_ctx"]),
         "repeat_penalty": 1.1,
@@ -2556,13 +2577,38 @@ def gen_options(temperature: Optional[float] = None) -> Dict[str, Any]:
 
 
 def _build_messages(sys_msg: str, user: str, history: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
-    msgs = [{"role": "system", "content": sys_msg + LENGTH_INSTR[gen_level()]
-             + " RAPPEL FINAL: tutoie Marc (« tu », « ton », « toi »), JAMAIS « vous »; pas de phrases creuses."}]
+    msgs = [{"role": "system", "content": sys_msg + STYLE_VIVANT + LENGTH_INSTR[gen_level()]
+             + " RAPPEL FINAL: réponse vivante et généreuse qui finit par **💡 Pour aller plus loin**; tutoie Marc (« tu », « ton », « toi »), JAMAIS « vous »; pas de phrases creuses."}]
     for m in (history or []):
         if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip():
             msgs.append({"role": m["role"], "content": m["content"]})
     msgs.append({"role": "user", "content": user})
     return msgs
+
+
+def forme_vivante(q: str) -> str:
+    """v39g: guide de forme ajouté à la question (les petits modèles le suivent mieux que le system)."""
+    q = (q or "").strip()
+    if len(q.split()) <= 3 and "?" not in q:
+        return ""  # salutation / mot isolé: rester naturel
+    lv = gen_level()
+    if lv == "courte":
+        return ("\n\n[Forme: 4 à 8 phrases chaleureuses en tutoyant Marc (jamais « vous »), "
+                "puis une ligne **💡 Pour aller plus loin**.]")
+    if lv == "normale":
+        return ("\n\n[Forme: environ 300 à 450 mots, en tutoyant Marc (jamais « vous », même pas « saviez-vous »). "
+                "Une accroche vivante, 2 ou 3 sections ### avec explications et exemples concrets, "
+                "puis **💡 Pour aller plus loin** (1 ou 2 puces). Si tu n'es pas sûr d'un fait, dis-le au lieu d'inventer.]")
+    return ("\n\n[Forme: réponse DÉVELOPPÉE d'environ 500 à 900 mots, en tutoyant Marc "
+            "(jamais « vous », même pas « saviez-vous »). "
+            "1) Une accroche vivante de 1-2 phrases. "
+            "2) 3 à 5 sections ### qui expliquent vraiment: comment ça marche, histoire ou contexte, "
+            "exemples concrets, chiffres sûrs, anecdotes. "
+            "3) Une section ### Précautions si le sujet touche la santé, les plantes ou l'électricité (vrais risques, doses, interactions), sinon ### Astuces. "
+            "4) Termine par **💡 Pour aller plus loin** avec 2 ou 3 puces: une idée connexe surprenante, "
+            "une question à explorer, une prochaine étape pratique. "
+            "Question factuelle simple: réponse directe d'abord, puis développe un peu moins. "
+            "EXACTITUDE AVANT TOUT: n'ajoute jamais un chiffre, une date, un nom ou une composante dont tu n'es pas sûr; mieux vaut développer avec des explications et des exemples que remplir avec des faits douteux.]")
 
 
 def chat(model: str, user: str, system: str | None = None, cancel: Optional[threading.Event] = None,
@@ -3174,11 +3220,11 @@ class Padawan(tk.Tk):
             row2, text="vérif…", bg=C["bg"], fg=C["dim"], font=("Segoe UI", 7),
         )
         self.model_lbl.pack(side="left", padx=(0, 8))
-        tk.Label(row2, text="Longueur", bg=C["bg"], fg=C["dim"], font=("Segoe UI", 7)).pack(side="left", padx=(0, 2))
+        tk.Label(row2, text="Style", bg=C["bg"], fg=C["dim"], font=("Segoe UI", 7)).pack(side="left", padx=(0, 2))
         self.lenvar = tk.StringVar(value=LENGTH_LABELS[gen_level()])
         self.len_combo = ttk.Combobox(
             row2, textvariable=self.lenvar, values=[LENGTH_LABELS[k] for k in LENGTH_LEVELS],
-            state="readonly", width=9,
+            state="readonly", width=10,
         )
         self.len_combo.pack(side="left", padx=(0, 8))
         self.len_combo.bind("<<ComboboxSelected>>", self.on_length_chosen)
@@ -4156,7 +4202,7 @@ class Padawan(tk.Tk):
         self.after0(apply)
 
     def on_length_chosen(self, *_):
-        """Réglage Longueur des réponses: Courte / Normale / Détaillée (persisté)."""
+        """Réglage Style de réponse: Court / Équilibré / Développé (persisté)."""
         lab = self.lenvar.get()
         lv = next((k for k, v in LENGTH_LABELS.items() if v == lab), "detaillee")
         GEN["level"] = lv
@@ -4165,7 +4211,7 @@ class Padawan(tk.Tk):
             savej(CFG_FILE, self.cfg)
         except Exception as e:
             log(f"save longueur: {e}")
-        self._ui_status(f"Longueur des réponses : {LENGTH_LABELS[lv]}", C["ok"])
+        self._ui_status(f"Style de réponse : {LENGTH_LABELS[lv]}", C["ok"])
 
     def on_model_chosen(self, *_):
         raw = self.mvar.get()
@@ -4787,9 +4833,10 @@ class Padawan(tk.Tk):
                        "Format: **En bref** (un vrai paragraphe de synthèse) / **En détail** (sections expliquées, "
                        "contexte, chiffres et nuances tirés des SOURCES) / **À retenir** (puces concrètes) / ")
                     + 
+                    "**💡 Pour aller plus loin** (1-3 puces) / "
                     "**Sources** (titre + URL complète). "
                     "INTERDIT sections vides Flou/Ça change/Prochaine coupe. "
-                    "Si peu d'info: 1 ligne. "
+                    "Si les sources sont minces, dis-le puis complète avec tes connaissances générales (présentées comme telles). "
                     "INTERDIT anciens projets / ADN / idées garées / chat antérieur.",
                     on_token=on_tok,
                     use_history=False,
@@ -4797,7 +4844,7 @@ class Padawan(tk.Tk):
                 )
                 ans = postprocess_hunt_brief(ans, getattr(self, "hits", []) or [], q)
             else:
-                ans = self._ollama(f"{web}\n\n{extra}\n\nMarc: {q}", on_token=on_tok)
+                ans = self._ollama(f"{web}\n\n{extra}\n\nMarc: {q}" + forme_vivante(q), on_token=on_tok)
             if want_web:
                 self.after0(self.mission_update, "brief", "done" if not self._cancel.is_set() else "fail", None)
             if self._cancel.is_set():
@@ -4896,6 +4943,9 @@ class Padawan(tk.Tk):
                     err = meta.get("ddgs_error") or _summarize_ddgs_errors(meta.get("ddgs_errors") or [])
                     attempts = ", ".join(meta.get("attempts") or []) or "aucune tentative"
                     widen = " · élargi au web" if meta.get("widened") else ""
+                    # v39g: hors ligne / filet vide -> réponse locale vivante au lieu d'un échec
+                    if self._answer_local_fallback(q, f"{err}{widen} - {attempts}"):
+                        return
                     raise RuntimeError(
                         f"Filet vide — {err}{widen} · tentatives: {attempts}"
                     )
@@ -4981,11 +5031,14 @@ class Padawan(tk.Tk):
                     "  **Sources** — pour chaque hit pertinent: titre puis URL complète "
                     "(ligne séparée, URL réelle des results).\n"
                     "- INTERDIT sections vides génériques « Flou / Ça change / Prochaine coupe ».\n"
-                    "- Si peu d'info: une seule ligne honnête, pas de remplissage.\n"
+                    "- Si les results sont minces: dis-le en une phrase, puis complète avec tes connaissances générales solides, "
+                    "présentées clairement comme telles (sans inventer de faits précis ni d'URL).\n"
                     "- AUCUNE URL dans ton texte: les Sources sont ajoutées automatiquement.\n"
                     "- CITE tes sources avec leur numéro entre crochets, ex. [1] ou [2][4], juste après le fait.\n"
-                    "- Termine par **Mon take** - ton analyse nuancée (causes, enjeux, ce qui pourrait arriver) "
+                    "- Ensuite **Mon take** - ton analyse nuancée (causes, enjeux, ce qui pourrait arriver) "
                     "et dis franchement si les sources sont faibles (rubriques, archives, titres sans contenu).\n"
+                    "- FINIS par **💡 Pour aller plus loin** - 1 à 3 puces vivantes: idée connexe, "
+                    "question à creuser ou prochaine étape pratique.\n"
                     "- Brief à partir des titres/snippets"
                     + dug
                     + ". "
@@ -5025,6 +5078,49 @@ class Padawan(tk.Tk):
                 self.after0(self.lock, False, "● prêt")
 
         threading.Thread(target=job, daemon=True).start()
+
+    def _answer_local_fallback(self, q: str, why: str = "") -> bool:
+        """v39g: chasse vide (hors ligne?) -> réponse vivante avec les connaissances du modèle local."""
+        try:
+            log(f"chasse vide -> réponse locale: {why[:200]}")
+            if self._cancel.is_set():
+                return False
+            if not self.model_ready and not self._wait_model_ready():
+                return False
+            self.after0(self.mission_update, "brief", "running", "réponse locale")
+            self.after0(self.say, "sys", "🌲 Pas de résultats web (hors ligne ?) - je te réponds avec mes connaissances locales.")
+            mark_holder: list = []
+            token_buf: list = []
+            self.after0(lambda: mark_holder.append(self._begin_stream()))
+            time.sleep(0.05)
+
+            def on_tok(t: str):
+                if mark_holder:
+                    self.after0(self._append_stream, mark_holder[0], t, token_buf)
+
+            ans = self._ollama(
+                "(Aucune source web disponible pour cette question. Exceptionnellement, oublie les consignes "
+                "sur les SOURCES et snippets: réponds avec tes connaissances générales, sans URL, "
+                "et signale franchement ce qui mériterait d'être vérifié.)\n\n"
+                f"Marc: {q}" + forme_vivante(q),
+                on_token=on_tok,
+                use_history=False,
+            )
+            if self._cancel.is_set():
+                self.after0(self.mission_update, "brief", "fail", "annulé")
+                self.after0(self.say, "sys", "Chasse annulée.")
+                return True
+            self.last_a = ans
+            if mark_holder:
+                self.after0(self._finish_stream, mark_holder[0], ans)
+            else:
+                self.after0(self.say, "ai", ans)
+            self.after0(self.mission_update, "brief", "done", "local")
+            self.after0(self.notify_done, "Padawan - chasse", f"Réponse locale prête - {q[:60]}")
+            return True
+        except Exception as e:
+            log(f"réponse locale: {e}")
+            return False
 
     def dig(self):
         if not self.last_q:

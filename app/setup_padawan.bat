@@ -174,6 +174,7 @@ if exist "%ROOT%facteur1.py" if not exist "%ROOT%facteur1.ico" "%PYTHON%" "%ROOT
 if exist "%ROOT%messager2.py" if not exist "%ROOT%messager2.ico" "%PYTHON%" "%ROOT%messager2.py" --make-icons >nul 2>&1
 if exist "%ROOT%chantier1.py" if not exist "%ROOT%chantier1.ico" "%PYTHON%" "%ROOT%chantier1.py" --make-icons >nul 2>&1
 if exist "%ROOT%retro1.py" if not exist "%ROOT%retro1.ico" "%PYTHON%" "%ROOT%retro1.py" --make-icons >nul 2>&1
+if exist "%ROOT%journal_bord.py" if not exist "%ROOT%journal_bord.ico" "%PYTHON%" "%ROOT%journal_bord.py" --make-icons >nul 2>&1
 set "SM_ARG="
 if defined PADAWAN_STARTMENU set "SM_ARG=-StartMenu"
 if defined PADAWAN_NOSYS (echo   saute ^(mode test^)) else powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%ROOT%_setup_shortcuts.ps1" -Root "%ROOT%." -PythonW "%PYTHONW%" %SM_ARG%
@@ -244,7 +245,7 @@ powershell.exe -NoProfile -Command "$v=(Get-ItemProperty -Path 'HKCU:\Software\M
 echo Raccourci Bureau Facteur:
 powershell.exe -NoProfile -Command "$l=Join-Path ([Environment]::GetFolderPath('Desktop')) 'Facteur.lnk'; if(Test-Path $l){$s=(New-Object -ComObject WScript.Shell).CreateShortcut($l); Write-Host ('  OK '+$s.Arguments)}else{Write-Host '  MANQUANT'}"
 echo.
-for %%F in (padawan39.py padawan_tray.py systemtray.py gestionnaire_fichiers5.py archiveur5.py arsenal1.py grimoire1.py facteur1.py messager2.py chantier1.py retro1.py) do (
+for %%F in (padawan39.py padawan_tray.py systemtray.py gestionnaire_fichiers5.py archiveur5.py arsenal1.py grimoire1.py facteur1.py messager2.py chantier1.py retro1.py journal_bord.py) do (
   if exist "%ROOT%%%F" (echo   OK %%F) else (echo   MANQUANT %%F)
 )
 echo ========================

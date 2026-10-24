@@ -1022,6 +1022,19 @@ def setup_tray(
         on_premiers = _suite_app("premiers_pas.py", "Premiers pas")
         on_recherche = _suite_app("recherche_padawan.py", "Recherche Padawan")
         on_coffre = _suite_app("coffre_padawan.py", "Coffre Padawan")
+        on_journal = _suite_app("journal_bord.py", "Journal de bord")
+
+        def on_journal_coller(icon=None, item=None):  # presse-papiers -> entree du jour, sans grande fenetre
+            def _go():
+                try:
+                    p = os.path.join(TRAY_DIR, "journal_bord.py")
+                    kw = {"cwd": TRAY_DIR}
+                    if os.name == "nt":
+                        kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                    subprocess.Popen([_python_launcher(), p, "--coller"], **kw)
+                except Exception as e:
+                    log(f"journal coller: {e}")
+            threading.Thread(target=_go, daemon=True).start()
 
         def _open_web(url):
             def _h(icon=None, item=None):
@@ -1058,6 +1071,8 @@ def setup_tray(
             TrayMenuItem("\U0001f9ed Tableau de bord de la suite\u2026", on_tableau),
             TrayMenuItem("\U0001f680 Premiers pas (guide 5 min)\u2026", on_premiers),
             TrayMenuItem("\U0001f50e Recherche Padawan (Ctrl+Alt+R)\u2026", on_recherche),
+            TrayMenuItem("\U0001f4d3 Journal de bord (Ctrl+Alt+J)\u2026", on_journal),
+            TrayMenuItem("\U0001f4cb Coller dans le journal (Ctrl+Alt+K)", on_journal_coller),
             TrayMenuItem("\U0001f5c4 Coffre Padawan (sauvegarde)\u2026", on_coffre),
             TrayMenuItem("Gestionnaire de fichiers…", on_file_manager),
             TrayMenuItem("Archiveur…", on_archiveur),

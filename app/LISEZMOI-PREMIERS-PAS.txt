@@ -4,7 +4,7 @@ PADAWAN SUITE - PREMIERS PAS EN 5 MINUTES
 Le guide s'ouvre tout seul au premier demarrage (case "Ne plus afficher" en bas).
 Pour le revoir : clic droit sur l'icone Padawan (pres de l'horloge) > "Premiers pas".
 
-LES 6 ETAPES
+LES 7 ETAPES
 ------------
 1. L'icone Padawan : clic droit = tous les outils de la suite. Une seule icone.
 2. Tableau de bord : ce qui tourne, tes serveurs, mises a jour, "Rapport de probleme".
@@ -12,7 +12,9 @@ LES 6 ETAPES
    + Arsenal + tes dossiers. Double-clic = ouvre au bon endroit.
 4. Archiveur (copies de videos et pages web) + Grimoire (notes, liens, medias par sujets).
 5. Arsenal : des centaines d'outils Windows et tes favoris, en un clic.
-6. Coffre Padawan : toutes tes donnees dans un seul .zip date, et restauration.
+6. Journal de bord (Ctrl+Alt+J) : ton journal de capitaine prive (texte, memos vocaux,
+   images, liens rendus permanents). Ctrl+Alt+K colle le presse-papiers dans l'entree du jour.
+7. Coffre Padawan : toutes tes donnees dans un seul .zip date, et restauration.
 
 SCENARIOS CONCRETS
 ------------------
@@ -49,6 +51,8 @@ F) Changer de PC sans rien perdre
 RACCOURCIS UTILES
 -----------------
   Ctrl+Alt+R  Recherche Padawan (raccourci du Bureau cree par l'installation)
+  Ctrl+Alt+J  Journal de bord (nouvelle entree)
+  Ctrl+Alt+K  Coller dans le journal (ce que tu viens de copier va dans l'entree du jour)
   F1          Aide dans la plupart des outils
   Echap       Ferme Recherche / Premiers pas
 

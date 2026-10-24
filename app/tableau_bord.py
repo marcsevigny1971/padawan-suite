@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tableau de bord 1.0 - Projet Padawan
+Tableau de bord 1.1 - Projet Padawan
 Vue d'ensemble de la suite : programmes (en marche ou non), serveurs du PC (détectés par Chantier, lecture seule),
 liens rapides, vérification des mises à jour (ne plante jamais hors ligne) et « Rapport de problème »
 (zip des journaux, secrets masqués). Raccourcis : F1 aide · F5 rafraîchir · F10 quitter.
@@ -10,8 +10,8 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.0"
-SUITE_VERSION = "2026.10.23"
+VERSION = "1.1"
+SUITE_VERSION = "2026.10.24"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
@@ -26,6 +26,7 @@ PROGS = [  # (fichier, nom, description)
     ("archiveur5.py", "Archiveur", "Archives et copies"),
     ("arsenal1.py", "Arsenal", "Boîte à outils"),
     ("grimoire1.py", "Grimoire", "Base de connaissances"),
+    ("journal_bord.py", "Journal de bord", "Le journal du capitaine (Ctrl+Alt+J)"),
     ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers", "Fichiers"),
     ("recherche_padawan.py", "Recherche Padawan", "Une recherche pour toute la suite (Ctrl+Alt+R)"),
     ("coffre_padawan.py", "Coffre Padawan", "Sauvegarde / restauration de toutes tes donn\u00e9es"),
