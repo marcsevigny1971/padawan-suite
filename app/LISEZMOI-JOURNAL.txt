@@ -1,7 +1,43 @@
 ﻿JOURNAL DE BORD — Padawan Suite
 ================================
-« Journal de bord du capitaine, date stellaire… »
 Ton journal personnel : privé par défaut, vivant, et facile à partager quand TU le décides.
+
+NOUVEAU (version 1.4) : LIENS VIVANTS + ARCHIVEUR
+  - Colle ou écris un lien (YouTube, X, Facebook, Vimeo, TikTok, page web) : un aperçu apparaît
+    sous la ligne (image, titre, site, description). L'aperçu est gardé sur ton PC (dossier apercus).
+  - « 📦 Rendre permanent » : le lien part à l'Archiveur, qui en fait une copie (vidéo MP4,
+    page, capture). Une barre vivante montre l'avancement. Ensuite : « ✔ Permanent », avec
+    ▶ Regarder, 📰 Copie locale et 📂 Dossier. La copie est aussi dans l'Archiveur,
+    collection « Journal de bord ». Même si le lien original disparaît, ta copie reste.
+  - « 🔗 Mes liens » (à gauche, ou menu Liens) : tous tes liens et leur état.
+  - Menu Liens > « Rendre les liens permanents automatiquement » (désactivé au départ).
+  - Dans la chronologie, 🔗 2 = nombre de liens dans l'entrée.
+
+NOUVEAU (version 1.2)
+  - À l'ouverture : la date du jour en grand (avec un petit bonjour), puis le saut vers ton journal.
+  - Le journal sait quel jour on est : entrée d'aujourd'hui = il la rouvre, curseur à la fin ;
+    entrée d'un autre jour = nouvelle entrée prête (rien n'est enregistré tant que tu n'écris pas).
+  - Quart de nuit : la journée commence à 5 h, et si tu as écrit il y a moins de 8 h on continue
+    le même quart. Réglable : Apparence > Journée et quart de travail.
+  - Notes au dossier : quand tu reviens dans une entrée, l'heure se met au début de la nouvelle note
+    (« 15 h 24 — »). Désactivable dans le même menu.
+  - Curseur vivant : un bloc qui respire dans la couleur du thème, et ta ligne luit doucement.
+
+NOUVEAU (version 1.1)
+  - La date du jour est dans le haut de la fenêtre (ex. « samedi 31 octobre 2026 »).
+    La date stellaire est partie ; les fans de Star Trek peuvent la remettre :
+    menu Apparence > « Afficher la date stellaire ».
+  - 4 thèmes : Cosmos (classique), Papier (clair), Nuit douce, Forêt.
+    Bouton « 🎨 Thème » en bas à droite, ou menu Apparence. Le journal s'en souvient.
+  - « 📝 Modèle » : Ma journée, Une idée, Gratitude, Travail, Rêve, Sortie nature.
+  - « ☆ Favori » : l'entrée va dans l'onglet ⭐ Favoris (aussi : clic droit sur une entrée).
+  - Corbeille : une entrée supprimée n'est jamais perdue. Journal > Corbeille > Restaurer.
+  - Imprimer (Ctrl+P, ou Partager > Imprimer) et enregistrer en fichier texte (.txt).
+  - En bas : nombre de mots. À gauche : ta série de jours d'écriture (🔥 3 jours de suite).
+  - Recherche : les mots trouvés sont surlignés dans l'entrée ; ✕ (ou Échap) efface la recherche.
+  - Humeur et météo choisies : bien encadrées, et leur nom est écrit juste en dessous.
+  - Tout se fait aussi à la souris : chaque raccourci a son bouton ou son menu,
+    et chaque bouton montre une bulle d'aide quand on passe la souris dessus.
 
 OUVRIR
   - Icône Padawan (près de l'horloge) > « Journal de bord »
@@ -63,11 +99,12 @@ INTIMITÉ
     toujours chiffrées).
 
 ANIMATIONS
-  Saut en vitesse de distorsion à l'ouverture, sceau de cire, onde du micro, rayon de copie
+  Saut en vitesse de distorsion à l'ouverture, sceau de cire, bulle « Consigné ✔ »,
+  lueur de la nouvelle entrée, mots trouvés surlignés, onde du micro, rayon de copie
   des liens, capsule qui se verrouille, confettis d'étoiles aux grandes étapes…
   Toutes courtes, passables d'un clic, et désactivables : case « Animations » en bas.
 
 RACCOURCIS
   Ctrl+N nouvelle entrée · Ctrl+S consigner · Ctrl+F chercher · Ctrl+B gras · Ctrl+I italique
-  Ctrl+V coller n'importe quoi · Ctrl+C copier le passage choisi · F1 ce guide
+  Ctrl+P imprimer · Ctrl+V coller n'importe quoi · Ctrl+C copier le passage choisi · F1 ce guide
   F11 plein écran · Échap quitter le plein écran

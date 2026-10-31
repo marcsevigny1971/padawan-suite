@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tableau de bord 1.1 - Projet Padawan
+Tableau de bord 1.2 - Projet Padawan
 Vue d'ensemble de la suite : programmes (en marche ou non), serveurs du PC (détectés par Chantier, lecture seule),
 liens rapides, vérification des mises à jour (ne plante jamais hors ligne) et « Rapport de problème »
 (zip des journaux, secrets masqués). Raccourcis : F1 aide · F5 rafraîchir · F10 quitter.
@@ -10,27 +10,27 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.1"
-SUITE_VERSION = "2026.10.24"
+VERSION = "1.2"
+SUITE_VERSION = "2026.10.31"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
 UPDATE_URL = "https://marcsevigny.ca/padawan_version.json"   # {"suite": "2026.10.30", "notes": "..."} (facultatif)
 
 PROGS = [  # (fichier, nom, description)
-    ("padawan39.py", "Padawan", "Assistant IA local (Ollama) + icône du tray"),
-    ("chantier1.py", "Chantier", "Serveurs Web / SQL / FTP / MQTT à la demande"),
-    ("retro1.py", "Rétro", "C64 · DOS · Win98, jeux et atelier BASIC"),
-    ("messager2.py", "Messager", "Messages"),
-    ("facteur1.py", "Facteur", "Courrier / boîte"),
-    ("archiveur5.py", "Archiveur", "Archives et copies"),
-    ("arsenal1.py", "Arsenal", "Boîte à outils"),
-    ("grimoire1.py", "Grimoire", "Base de connaissances"),
     ("journal_bord.py", "Journal de bord", "Le journal du capitaine (Ctrl+Alt+J)"),
-    ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers", "Fichiers"),
+    ("archiveur5.py", "Archiveur", "Archives et copies"),
+    ("grimoire1.py", "Grimoire", "Base de connaissances"),
+    ("messager2.py", "Messager", "Messages"),
+    ("arsenal1.py", "Arsenal", "Boîte à outils"),
+    ("padawan39.py", "Padawan", "Assistant IA local (Ollama) + icône du tray"),
     ("recherche_padawan.py", "Recherche Padawan", "Une recherche pour toute la suite (Ctrl+Alt+R)"),
+    ("retro1.py", "Rétro", "C64 · DOS · Win98, jeux et atelier BASIC"),
+    ("facteur1.py", "Facteur", "Courrier / boîte"),
     ("coffre_padawan.py", "Coffre Padawan", "Sauvegarde / restauration de toutes tes donn\u00e9es"),
+    ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers", "Fichiers"),
     ("premiers_pas.py", "Premiers pas", "Guide de d\u00e9marrage en 5 minutes"),
+    ("chantier1.py", "Chantier", "Serveurs Web / SQL / FTP / MQTT à la demande"),
 ]
 
 def file_version(path):
@@ -133,7 +133,13 @@ def run_gui():
     from tkinter import messagebox
     BG, PANEL, FG, DIM, ACC, OK, BAD = "#0f172a", "#1e293b", "#e2e8f0", "#94a3b8", "#facc15", "#4ade80", "#f87171"
     root = tk.Tk(); root.title(f"{APP} {VERSION} - suite Padawan {SUITE_VERSION}"); root.configure(bg=BG)
-    root.geometry("900x640"); root.minsize(760, 520)
+    root.geometry("900x640"); root.minsize(760, 380)
+    # Ouvre agrandi (maximise) comme le Gestionnaire de fichiers
+    try:
+        if os.name == "nt":
+            root.state("zoomed")
+    except Exception:
+        pass
     try:
         root.iconbitmap(os.path.join(HERE, "padawan_tray.ico"))
     except Exception:
@@ -144,10 +150,28 @@ def run_gui():
     tk.Label(root, textvariable=srv_var, bg="#0b1220", fg="#a7f3d0", font=("Segoe UI", 10, "bold"), anchor="w", padx=12, pady=5).pack(fill="x", pady=(8, 4))
     upd_var = tk.StringVar(value="Mises à jour : vérification…")
     tk.Label(root, textvariable=upd_var, bg=BG, fg=DIM, font=("Segoe UI", 9), anchor="w").pack(fill="x", padx=16)
-    grid = tk.Frame(root, bg=BG); grid.pack(fill="both", expand=True, padx=12, pady=8)
+    # Liste defilante (barre verticale + molette) : toutes les lignes restent accessibles meme en petite fenetre
+    wrap = tk.Frame(root, bg=BG); wrap.pack(fill="both", expand=True, padx=12, pady=8)
+    cv = tk.Canvas(wrap, bg=BG, highlightthickness=0, height=200)
+    sb = tk.Scrollbar(wrap, orient="vertical", command=cv.yview)
+    cv.configure(yscrollcommand=sb.set)
+    sb.pack(side="right", fill="y"); cv.pack(side="left", fill="both", expand=True)
+    grid = tk.Frame(cv, bg=BG)
+    gwin = cv.create_window((0, 0), window=grid, anchor="nw")
+    grid.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+    cv.bind("<Configure>", lambda e: cv.itemconfigure(gwin, width=e.width))
+    def _wheel(e):
+        if cv.yview() == (0.0, 1.0):
+            return
+        d = -1 if (getattr(e, "num", 0) == 4 or getattr(e, "delta", 0) > 0) else 1
+        cv.yview_scroll(d * (1 if abs(getattr(e, "delta", 120)) < 120 else abs(e.delta) // 120), "units")
+    root.bind_all("<MouseWheel>", _wheel); root.bind_all("<Button-4>", _wheel); root.bind_all("<Button-5>", _wheel)
+    _r = [0]
     rows = {}
     for i, (f, n, d) in enumerate(PROGS):
-        fr = tk.Frame(grid, bg=PANEL, padx=10, pady=6); fr.grid(row=i, column=0, sticky="ew", pady=2)
+        if f == "chantier1.py":
+            tk.Label(grid, text="\u2699  Serveurs et installation", bg=BG, fg=ACC, font=("Segoe UI", 10, "bold"), anchor="w").grid(row=_r[0], column=0, sticky="ew", pady=(10, 2)); _r[0] += 1
+        fr = tk.Frame(grid, bg=PANEL, padx=10, pady=6); fr.grid(row=_r[0], column=0, sticky="ew", pady=2); _r[0] += 1
         grid.grid_columnconfigure(0, weight=1)
         led = tk.Label(fr, text="●", bg=PANEL, fg=DIM, font=("Segoe UI", 14)); led.pack(side="left")
         tk.Label(fr, text=n, bg=PANEL, fg=FG, font=("Segoe UI", 11, "bold"), width=22, anchor="w").pack(side="left", padx=6)

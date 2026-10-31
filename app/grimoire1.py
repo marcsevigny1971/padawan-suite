@@ -26,11 +26,13 @@ import base64
 import ctypes
 import datetime as dt
 import glob
+import hashlib
 import html
 import io
 import json
 import logging
 import logging.handlers
+import math
 import mimetypes
 import os
 import queue
@@ -914,6 +916,7 @@ class Store:
         c.execute("PRAGMA foreign_keys=OFF")
         c.execute("PRAGMA synchronous=NORMAL")
         c.executescript(SCHEMA)
+        c.executescript(GX_ARCHIVES_SQL)   # 1.5 : liens rendus permanents (ajout, rien n'est modifie)
         try:
             c.execute(FTS_SQL)
         except sqlite3.OperationalError as ex:
@@ -5034,6 +5037,719 @@ class RecorderDialog(Dialog):
 
 
 # ================================================================ application
+# ======================================================================== 1.5 : cartes, carte des sujets, liens permanents
+GX_ARCHIVES_SQL = """
+CREATE TABLE IF NOT EXISTS archives(
+  url TEXT PRIMARY KEY,
+  item_id INTEGER,
+  status TEXT DEFAULT '',
+  root TEXT DEFAULT '',
+  folder TEXT DEFAULT '',
+  info TEXT DEFAULT '{}',
+  created TEXT, updated TEXT
+);
+"""
+GX_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+GX_MEDIA_EXT = (".mp4", ".webm", ".mkv", ".mov", ".m4v", ".mp3", ".m4a", ".opus")
+
+
+def gx_mix(c1: str, c2: str, t: float) -> str:
+    """melange de deux couleurs #RRGGBB (t=0 -> c1, t=1 -> c2)."""
+    try:
+        a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+        b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+        return "#%02X%02X%02X" % tuple(int(x + (y - x) * t) for x, y in zip(a, b))
+    except Exception:
+        return c2
+
+
+def gx_http(url: str, timeout: float = 12, limit: int = 3_000_000, headers: Optional[Dict[str, str]] = None):
+    h = {"User-Agent": GX_UA, "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, headers=h)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read(limit), r.headers.get("Content-Type", ""), r.geturl()
+
+
+def gx_http_json(url: str, timeout: float = 12) -> Dict[str, Any]:
+    raw, _c, _u = gx_http(url, timeout, headers={"Accept": "application/json"})
+    return json.loads(raw.decode("utf-8", "replace"))
+
+
+def gx_og(raw_html: str, *names: str) -> str:
+    for n in names:
+        mo = re.search(r'(?is)<meta[^>]+(?:property|name)=["\']' + re.escape(n) + r'["\'][^>]*content=["\']([^"\']*)', raw_html) or \
+            re.search(r'(?is)<meta[^>]+content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']' + re.escape(n) + r'["\']', raw_html)
+        if mo and mo.group(1).strip():
+            return html.unescape(re.sub(r"\s+", " ", mo.group(1))).strip()
+    return ""
+
+
+def gx_preview_dir() -> str:
+    d = os.path.join(Paths.data, "apercus")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def gx_key(url: str) -> str:
+    return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+
+
+def gx_preview_cached(url: str) -> Optional[Dict[str, Any]]:
+    p = os.path.join(gx_preview_dir(), gx_key(url) + ".json")
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def gx_preview_image(url: str) -> str:
+    """chemin de la miniature d'apercu en cache (ou '')."""
+    d = gx_preview_cached(url)
+    if d and d.get("image"):
+        p = os.path.join(gx_preview_dir(), d["image"])
+        if os.path.isfile(p):
+            return p
+    return ""
+
+
+def gx_fetch_preview(url: str) -> Dict[str, Any]:
+    """apercu d'un lien (titre, site, description, miniature : OpenGraph / oEmbed) ; garde une copie dans apercus\\
+    pour que ca marche hors ligne. Meme logique que le Journal de bord 1.4."""
+    key = gx_key(url)
+    d = gx_preview_dir()
+    jp = os.path.join(d, key + ".json")
+    old = gx_preview_cached(url)
+    if old and (old.get("ok") or time.time() - float(old.get("t") or 0) < 3600):
+        return old
+    host = (urllib.parse.urlparse(url).hostname or "").lower().replace("www.", "")
+    res: Dict[str, Any] = {"url": url, "title": "", "site": host, "desc": "", "image": "", "author": "", "ok": False,
+                           "t": time.time()}
+    img_url = ""
+    q = urllib.parse.quote(url, safe="")
+    try:
+        if host in ("youtube.com", "m.youtube.com", "youtu.be", "music.youtube.com"):
+            o = gx_http_json("https://www.youtube.com/oembed?format=json&url=" + q)
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="YouTube", video=True)
+            img_url = o.get("thumbnail_url", "")
+        elif host.endswith("vimeo.com"):
+            o = gx_http_json("https://vimeo.com/api/oembed.json?url=" + q)
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="Vimeo",
+                       desc=str(o.get("description") or "")[:300], video=True)
+            img_url = o.get("thumbnail_url", "")
+        elif host.endswith("tiktok.com"):
+            o = gx_http_json("https://www.tiktok.com/oembed?url=" + q)
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="TikTok", video=True)
+            img_url = o.get("thumbnail_url", "")
+        elif host in ("x.com", "twitter.com", "mobile.twitter.com", "fxtwitter.com", "vxtwitter.com") and "/status/" in url:
+            mo = re.search(r"/([A-Za-z0-9_]{1,15})/status(?:es)?/(\d+)", url)
+            o = gx_http_json(f"https://api.fxtwitter.com/{mo.group(1)}/status/{mo.group(2)}")["tweet"]
+            a = o.get("author") or {}
+            res.update(title=(a.get("name") or "") + (f" (@{a.get('screen_name')})" if a.get("screen_name") else ""),
+                       author=a.get("name") or "", site="X", desc=str(o.get("text") or "")[:400])
+            med = o.get("media") or {}
+            if med.get("photos"):
+                img_url = med["photos"][0].get("url", "")
+            elif med.get("videos"):
+                img_url = med["videos"][0].get("thumbnail_url", "")
+                res["video"] = True
+            else:
+                img_url = a.get("avatar_url", "")
+        if not res["title"]:
+            raw, ctype, final = gx_http(url, 12, 1_500_000)
+            if "html" in ctype.lower() or not ctype:
+                t = raw.decode("utf-8", "replace")
+                res["title"] = gx_og(t, "og:title", "twitter:title") or html.unescape(
+                    re.sub(r"\s+", " ", (re.search(r"(?is)<title[^>]*>(.*?)</title>", t) or [None, ""])[1])).strip()
+                res["desc"] = res["desc"] or gx_og(t, "og:description", "twitter:description", "description")[:400]
+                res["site"] = gx_og(t, "og:site_name") or res["site"]
+                img_url = img_url or gx_og(t, "og:image", "og:image:url", "twitter:image", "twitter:image:src")
+                if img_url:
+                    img_url = urllib.parse.urljoin(final, img_url)
+            else:
+                res["title"] = os.path.basename(urllib.parse.urlparse(url).path) or url
+                res["desc"] = ctype
+        res["title"] = str(res["title"])[:200]
+        res["ok"] = bool(res["title"] or res["desc"])
+        if img_url:
+            try:
+                raw, _c, _u = gx_http(img_url, 15, 8_000_000)
+                from PIL import Image  # type: ignore
+                im = Image.open(io.BytesIO(raw)).convert("RGB")
+                im.thumbnail((480, 300))
+                im.save(os.path.join(d, key + ".jpg"), "JPEG", quality=85)
+                res["image"] = key + ".jpg"
+            except Exception:
+                pass
+    except Exception as ex:
+        res["erreur"] = str(ex)[:200]
+    try:
+        tmp = jp + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(res, f, ensure_ascii=False)
+        os.replace(tmp, jp)
+    except OSError:
+        pass
+    return res
+
+
+GX_ARCH_SCRIPT = r"""
+import sys, os, json
+sys.path.insert(0, sys.argv[1]); url = sys.argv[2]
+import archiveur5 as a
+a.setup_logging()
+def hook(d):
+    try:
+        if d.get("status") == "downloading":
+            t = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+            if t:
+                print("@@P@@%.1f" % (100.0 * (d.get("downloaded_bytes") or 0) / t), flush=True)
+        elif d.get("status") == "finished":
+            print("@@P@@100", flush=True)
+    except Exception:
+        pass
+cfg = a.load_cfg()
+root = cfg.get("archive_root") or a.DEFAULT_ROOT
+os.makedirs(root, exist_ok=True)
+if not a._cli_ensure_ytdlp():
+    print("@@E@@yt-dlp introuvable", flush=True); sys.exit(2)
+entries = a.sync_index_with_disk(root)
+d = a.find_duplicates(entries, url)
+if d:
+    folder, dup = d[0].get("folder"), True
+else:
+    info = a.archive_url(url, root, a._cli_log, progress_hook=hook, quality=cfg.get("quality") or "best",
+                         subtitles=bool(cfg.get("subtitles", True)), storyboard=True, tags=["Grimoire"],
+                         notes="Depuis le Grimoire", web_capture=bool(cfg.get("web_capture", True)),
+                         use_fx=bool(cfg.get("x_fxtwitter", True)), auto_convert=bool(cfg.get("auto_convert", True)))
+    folder, dup = a.register_archive(root, info)["folder"], False
+try:
+    a.set_collections(root, [folder], add="Grimoire")
+except Exception:
+    pass
+print("@@R@@" + json.dumps({"root": root, "folder": folder, "dup": dup}), flush=True)
+"""
+
+
+def gx_archiveur_dir() -> str:
+    for d in (padawan_dir(), BASE):
+        if d and os.path.isfile(os.path.join(d, "archiveur5.py")):
+            return d
+    return ""
+
+
+def gx_console_python() -> str:
+    exe = sys.executable or "python"
+    if os.path.basename(exe).lower() == "pythonw.exe":
+        c = os.path.join(os.path.dirname(exe), "python.exe")
+        if os.path.isfile(c):
+            return c
+    return exe
+
+
+def gx_archive_via_archiveur(url: str, on_event: Callable[[str, Any], None] = lambda k, v: None,
+                             timeout: float = 3600) -> Dict[str, Any]:
+    here = gx_archiveur_dir()
+    if not here:
+        raise RuntimeError("archiveur5.py introuvable")
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    kw: Dict[str, Any] = {}
+    if IS_WIN:
+        kw["creationflags"] = CREATE_NO_WINDOW
+    p = subprocess.Popen([gx_console_python(), "-c", GX_ARCH_SCRIPT, here, url], cwd=here, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
+                         errors="replace", env=env, **kw)
+    res, tail, t0 = None, [], time.time()
+    assert p.stdout is not None
+    for line in p.stdout:
+        line = line.rstrip()
+        if line.startswith("@@P@@"):
+            try:
+                on_event("pct", float(line[5:]))
+            except ValueError:
+                pass
+        elif line.startswith("@@R@@"):
+            res = json.loads(line[5:])
+        elif line.startswith("@@E@@"):
+            tail.append(line[5:])
+        elif line.strip():
+            tail = (tail + [line])[-8:]
+            on_event("log", line)
+        if time.time() - t0 > timeout:
+            p.kill()
+            break
+    p.wait()
+    if not res:
+        fails = [x for x in tail if "FAIL" in x or "rror" in x]
+        raise RuntimeError((fails or tail or ["l'Archiveur n'a rien gardé"])[-1][-240:])
+    return res
+
+
+def gx_folder_info(folder: str) -> Dict[str, Any]:
+    """fichiers utiles d'un dossier d'archive (video principale, page, capture...)."""
+    files = os.listdir(folder) if os.path.isdir(folder) else []
+    vids = sorted([f for f in files if f.lower().endswith(GX_MEDIA_EXT)], key=lambda f: -os.path.getsize(os.path.join(folder, f)))
+    imgs = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and not f.startswith("sb_")]
+    imgs.sort(key=lambda f: (0 if ("thumb" in f.lower() or "capture" in f.lower()) else 1, f))
+    info: Dict[str, Any] = {}
+    try:
+        with open(os.path.join(folder, "info.json"), "r", encoding="utf-8") as f:
+            info = json.load(f) or {}
+    except (OSError, ValueError):
+        info = {}
+    return {"main": vids[0] if vids else ("lecture.html" if "lecture.html" in files else
+                                          ("page.html" if "page.html" in files else ("index.html" if "index.html" in files else ""))),
+            "video": bool(vids and not vids[0].lower().endswith((".mp3", ".m4a", ".opus"))),
+            "index": "index.html" if "index.html" in files else "",
+            "capture": imgs[0] if imgs else "",
+            "title": str(info.get("title") or "")[:300],
+            "texte": str(info.get("description") or info.get("text") or "")[:20000],
+            "nfiles": len(files)}
+
+
+def gx_archive_get(store: "Store", url: str) -> Optional[Dict[str, Any]]:
+    try:
+        r = store.q("SELECT * FROM archives WHERE url=?", (url,))
+    except sqlite3.Error:
+        return None
+    if not r:
+        return None
+    d = dict(r[0])
+    try:
+        d["info"] = json.loads(d.get("info") or "{}")
+    except ValueError:
+        d["info"] = {}
+    return d
+
+
+def gx_archive_set(store: "Store", url: str, item_id: Optional[int], status: str, root: str = "", folder: str = "",
+                   info: Optional[Dict[str, Any]] = None) -> None:
+    now = now_iso()
+    old = gx_archive_get(store, url)
+    if old:
+        store.x("UPDATE archives SET item_id=COALESCE(?,item_id), status=?, root=?, folder=?, info=?, updated=? WHERE url=?",
+                (item_id, status, root or old.get("root") or "", folder or old.get("folder") or "",
+                 json.dumps(info if info is not None else old.get("info") or {}, ensure_ascii=False), now, url))
+    else:
+        store.x("INSERT INTO archives(url,item_id,status,root,folder,info,created,updated) VALUES(?,?,?,?,?,?,?,?)",
+                (url, item_id, status, root, folder, json.dumps(info or {}, ensure_ascii=False), now, now))
+
+
+def gx_archive_folder(a: Optional[Dict[str, Any]]) -> str:
+    if not a or a.get("status") != "permanent":
+        return ""
+    p = os.path.join(a.get("root") or "", a.get("folder") or "")
+    return p if a.get("folder") and os.path.isdir(p) else ""
+
+
+def gx_cheer(pct: Optional[float], log: str = "") -> str:
+    if pct is None:
+        if re.search(r"(?i)ffmpeg|convert|encod|remux|storyboard", log or ""):
+            return "🎞 L'Archiveur peaufine la copie… presque fini !"
+        return "🛰 L'Archiveur met ce lien à l'abri… tu peux continuer à lire."
+    p = int(pct)
+    if p < 5:
+        return "🚀 C'est parti, on va chercher ça…"
+    if p < 40:
+        return f"📥 {p} % — ça avance bien !"
+    if p < 80:
+        return f"✨ {p} % — plus de la moitié !"
+    if p < 100:
+        return f"🏁 {p} % — dernière ligne droite !"
+    return "🎞 Téléchargé ! L'Archiveur range la copie…"
+
+
+def gx_item_urls(it: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    for u in [it.get("url") or ""] + find_urls(it.get("body_text") or "") + find_urls(it.get("extracted") or "")[:5]:
+        u = (u or "").strip().rstrip(".,;:)»\"'")
+        if u.startswith(("http://", "https://")) and u not in out:
+            out.append(u)
+    return out[:12]
+
+
+class MindMap(tk.Toplevel):
+    """« Carte des sujets » : graphe anime et interactif (Canvas Tk pur) : sujets, sous-sujets, fiches, liens."""
+
+    def __init__(self, app: "GrimoireApp"):
+        super().__init__(app)
+        self.app = app
+        st = app.store
+        self.title("🗺 Carte des sujets — Grimoire")
+        self.configure(bg=C["BG"])
+        try:
+            self.state("zoomed")
+        except tk.TclError:
+            self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight() - 60}+0+0")
+        self.anim = bool(app.store.get("animations", True))
+        self.show_items = tk.BooleanVar(value=bool(st.get("map_items", True)))
+        self.show_links = tk.BooleanVar(value=bool(st.get("map_links", False)))
+        bar = tk.Frame(self, bg=C["PANEL"])
+        bar.pack(fill="x")
+        tk.Label(bar, text="🗺 CARTE DES SUJETS", bg=C["PANEL"], fg=C["HI"], font=fnt("GTitle")).pack(side="left", padx=10, pady=6)
+        for txt, cmd, tip in (("➕ Zoom", lambda: self.zoom_at(1.2), "Agrandir (molette vers le haut, ou +)"),
+                              ("➖ Zoom", lambda: self.zoom_at(1 / 1.2), "Réduire (molette vers le bas, ou -)"),
+                              ("🎯 Recentrer", self.fit, "Tout voir d'un coup d'œil (touche 0)"),
+                              ("✨ Réorganiser", self.shake, "Relancer l'animation de placement (touche R)")):
+            mk_button(bar, txt, cmd, tip=tip).pack(side="left", padx=3, pady=6)
+        c1 = mk_check(bar, "Montrer les fiches", self.show_items, bg=C["PANEL"], cmd=self.rebuild)
+        c1.pack(side="left", padx=8)
+        Tooltip(c1, "Petits points autour de chaque sujet : un point = une fiche")
+        c2 = mk_check(bar, "Liens entre fiches", self.show_links, bg=C["PANEL"], cmd=lambda: (self.app.store.set("map_links", bool(self.show_links.get())), self.redraw()))
+        c2.pack(side="left", padx=4)
+        Tooltip(c2, "Traits pointillés : fiches qui se citent ([[…]]) ou partagent une étiquette")
+        mk_button(bar, "✖ Fermer", self.destroy, tip="Fermer la carte (Échap)").pack(side="right", padx=6, pady=6)
+        self.l_info = tk.Label(self, text="Molette : zoom · glisser : déplacer · clic sur un sujet : l'ouvrir · double-clic sur une "
+                                          "fiche : l'ouvrir · survol : nom et nombre de fiches", bg=C["BG"], fg=C["DIM"],
+                               font=fnt("GSM"), anchor="w")
+        self.l_info.pack(fill="x", padx=10)
+        self.cv = tk.Canvas(self, bg=C["CARD"], highlightthickness=0, bd=0, takefocus=1)
+        self.cv.pack(fill="both", expand=True)
+        self.scale, self.ox, self.oy = 1.0, 0.0, 0.0
+        self.nodes: Dict[str, Dict[str, Any]] = {}
+        self.edges: List[Tuple[str, str, str]] = []
+        self.hover: Optional[str] = None
+        self.drag: Optional[Tuple[int, int, float, float, bool]] = None
+        self.ticks = 0
+        self.job = None
+        cv = self.cv
+        cv.bind("<MouseWheel>", lambda e: self.zoom_at(1.15 if wheel_steps(e) < 0 else 1 / 1.15, e.x, e.y))
+        cv.bind("<Button-4>", lambda e: self.zoom_at(1.15, e.x, e.y))
+        cv.bind("<Button-5>", lambda e: self.zoom_at(1 / 1.15, e.x, e.y))
+        cv.bind("<ButtonPress-1>", self._press)
+        cv.bind("<B1-Motion>", self._motion_drag)
+        cv.bind("<ButtonRelease-1>", self._release)
+        cv.bind("<Double-Button-1>", self._double)
+        cv.bind("<Motion>", self._motion)
+        cv.bind("<Button-3>", self._menu)
+        cv.bind("<Configure>", lambda _e: self.redraw())
+        self.bind("<Escape>", lambda _e: self.destroy())
+        for k, f in (("plus", 1.2), ("equal", 1.2), ("KP_Add", 1.2), ("minus", 1 / 1.2), ("KP_Subtract", 1 / 1.2)):
+            self.bind(f"<{k}>", lambda _e, ff=f: self.zoom_at(ff))
+        self.bind("0", lambda _e: self.fit())
+        self.bind("r", lambda _e: self.shake())
+        self.bind("R", lambda _e: self.shake())
+        self.rebuild(first=True)
+        self.after(50, lambda: (cv.focus_set(), self.fit(), self.start()))
+
+    # ------------------------------------------------------------ modele
+    def rebuild(self, first: bool = False):
+        st = self.app.store
+        st.set("map_items", bool(self.show_items.get()))
+        subs = st.subjects()
+        tc = st.total_counts()
+        cnt = st.counts()
+        old = self.nodes
+        self.nodes, self.edges = {}, []
+        roots = [s for s in st.children(None)]
+        n = max(1, len(roots))
+        R0 = 340.0
+        for k, s in enumerate(roots):
+            a = 2 * math.pi * k / n
+            self._add_subject(s, math.cos(a) * R0, math.sin(a) * R0, subs, tc, 0, old)
+        for sid, s in subs.items():
+            if s.get("parent_id") and f"s{s['parent_id']}" in self.nodes and f"s{sid}" in self.nodes:
+                self.edges.append((f"s{s['parent_id']}", f"s{sid}", "tree"))
+        if self.show_items.get():
+            items = st.items_where("1=1", limit=3000)
+            by_title: Dict[str, str] = {}
+            tags: Dict[str, List[str]] = {}
+            for r in items:
+                p = self.nodes.get(f"s{r['subject_id']}")
+                if not p:
+                    continue
+                key = f"i{r['id']}"
+                ang = random.random() * 2 * math.pi
+                o = old.get(key)
+                self.nodes[key] = {"kind": "item", "id": r["id"], "label": r.get("title") or "(sans titre)",
+                                   "x": o["x"] if o else p["x"] + math.cos(ang) * 60, "y": o["y"] if o else p["y"] + math.sin(ang) * 60,
+                                   "vx": 0.0, "vy": 0.0, "r": 4.5, "color": p["color"], "type": r["type"], "fav": r.get("fav")}
+                self.edges.append((p["key"], key, "item"))
+                by_title[norm(r.get("title") or "")] = key
+                for tg in tag_list(r.get("tags") or ""):
+                    tags.setdefault(tg.lower(), []).append(key)
+            seen = set()
+            for r in items:
+                a = f"i{r['id']}"
+                if a not in self.nodes:
+                    continue
+                for ref in re.findall(r"\[\[([^\]]+)\]\]", r.get("body_text") or ""):
+                    b = by_title.get(norm(ref))
+                    if b and b != a and (a, b) not in seen:
+                        seen.add((a, b))
+                        self.edges.append((a, b, "ref"))
+            for tg, keys in tags.items():
+                if 2 <= len(keys) <= 12:
+                    for i in range(len(keys) - 1):
+                        pair = (keys[i], keys[i + 1])
+                        if pair not in seen:
+                            seen.add(pair)
+                            self.edges.append((keys[i], keys[i + 1], "tag"))
+        _ = cnt
+        if not first:
+            self.start()
+
+    def _add_subject(self, s, x, y, subs, tc, depth, old):
+        key = f"s{s['id']}"
+        o = old.get(key)
+        n = tc.get(s["id"], 0)
+        r = (26 if depth == 0 else 16) + 5 * math.sqrt(n)
+        col = s.get("color") or (self.nodes.get(f"s{s.get('parent_id')}", {}).get("color")) or C["HI"]
+        self.nodes[key] = {"kind": "subject", "id": s["id"], "key": key, "label": s["name"], "icon": s.get("icon") or "📁",
+                           "count": n, "x": o["x"] if o else x, "y": o["y"] if o else y, "vx": 0.0, "vy": 0.0,
+                           "r": min(r, 70), "color": col, "depth": depth}
+        kids = self.app.store.children(s["id"])
+        for k, c in enumerate(kids):
+            a = math.atan2(y, x) + (k - (len(kids) - 1) / 2) * 0.55
+            self._add_subject(c, x + math.cos(a) * 170, y + math.sin(a) * 170, subs, tc, depth + 1, old)
+
+    # ------------------------------------------------------------ animation (forces douces)
+    def start(self):
+        self.ticks = 160 if self.anim else 0
+        if not self.anim:
+            for _ in range(140):
+                self.step(fast=True)
+            self.redraw()
+            return
+        if self.job is None:
+            self.job = self.after(16, self._tick)
+
+    def shake(self):
+        for n in self.nodes.values():
+            n["vx"] += random.uniform(-8, 8)
+            n["vy"] += random.uniform(-8, 8)
+        self.start()
+
+    def _tick(self):
+        self.job = None
+        if not self.winfo_exists():
+            return
+        self.step()
+        self.redraw()
+        self.ticks -= 1
+        if self.ticks > 0:
+            self.job = self.after(20, self._tick)
+
+    def step(self, fast: bool = False):
+        ns = list(self.nodes.values())
+        subj = [n for n in ns if n["kind"] == "subject"]
+        for i, a in enumerate(subj):           # repulsion entre sujets
+            for b in subj[i + 1:]:
+                dx, dy = a["x"] - b["x"], a["y"] - b["y"]
+                d2 = dx * dx + dy * dy + 0.01
+                d = math.sqrt(d2)
+                mind = a["r"] + b["r"] + 60
+                f = 9000.0 / d2 + (max(0.0, mind - d) * 0.5)
+                fx, fy = dx / d * f, dy / d * f
+                a["vx"] += fx; a["vy"] += fy
+                b["vx"] -= fx; b["vy"] -= fy
+        for a_k, b_k, kind in self.edges:       # ressorts
+            a, b = self.nodes.get(a_k), self.nodes.get(b_k)
+            if not a or not b:
+                continue
+            dx, dy = b["x"] - a["x"], b["y"] - a["y"]
+            d = math.sqrt(dx * dx + dy * dy) + 0.01
+            rest = {"tree": a["r"] + b["r"] + 90, "item": a["r"] + 22 + (abs(hash(b_k)) % 30), "ref": 120, "tag": 140}[kind]
+            k = {"tree": 0.02, "item": 0.08, "ref": 0.004, "tag": 0.002}[kind]
+            f = (d - rest) * k
+            fx, fy = dx / d * f, dy / d * f
+            if a["kind"] == "item" or kind != "item":
+                a["vx"] += fx; a["vy"] += fy
+            b["vx"] -= fx; b["vy"] -= fy
+        for n in ns:                              # gravite vers le centre + amortissement
+            g = 0.004 if n["kind"] == "subject" else 0.0
+            n["vx"] = (n["vx"] - n["x"] * g) * 0.78
+            n["vy"] = (n["vy"] - n["y"] * g) * 0.78
+            if self.drag and self.drag[4] and self.drag_key == n.get("key", f"i{n['id']}"):
+                continue
+            n["x"] += max(-30, min(30, n["vx"]))
+            n["y"] += max(-30, min(30, n["vy"]))
+
+    # ------------------------------------------------------------ dessin
+    def sx(self, x: float) -> float:
+        return self.cv.winfo_width() / 2 + (x + self.ox) * self.scale
+
+    def sy(self, y: float) -> float:
+        return self.cv.winfo_height() / 2 + (y + self.oy) * self.scale
+
+    def redraw(self):
+        cv = self.cv
+        if not cv.winfo_exists():
+            return
+        cv.delete("all")
+        s = self.scale
+        links = self.show_links.get()
+        for a_k, b_k, kind in self.edges:
+            if kind in ("ref", "tag") and not links:
+                continue
+            a, b = self.nodes.get(a_k), self.nodes.get(b_k)
+            if not a or not b:
+                continue
+            hot = self.hover in (a_k, b_k)
+            if kind == "tree":
+                cv.create_line(self.sx(a["x"]), self.sy(a["y"]), self.sx(b["x"]), self.sy(b["y"]), fill=gx_mix(C["CARD"], b["color"], 0.8),
+                               width=max(1, 3 * s))
+            elif kind == "item":
+                cv.create_line(self.sx(a["x"]), self.sy(a["y"]), self.sx(b["x"]), self.sy(b["y"]),
+                               fill=gx_mix(C["CARD"], a["color"], 0.6 if hot else 0.28), width=1)
+            else:
+                cv.create_line(self.sx(a["x"]), self.sy(a["y"]), self.sx(b["x"]), self.sy(b["y"]),
+                               fill=C["HI"] if hot else gx_mix(C["CARD"], C["FG"] if kind == "ref" else C["DIM"], 0.55),
+                               dash=(4, 3), width=2 if hot else 1)
+        for key, n in self.nodes.items():
+            if n["kind"] != "item":
+                continue
+            r = max(2.0, n["r"] * min(1.6, s))
+            x, y = self.sx(n["x"]), self.sy(n["y"])
+            hot = key == self.hover
+            cv.create_oval(x - r, y - r, x + r, y + r, fill=C["HI"] if (hot or n.get("fav")) else gx_mix(C["CARD"], n["color"], 0.75),
+                           outline=C["HI"] if hot else "", tags=("node", key))
+        subs = sorted([kv for kv in self.nodes.items() if kv[1]["kind"] == "subject"], key=lambda kv: -kv[1]["depth"])
+        for key, n in subs:
+            r = n["r"] * s
+            x, y = self.sx(n["x"]), self.sy(n["y"])
+            hot = key == self.hover
+            if hot:
+                cv.create_oval(x - r - 6, y - r - 6, x + r + 6, y + r + 6, outline=n["color"], width=2, tags=("node", key))
+            cv.create_oval(x - r, y - r, x + r, y + r, fill=gx_mix(C["CARD"], n["color"], 0.30 if not hot else 0.45),
+                           outline=n["color"], width=3 if n["depth"] == 0 else 2, tags=("node", key))
+            if r > 9:
+                cv.create_text(x, y - (r * 0.12), text=n["icon"], font=("Segoe UI Emoji", max(8, int(min(28, r * 0.55)))),
+                               fill=C["TEXT"], tags=("node", key))
+            if s > 0.35 or n["depth"] == 0:
+                fz = max(7, int((11 if n["depth"] == 0 else 9) * min(1.5, max(0.8, s))))
+                cv.create_text(x, y + r + 4, text=f"{n['label']}  ({n['count']})", anchor="n", fill=C["TEXT"] if not hot else C["HI"],
+                               font=(fnt("GUIB").actual("family") if hasattr(fnt("GUIB"), "actual") else "Segoe UI", fz, "bold"),
+                               tags=("node", key))
+        if self.hover and self.hover in self.nodes:
+            n = self.nodes[self.hover]
+            txt = (f"{n['icon']} {self.app.store.subject_path(n['id'])} — {n['count']} fiche(s) · clic : ouvrir ce sujet"
+                   if n["kind"] == "subject" else f"{TYPES.get(n['type'], TYPES['file'])['icon']} {n['label']} · double-clic : ouvrir la fiche")
+            x, y = self.sx(n["x"]), self.sy(n["y"]) - n["r"] * s - 16
+            t = cv.create_text(x, y, text=txt, anchor="s", fill=C["ON_HI"], font=fnt("GUI"))
+            bb = cv.bbox(t)
+            if bb:
+                rr = cv.create_rectangle(bb[0] - 6, bb[1] - 3, bb[2] + 6, bb[3] + 3, fill=C["HI"], outline="")
+                cv.tag_lower(rr, t)
+
+    def fit(self):
+        if not self.nodes:
+            return
+        xs = [n["x"] for n in self.nodes.values()]
+        ys = [n["y"] for n in self.nodes.values()]
+        w, h = max(200, self.cv.winfo_width()), max(200, self.cv.winfo_height())
+        bw, bh = max(xs) - min(xs) + 200, max(ys) - min(ys) + 200
+        self.scale = max(0.15, min(2.0, min(w / bw, h / bh)))
+        self.ox, self.oy = -(max(xs) + min(xs)) / 2, -(max(ys) + min(ys)) / 2
+        self.redraw()
+
+    def zoom_at(self, f: float, x: Optional[int] = None, y: Optional[int] = None):
+        w, h = self.cv.winfo_width(), self.cv.winfo_height()
+        x = w / 2 if x is None else x
+        y = h / 2 if y is None else y
+        wx = (x - w / 2) / self.scale - self.ox
+        wy = (y - h / 2) / self.scale - self.oy
+        self.scale = max(0.1, min(5.0, self.scale * f))
+        self.ox = (x - w / 2) / self.scale - wx
+        self.oy = (y - h / 2) / self.scale - wy
+        self.redraw()
+
+    # ------------------------------------------------------------ souris
+    def node_at(self, x: int, y: int) -> Optional[str]:
+        best, bd = None, 1e9
+        for key, n in self.nodes.items():
+            d = math.hypot(self.sx(n["x"]) - x, self.sy(n["y"]) - y)
+            r = max(6, n["r"] * self.scale) + 3
+            if d <= r and (n["kind"] == "item" or d < bd):
+                if n["kind"] == "item" or best is None or self.nodes[best]["kind"] != "item":
+                    best, bd = key, d
+        return best
+
+    def _motion(self, e):
+        k = self.node_at(e.x, e.y)
+        if k != self.hover:
+            self.hover = k
+            self.cv.configure(cursor="hand2" if k else "fleur")
+            self.redraw()
+
+    def _press(self, e):
+        self.cv.focus_set()
+        k = self.node_at(e.x, e.y)
+        self.drag_key = k
+        self.drag = (e.x, e.y, self.ox, self.oy, bool(k))
+        self.moved = False
+
+    def _motion_drag(self, e):
+        if not self.drag:
+            return
+        x0, y0, ox, oy, on_node = self.drag
+        if abs(e.x - x0) + abs(e.y - y0) > 4:
+            self.moved = True
+        if on_node and self.drag_key in self.nodes:
+            n = self.nodes[self.drag_key]
+            n["x"] = (e.x - self.cv.winfo_width() / 2) / self.scale - self.ox
+            n["y"] = (e.y - self.cv.winfo_height() / 2) / self.scale - self.oy
+            n["vx"] = n["vy"] = 0.0
+            if self.anim and self.job is None:
+                self.ticks = 40
+                self.job = self.after(16, self._tick)
+        else:
+            self.ox = ox + (e.x - x0) / self.scale
+            self.oy = oy + (e.y - y0) / self.scale
+        self.redraw()
+
+    def _release(self, e):
+        k = self.drag_key if self.drag else None
+        moved = getattr(self, "moved", False)
+        self.drag = None
+        if k and not moved and self.nodes.get(k, {}).get("kind") == "subject":
+            self.open_node(k)
+
+    def _double(self, e):
+        k = self.node_at(e.x, e.y)
+        if k:
+            self.open_node(k)
+
+    def open_node(self, k: str):
+        n = self.nodes.get(k)
+        if not n:
+            return
+        if n["kind"] == "subject":
+            self.app.open_view(f"s:{n['id']}")
+            self.app.reveal_subject(n["id"])
+            self.app.set_status(f"🗺 Sujet ouvert : {n['label']} ({n['count']} fiche(s)).", "OK")
+        else:
+            self.app.goto_item(n["id"])
+        self.app.lift()
+
+    def _menu(self, e):
+        k = self.node_at(e.x, e.y)
+        m = new_menu(self)
+        if k:
+            n = self.nodes[k]
+            m.add_command(label=("📂 Ouvrir ce sujet" if n["kind"] == "subject" else "📄 Ouvrir cette fiche"),
+                          command=lambda: self.open_node(k))
+            m.add_separator()
+        m.add_command(label="🎯 Recentrer", command=self.fit)
+        m.add_command(label="✨ Réorganiser", command=self.shake)
+        m.add_command(label="✖ Fermer la carte", command=self.destroy)
+        popup(m, e)
+
+    def destroy(self):
+        if self.job:
+            try:
+                self.after_cancel(self.job)
+            except tk.TclError:
+                pass
+            self.job = None
+        try:
+            self.app._mindmap = None
+        except Exception:
+            pass
+        super().destroy()
+
+
 SPECIAL_VIEWS = [("v:all", "🗂", "Tout"), ("v:fav", "★", "Favoris"), ("v:pin", "📌", "Épinglés"),
                  ("v:recent", "🕘", "Récents"), ("v:tags", "🏷", "Étiquettes"), ("v:trash", "🗑", "Corbeille")]
 SORTS = [("manual", "Ordre manuel"), ("recent", "Plus récents"), ("old", "Plus anciens"), ("title", "Titre A→Z"),
@@ -5066,7 +5782,11 @@ class GrimoireApp(tk.Tk):
         C.clear()
         C.update(THEMES.get(st.get("theme", "norton"), THEMES["norton"]))
         init_fonts(self, st.get("font_delta", 0))
-        self.view_mode = st.get("view_mode", "list")
+        if not st.get("gx_cards_default"):      # 1.5 : la vue Cartes devient la vue par defaut (une seule fois)
+            st.set("view_mode", "cards")
+            st.set("gx_cards_default", True)
+        self.view_mode = st.get("view_mode", "cards")
+        self._mindmap = None
         self.sort = st.get("sort", "manual")
         self.cur_view = st.get("last_view", "")
         if not self._view_valid(self.cur_view):
@@ -5090,6 +5810,7 @@ class GrimoireApp(tk.Tk):
         self.results: List[Dict[str, Any]] = []
         self.terms: List[str] = []
         self.readonly_test = bool(getattr(args, "smoke", False) or getattr(args, "shot", ""))
+        self.v_anim = tk.BooleanVar(master=self, value=bool(st.get("animations", True)))
         self._build()
         try:
             ico = os.path.join(BASE, "grimoire1.ico")
@@ -5366,6 +6087,8 @@ class GrimoireApp(tk.Tk):
         m.add_radiobutton(label="▦ Cartes", accelerator="Ctrl+2", variable=self.v_view, value="cards", command=self._view_from_var)
         m.add_radiobutton(label="🕘 Chronologie", accelerator="Ctrl+3", variable=self.v_view, value="chrono", command=self._view_from_var)
         m.add_separator()
+        m.add_command(label="🗺 Carte des sujets", accelerator="F8", command=self.open_mindmap)
+        m.add_checkbutton(label="✨ Animations", variable=self.v_anim, command=self.toggle_animations)
         m.add_command(label="📖 Mode lecture", accelerator="F11", command=self.open_reader)
         m.add_command(label="🧭 Aller à un sujet ou une fiche…", accelerator="Ctrl+G", command=self.open_palette)
         m.add_command(label="🔍 Rechercher partout", accelerator="Ctrl+F", command=self.focus_search)
@@ -5448,6 +6171,8 @@ class GrimoireApp(tk.Tk):
         right.pack(side="right", padx=6)
         mk_button(right, "?", self.show_help, tip="Aide (F1)").pack(side="right", padx=3, pady=6)
         mk_button(right, "📊", self.show_stats, tip="Statistiques du Grimoire").pack(side="right", padx=3, pady=6)
+        mk_button(right, "🗺" if small else "🗺 Carte", self.open_mindmap, tip="Carte des sujets : tes sujets en graphe animé (F8)").pack(
+            side="right", padx=3, pady=6)
         mk_button(right, "🧭", self.open_palette, tip="Aller à un sujet ou une fiche (Ctrl+G)").pack(side="right", padx=3, pady=6)
         mk_button(right, "📖" if small else "📖 Lecture", self.open_reader, tip="Mode lecture plein écran (F11)").pack(
             side="right", padx=3, pady=6)
@@ -5548,6 +6273,12 @@ class GrimoireApp(tk.Tk):
             b.configure(padx=7)
             fb.add(b, 1)
             self.view_btns[key] = b
+        b = mk_button(fb, "🗺 Carte des sujets", self.open_mindmap, tip="Carte animée de tes sujets et de leurs fiches (F8)")
+        fb.add(b, 6)
+        ch_an = mk_check(fb, "✨ Animations", self.v_anim, bg=C["BG"], cmd=self.toggle_animations)
+        ch_an.configure(font=fnt("GSM"))
+        fb.add(ch_an, 4)
+        Tooltip(ch_an, "Petites animations (apparition des cartes, carte des sujets, barre de progression)")
         self.cb_sort = ttk.Combobox(fb, values=[lab for _k, lab in SORTS], state="readonly", width=14, font=fnt("GSM"))
         fb.add(self.cb_sort, 6)
         self.cb_sort.current(max(0, [k for k, _l in SORTS].index(self.sort) if self.sort in [k for k, _l in SORTS] else 0))
@@ -5616,6 +6347,8 @@ class GrimoireApp(tk.Tk):
         self.cv.bind("<B1-Motion>", self._drag_motion)
         self.cv.bind("<ButtonRelease-1>", self._drag_release)
         self.cv.bind("<Double-Button-1>", self._card_double)
+        self.cv.bind("<Motion>", self._card_motion)
+        self.cv.bind("<Leave>", lambda _e: self._card_motion(type("E", (), {"x": -9999, "y": -9999})()))
         self.cv.bind("<Button-3>", self._card_menu)
         for k in ("Left", "Right", "Up", "Down", "Home", "End"):
             self.cv.bind(f"<{k}>", lambda _e, kk=k: self._card_key(kk))
@@ -5883,6 +6616,7 @@ class GrimoireApp(tk.Tk):
         b("<F2>", lambda _e: self.rename_any())
         b("<F5>", lambda _e: self.refresh_all())
         b("<F11>", lambda _e: self.open_reader())
+        b("<F8>", lambda _e: self.open_mindmap())
         b("<Escape>", lambda _e: self.clear_search() if self.v_search.get() else None)
         for seq in ("<Control-plus>", "<Control-equal>", "<Control-KP_Add>"):
             b(seq, lambda _e: self.zoom(1))
@@ -6388,12 +7122,30 @@ class GrimoireApp(tk.Tk):
                 self.after_cancel(self._cards_job)
             self._cards_job = self.after(80, self.fill_cards)
 
+    # ================================================================ 1.5 : cartes illustrees
+    def _gx_thumb_src(self, r: Dict[str, Any]) -> str:
+        """vignette d'une fiche : image/media de la fiche, sinon apercu de lien en cache, sinon ''."""
+        if r.get("thumb"):
+            return r["thumb"]
+        if r["type"] == "image" and r.get("file"):
+            return r["file"]
+        for u in gx_item_urls(r)[:3]:
+            p = gx_preview_image(u)
+            if p:
+                return p
+            a = gx_archive_get(self.store, u)
+            fo = gx_archive_folder(a)
+            cap = (a or {}).get("info", {}).get("capture") if a else ""
+            if fo and cap and os.path.isfile(os.path.join(fo, cap)):
+                return os.path.join(fo, cap)
+        return ""
+
     def _card_dims(self) -> Tuple[int, int, int, int]:
         W = max(200, self.cv.winfo_width())
-        base = 176 + 10 * int(self.store.get("font_delta", 0) or 0)
-        cols = max(1, (W - 12) // (base + 12))
-        cw = (W - 12 - (cols - 1) * 12) // cols
-        thumb_h = int(cw * 0.52)
+        base = 210 + 10 * int(self.store.get("font_delta", 0) or 0)
+        cols = max(1, (W - 12) // (base + 14))
+        cw = (W - 12 - (cols - 1) * 14) // cols
+        thumb_h = int(cw * 0.50)
         lh = tkfont.Font(font=fnt("GCard")).metrics("linespace")
         lh2 = tkfont.Font(font=fnt("GCardD")).metrics("linespace")
         ch = thumb_h + 2 * lh + 3 * lh2 + 34
@@ -6404,70 +7156,423 @@ class GrimoireApp(tk.Tk):
         cv.delete("all")
         self.card_boxes = []
         self._card_imgs: List[Any] = []
-        items = self.visible[:400]
+        self._card_hover = None
+        items = self.visible[:600]
         cols, cw, ch, th = self._card_dims()
         lh = tkfont.Font(font=fnt("GCard")).metrics("linespace")
         lh2 = tkfont.Font(font=fnt("GCardD")).metrics("linespace")
+        pending: List[Tuple[int, str, int, int, int, int]] = []
         for k, r in enumerate(items):
             col, row = k % cols, k // cols
-            x0 = 6 + col * (cw + 12)
-            y0 = 8 + row * (ch + 12)
+            x0 = 6 + col * (cw + 14)
+            y0 = 8 + row * (ch + 14)
             x1, y1 = x0 + cw, y0 + ch
             iid = r["id"]
+            tg = (f"c{iid}", "cardall")
             sel = iid in self.selected
             s = self.store.subject(r["subject_id"])
-            scol = (s["color"] if s else "") or C["LINE"]
+            scol = (s["color"] if s else "") or C["HI"]
+            cv.create_rectangle(x0 + 3, y0 + 3, x1 + 3, y1 + 3, fill=gx_mix(C["BG"], "#000000", 0.35), width=0, tags=tg + ("shadow",))
             cv.create_rectangle(x0, y0, x1, y1, fill=C["CARD"], outline=C["HI"] if sel else C["LINE"], width=3 if sel else 1,
-                                tags=("card", f"c{iid}"))
-            cv.create_rectangle(x0 + 1, y0 + 1, x1 - 1, y0 + 5, fill=scol, width=0, tags=(f"c{iid}",))
+                                tags=("card",) + tg)
+            cv.create_rectangle(x0 + 1, y0 + 1, x1 - 1, y0 + 5, fill=scol, width=0, tags=tg)
             t = TYPES.get(r["type"], TYPES["file"])
-            img = self.photo(r.get("thumb") or (r.get("file") if r["type"] == "image" else ""), cw - 12, th)
             ty0 = y0 + 8
-            if img is not None:
-                cv.create_rectangle(x0 + 6, ty0, x1 - 6, ty0 + th, fill=C["PANEL"], width=0)
-                cv.create_image((x0 + x1) // 2, ty0 + th // 2, image=img)
-                self._card_imgs.append(img)
-            else:
-                cv.create_rectangle(x0 + 6, ty0, x1 - 6, ty0 + th, fill=C["PANEL"], width=0)
-                if r["type"] in ("note", "quote"):
-                    txt = (r.get("body_text") or "").strip()
-                    if r["type"] == "quote":
-                        txt = "« " + txt + " »"
-                    nlines = max(1, (th - 8) // lh2)
-                    cv.create_text(x0 + 12, ty0 + 6, text=self.fit_text(txt, "GCardD", cw - 26, nlines), anchor="nw",
-                                   fill=C["TEXT"] if r["type"] == "note" else C["QUOTE"], font=fnt("GCardD"))
-                else:
-                    cv.create_text((x0 + x1) // 2, ty0 + th // 2, text=t["icon"], font=fnt("EmojiBig"), fill=C["FG"])
+            # vignette (chargee en differe) ou tuile coloree
+            cv.create_rectangle(x0 + 6, ty0, x1 - 6, ty0 + th, fill=gx_mix(C["PANEL"], scol, 0.22), width=0, tags=tg + (f"th{iid}",))
+            cv.create_text((x0 + x1) // 2, ty0 + th // 2 - 6, text=(s["icon"] if s and s.get("icon") else t["icon"]),
+                           font=fnt("EmojiBig"), fill=scol, tags=tg + (f"ic{iid}",))
+            src = self._gx_thumb_src(r)
+            if src:
+                pending.append((iid, src, (x0 + x1) // 2, ty0 + th // 2, cw - 12, th))
+            # badge de type + etoile
+            badge = f" {t['icon']} {t['label']} "
+            bt = cv.create_text(x0 + 12, ty0 + 6, text=badge, anchor="nw", fill=C["ON_HI"], font=fnt("GCardD"), tags=tg)
+            bb = cv.bbox(bt)
+            if bb:
+                br = cv.create_rectangle(bb[0] - 2, bb[1] - 1, bb[2] + 2, bb[3] + 1, fill=scol, outline="", tags=tg)
+                cv.tag_lower(br, bt)
+            star = cv.create_text(x1 - 12, ty0 + 4, text="★" if r.get("fav") else "☆", anchor="ne",
+                                  fill=C["HI"] if r.get("fav") else C["DIM"], font=("Segoe UI Symbol", 15), tags=tg + ("star", f"st{iid}"))
+            _ = star
+            if r.get("pinned"):
+                cv.create_text(x1 - 34, ty0 + 6, text="📌", anchor="ne", font=fnt("GCardD"), tags=tg)
+            perm = any(gx_archive_folder(gx_archive_get(self.store, u)) for u in gx_item_urls(r)[:4]) if (r.get("url") or "http" in (r.get("body_text") or "")) else False
+            if perm:
+                pt = cv.create_text(x0 + 12, ty0 + th - 6, text=" ✔ Permanent ", anchor="sw", fill="#FFFFFF", font=fnt("GCardD"), tags=tg)
+                pb = cv.bbox(pt)
+                if pb:
+                    pr = cv.create_rectangle(pb[0] - 2, pb[1] - 1, pb[2] + 2, pb[3] + 1, fill="#2E9E5B", outline="", tags=tg)
+                    cv.tag_lower(pr, pt)
             yt = ty0 + th + 6
-            title = ("📌 " if r.get("pinned") else "") + ("★ " if r.get("fav") else "") + (r.get("title") or "(sans titre)")
+            title = r.get("title") or "(sans titre)"
             cv.create_text(x0 + 8, yt, text=self.fit_text(title, "GCard", cw - 16, 2), anchor="nw",
-                           fill=C["HI"] if r.get("fav") else C["TEXT"], font=fnt("GCard"), width=cw - 14)
+                           fill=C["HI"] if r.get("fav") else C["TEXT"], font=fnt("GCard"), width=cw - 14, tags=tg)
             ym = yt + 2 * lh + 2
-            meta = f"{t['icon']} {t['label']} · {self._row_date(r)}"
+            meta = f"🗓 {self._row_date(r)}"
             if self._multi_subject_view() and s:
-                meta += f" · {s['name']}"
-            cv.create_text(x0 + 8, ym, text=self.fit_text(meta, "GCardD", cw - 16), anchor="nw", fill=C["DIM"], font=fnt("GCardD"))
+                meta += f"  ·  {s.get('icon') or ''} {s['name']}"
+            cv.create_text(x0 + 8, ym, text=self.fit_text(meta, "GCardD", cw - 16), anchor="nw", fill=C["DIM"], font=fnt("GCardD"), tags=tg)
             desc = self.store.meta(r).get("description") or ""
-            if not desc and r["type"] not in ("note", "quote"):
-                desc = r.get("body_text") or r.get("url") or ""
-            if r["type"] in ("note", "quote") and img is not None:
-                desc = r.get("body_text") or ""
+            if not desc:
+                desc = r.get("body_text") or r.get("extracted") or r.get("url") or ""
+            if r["type"] == "quote" and desc:
+                desc = "« " + desc.strip() + " »"
             if desc:
-                cv.create_text(x0 + 8, ym + lh2 + 1, text=self.fit_text(desc, "GCardD", cw - 16, 1), anchor="nw",
-                               fill=C["TEXT"], font=fnt("GCardD"))
-            tg = tag_list(r.get("tags") or "")
-            if tg:
-                cv.create_text(x0 + 8, ym + 2 * lh2 + 3, text=self.fit_text("  ".join("#" + x for x in tg), "GCardD", cw - 16),
-                               anchor="nw", fill=C["FG"], font=fnt("GCardD"))
+                cv.create_text(x0 + 8, ym + lh2 + 2, text=self.fit_text(desc, "GCardD", cw - 16, 2), anchor="nw",
+                               fill=C["QUOTE"] if r["type"] == "quote" else C["TEXT"], font=fnt("GCardD"), tags=tg)
             self.card_boxes.append((x0, y0, x1, y1, iid))
         rows = (len(items) + cols - 1) // cols
-        total_h = 8 + rows * (ch + 12)
+        total_h = 8 + rows * (ch + 14)
         if len(self.visible) > len(items):
             cv.create_text(12, total_h + 4, anchor="nw", fill=C["WARN"], font=fnt("GSM"),
                            text=f"… {len(self.visible) - len(items)} fiche(s) de plus : utilise la vue Liste ou un filtre.")
             total_h += 30
         cv.configure(scrollregion=(0, 0, max(1, cv.winfo_width()), max(total_h, cv.winfo_height())))
         self._empty_hint(cv, not items)
+        # vignettes en differe (les cartes visibles d'abord) : l'affichage reste instantane meme avec 150+ fiches
+        top = cv.canvasy(0)
+        pending.sort(key=lambda p: (0 if p[3] >= top - 50 and p[3] <= top + cv.winfo_height() + 200 else 1, p[3]))
+        self._gx_thumb_gen = getattr(self, "_gx_thumb_gen", 0) + 1
+        gen = self._gx_thumb_gen
+        self.after(15, lambda: self._gx_load_thumbs(pending, gen))
+        # apparition en douceur (seulement quand la liste change, pas a chaque clic)
+        sig = (self.cur_view, tuple(r["id"] for r in items[:60]), cols)
+        if self.store.get("animations", True) and sig != getattr(self, "_gx_card_sig", None) and items:
+            self._gx_fade(rows_visible=max(1, int(cv.winfo_height() // (ch + 14)) + 1), cols=cols, ids=[r["id"] for r in items])
+        self._gx_card_sig = sig
+
+    def _gx_load_thumbs(self, pending, gen):
+        if gen != getattr(self, "_gx_thumb_gen", 0) or self._effective_mode() != "cards":
+            return
+        t0 = time.time()
+        while pending and time.time() - t0 < 0.03:
+            iid, src, cx, cy, w, h = pending.pop(0)
+            img = self.photo(src, w, h)
+            if img is None:
+                continue
+            self._card_imgs.append(img)
+            self.cv.delete(f"ic{iid}")
+            o = self.cv.create_image(cx, cy, image=img, tags=(f"c{iid}", "cardall", f"im{iid}"))
+            above = self.cv.find_withtag(f"th{iid}")
+            if above:
+                self.cv.tag_raise(o, above[0])
+        if pending:
+            self.after(10, lambda: self._gx_load_thumbs(pending, gen))
+
+    def _gx_fade(self, rows_visible: int, cols: int, ids: List[int]):
+        """les cartes du haut glissent et apparaissent rangee par rangee (~0,4 s)."""
+        cv = self.cv
+        n = min(len(ids), rows_visible * cols)
+        first = ids[:n]
+        for i in first:
+            cv.itemconfigure(f"c{i}", state="hidden")
+            cv.move(f"c{i}", 0, 14)
+
+        def show(k: int, step: int):
+            if not cv.winfo_exists():
+                return
+            row = first[k * cols:(k + 1) * cols]
+            if not row:
+                return
+            for i in row:
+                if step == 0:
+                    cv.itemconfigure(f"c{i}", state="normal")
+                cv.move(f"c{i}", 0, -3.5)
+            if step < 3:
+                self.after(22, lambda: show(k, step + 1))
+            if step == 1:
+                self.after(10, lambda: show(k + 1, 0))
+        show(0, 0)
+
+    def _card_motion(self, e):
+        iid = self._card_at(e.x, e.y)
+        old = getattr(self, "_card_hover", None)
+        if iid == old:
+            return
+        cv = self.cv
+        for i, on in ((old, False), (iid, True)):
+            if i is None:
+                continue
+            rid = next((o for o in cv.find_withtag(f"c{i}") if "card" in cv.gettags(o)), None)
+            if rid:
+                sel = i in self.selected
+                cv.itemconfigure(rid, fill=gx_mix(C["CARD"], C["HI"], 0.10) if on else C["CARD"],
+                                 outline=C["HI"] if sel else (C["FG"] if on else C["LINE"]), width=3 if sel else (2 if on else 1))
+        self._card_hover = iid
+        cv.configure(cursor="hand2" if iid else "")
+
+    def _card_star_click(self, e) -> bool:
+        cx, cy = self.cv.canvasx(e.x), self.cv.canvasy(e.y)
+        for o in self.cv.find_overlapping(cx - 2, cy - 2, cx + 2, cy + 2):
+            tags = self.cv.gettags(o)
+            if "star" in tags:
+                iid = int(next(t for t in tags if t.startswith("st"))[2:])
+                it = self.store.item(iid)
+                if it:
+                    self.store.update_item(iid, touch=False, fav=0 if it.get("fav") else 1)
+                    self.set_status("★ Ajoutée aux favoris." if not it.get("fav") else "☆ Retirée des favoris.", "OK")
+                    self.refresh_items(keep=[iid])
+                return True
+        return False
+
+    def _gx_open_pulse(self, iid: int):
+        """petite pulsation de la carte a l'ouverture d'une fiche."""
+        if not self.store.get("animations", True) or self._effective_mode() != "cards":
+            return
+        cv = self.cv
+        rid = next((o for o in cv.find_withtag(f"c{iid}") if "card" in cv.gettags(o)), None)
+        if not rid:
+            return
+        seq = [0.35, 0.6, 0.35, 0.15, 0.0]
+
+        def go(k):
+            if k >= len(seq) or not cv.winfo_exists():
+                return
+            try:
+                cv.itemconfigure(rid, fill=gx_mix(C["CARD"], C["HI"], seq[k]))
+            except tk.TclError:
+                return
+            self.after(45, lambda: go(k + 1))
+        go(0)
+
+    def toggle_animations(self):
+        on = bool(self.v_anim.get())
+        self.store.set("animations", on)
+        self.set_status("✨ Animations activées." if on else "Animations désactivées (tout s'affiche d'un coup).", "OK")
+
+    def open_mindmap(self):
+        mm = getattr(self, "_mindmap", None)
+        if mm is not None:
+            try:
+                if mm.winfo_exists():
+                    mm.lift()
+                    mm.focus_force()
+                    return
+            except tk.TclError:
+                pass
+        self._mindmap = MindMap(self)
+
+    # ================================================================ 1.5 : apercus de liens + Archiveur
+    def gx_link_section(self, f, it: Dict[str, Any], W: int):
+        urls = gx_item_urls(it)
+        if not urls:
+            return
+        self._section(f, "🔗 LIENS DE LA FICHE" if len(urls) > 1 else "🔗 LIEN DE LA FICHE")
+        self._gx_link_rows = getattr(self, "_gx_link_rows", {})
+        self._gx_link_rows = {}
+        for u in urls:
+            box = tk.Frame(f, bg=C["CARD"], highlightthickness=1, highlightbackground=C["LINE"])
+            box.pack(fill="x", padx=12, pady=4)
+            self._gx_link_rows[u] = (box, it["id"], W)
+            self._gx_fill_link(u)
+            pv = gx_preview_cached(u)
+            if not pv or (not pv.get("ok") and time.time() - float(pv.get("t") or 0) > 3600):
+                self.run_job(lambda uu=u: gx_fetch_preview(uu), lambda _r, uu=u: self._gx_fill_link(uu), "")
+
+    def _gx_fill_link(self, url: str):
+        rows = getattr(self, "_gx_link_rows", {})
+        if url not in rows:
+            return
+        box, iid, W = rows[url]
+        try:
+            if not box.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        for w in box.winfo_children():
+            w.destroy()
+        pv = gx_preview_cached(url) or {}
+        a = gx_archive_get(self.store, url)
+        folder = gx_archive_folder(a)
+        bg = C["CARD"]
+        top = tk.Frame(box, bg=bg)
+        top.pack(fill="x", padx=6, pady=6)
+        img = None
+        ip = gx_preview_image(url)
+        if not ip and folder and (a or {}).get("info", {}).get("capture"):
+            ip = os.path.join(folder, a["info"]["capture"])
+        if ip:
+            img = self.photo(ip, 150, 96)
+        if img is not None:
+            lab = tk.Label(top, image=img, bg=bg, cursor="hand2", bd=0)
+            lab.pack(side="left", padx=(0, 8))
+            self._prev_imgs.append(img)
+            lab.bind("<Button-1>", lambda _e: self._gx_watch(url) if folder else open_url(url))
+            Tooltip(lab, "Clic : regarder la copie permanente" if folder else "Clic : ouvrir dans le navigateur")
+        txt = tk.Frame(top, bg=bg)
+        txt.pack(side="left", fill="x", expand=True)
+        site = pv.get("site") or domain_of(url)
+        mk_label(txt, ("🎬 " if pv.get("video") or is_video_url(url) else "🌐 ") + str(site), "DIM", "GSM", bg=bg).pack(anchor="w")
+        title = pv.get("title") or (a or {}).get("info", {}).get("title") or url
+        mk_link(txt, self.fit_text(title, "GUIB", max(120, W - 200), 2), url, bg=bg, font_name="GUIB", wrap=max(120, W - 190)).pack(anchor="w")
+        if pv.get("desc"):
+            mk_label(txt, self.fit_text(pv["desc"], "GSM", max(120, W - 200), 3), "TEXT", "GSM", bg=bg, justify="left",
+                     wraplength=max(120, W - 190)).pack(anchor="w")
+        if not pv:
+            mk_label(txt, "⏳ Aperçu en préparation…", "DIM", "GSM", bg=bg).pack(anchor="w")
+        bar = tk.Frame(box, bg=bg)
+        bar.pack(fill="x", padx=6, pady=(0, 6))
+        prog = getattr(self, "_gx_prog", {}).get(url)
+        if prog is not None:
+            self._gx_progress_bar(bar, url)
+        elif folder:
+            tk.Label(bar, text=f"✔ Permanent · dans l'Archiveur · {str((a or {}).get('updated') or '')[:10]}", bg="#2E9E5B",
+                     fg="#FFFFFF", font=fnt("GSM"), padx=6).pack(anchor="w", pady=(0, 3))
+            bar = tk.Frame(bar, bg=bg)
+            bar.pack(fill="x")
+            mk_button(bar, "▶ Regarder", lambda: self._gx_watch(url), "accent",
+                      tip="Regarder la copie gardée sur ton PC (marche même si le lien original disparaît)").pack(side="left", padx=(0, 4))
+            mk_button(bar, "💾 Copie locale", lambda: self._gx_local(url),
+                      tip="Ouvrir la page de l'archive (index.html) dans le navigateur").pack(side="left", padx=2)
+            mk_button(bar, "🗂 Dossier", lambda: reveal_in_explorer(folder), tip="Le dossier de la copie (Archiveur, collection « Grimoire »)").pack(
+                side="left", padx=2)
+        else:
+            err = (a or {}).get("status") == "erreur"
+            ok = bool(gx_archiveur_dir())
+            b = mk_button(bar, "↻ Réessayer" if err else "📦 Rendre permanent", lambda: self.gx_make_permanent(url, iid), "accent",
+                          tip=("Envoie le lien à l'Archiveur : une copie reste sur ton PC, même si le lien disparaît" if ok else
+                               "L'Archiveur (archiveur5.py) est introuvable : bouton indisponible"))
+            b.pack(side="left")
+            if not ok:
+                b.configure(state="disabled")
+            if err:
+                mk_label(bar, "⚠ La copie n'a pas marché (connexion ?) — tu peux réessayer.", "WARN", "GSM", bg=bg).pack(side="left", padx=6)
+            mk_button(bar, "🌐 Ouvrir", lambda: open_url(url), tip="Ouvrir le lien dans le navigateur").pack(side="left", padx=4)
+            mk_button(bar, "📋 Copier", lambda: (copy_to_clipboard(self, url), self.set_status("Lien copié.", "OK")),
+                      tip="Copier le lien").pack(side="left", padx=2)
+
+    def _gx_progress_bar(self, bar, url: str):
+        bg = C["CARD"]
+        cv = tk.Canvas(bar, height=16, bg=C["PANEL"], highlightthickness=0, bd=0)
+        cv.pack(fill="x", pady=(2, 2))
+        lab = mk_label(bar, "", "FG", "GSM", bg=bg)
+        lab.pack(anchor="w")
+        state = {"ph": 0.0}
+
+        def tick():
+            try:
+                if not cv.winfo_exists():
+                    return
+            except tk.TclError:
+                return
+            p = getattr(self, "_gx_prog", {}).get(url)
+            if p is None:
+                return
+            w = max(50, cv.winfo_width())
+            cv.delete("all")
+            pct = p.get("pct")
+            if pct is None:   # barre vivante (indeterminee)
+                state["ph"] = (state["ph"] + 7) % (w + 120)
+                x = state["ph"] - 120
+                cv.create_rectangle(max(0, x), 2, min(w, x + 120), 14, fill=C["HI"], width=0)
+            else:
+                cv.create_rectangle(0, 2, w * min(100, pct) / 100, 14, fill=C["HI"], width=0)
+                state["ph"] = (state["ph"] + 9) % 40
+                for xx in range(int(-40 + state["ph"]), int(w * min(100, pct) / 100), 40):
+                    cv.create_line(xx, 14, xx + 12, 2, fill=gx_mix(C["HI"], "#FFFFFF", 0.5), width=4)
+            lab.configure(text=gx_cheer(pct, p.get("log", "")))
+            self.after(60 if self.store.get("animations", True) else 400, tick)
+        tick()
+
+    def gx_make_permanent(self, url: str, iid: Optional[int]):
+        self._gx_prog = getattr(self, "_gx_prog", {})
+        if url in self._gx_prog:
+            return
+        if not gx_archiveur_dir():
+            messagebox.showinfo(APP_NAME, "L'Archiveur (archiveur5.py) est introuvable dans le dossier Padawan.\n"
+                                          "Astuce : « 🌐 Capturer la page » garde quand même une copie hors ligne.", parent=self)
+            return
+        prog = self._gx_prog[url] = {"pct": None, "log": ""}
+        gx_archive_set(self.store, url, iid, "copie")
+        self._gx_fill_link(url)
+        self.set_status("📦 Envoi à l'Archiveur… tu peux continuer à travailler.", "FG")
+
+        def ev(k, v):
+            prog[k] = v
+
+        def work():
+            r = gx_archive_via_archiveur(url, ev)
+            folder = os.path.join(r["root"], r["folder"])
+            fi = gx_folder_info(folder)
+            if not fi["nfiles"]:
+                raise RuntimeError("dossier d'archive introuvable")
+            fi.update({"source": "grimoire", "dup": r.get("dup"), "copie_le": now_iso()})
+            return r, fi
+
+        def finish(res):
+            self._gx_prog.pop(url, None)
+            if isinstance(res, Exception) or not res:
+                gx_archive_set(self.store, url, iid, "erreur")
+                logger.warning("rendre permanent %s : %s", url, res)
+                self.set_status("⚠ Copie impossible pour l'instant (connexion ?). Le lien reste dans la fiche ; tu pourras réessayer.", "WARN")
+            else:
+                r, fi = res
+                gx_archive_set(self.store, url, iid, "permanent", r["root"], r["folder"], fi)
+                self.set_status("✔ Lien rendu permanent : la copie est sur ton PC (Archiveur, collection « Grimoire »).", "OK")
+                self._gx_toast("✔ Permanent ! Même si le lien disparaît, ta copie reste dans ton Grimoire.")
+            self._gx_fill_link(url)
+            if self._effective_mode() == "cards":
+                self.fill_cards()
+                if self.selected:
+                    self.select_ids(self.selected)
+
+        def job():
+            try:
+                out = work()
+            except Exception as ex:
+                logger.error("Archiveur : %s", traceback.format_exc())
+                out = ex
+            self.post(lambda: finish(out))
+        threading.Thread(target=job, daemon=True).start()
+
+    def _gx_watch(self, url: str):
+        a = gx_archive_get(self.store, url)
+        folder = gx_archive_folder(a)
+        if not folder:
+            open_url(url)
+            return
+        info = (a or {}).get("info") or {}
+        main = info.get("main") or gx_folder_info(folder)["main"]
+        p = os.path.join(folder, main) if main else folder
+        open_path(p if os.path.exists(p) else folder)
+
+    def _gx_local(self, url: str):
+        a = gx_archive_get(self.store, url)
+        folder = gx_archive_folder(a)
+        if folder:
+            p = os.path.join(folder, "index.html")
+            open_path(p if os.path.isfile(p) else folder)
+
+    def _gx_toast(self, msg: str, seconds: float = 3.5):
+        try:
+            t = tk.Toplevel(self)
+            t.overrideredirect(True)
+            t.configure(bg=C["HI"])
+            tk.Label(t, text=msg, bg=C["HI"], fg=C["ON_HI"], font=fnt("GUIB"), padx=16, pady=8).pack()
+            t.update_idletasks()
+            x = self.winfo_rootx() + (self.winfo_width() - t.winfo_reqwidth()) // 2
+            y = self.winfo_rooty() + self.winfo_height() - t.winfo_reqheight() - 60
+            t.geometry(f"+{x}+{y}")
+            t.attributes("-topmost", True)
+            if self.store.get("animations", True):
+                for k in range(6):
+                    self.after(k * 30, lambda a=(k + 1) / 6: t.winfo_exists() and t.attributes("-alpha", a))
+            self.after(int(seconds * 1000), t.destroy)
+        except tk.TclError:
+            pass
+
+    def _gx_external_changes(self):
+        """une autre application (ex. l'Archiveur) a ecrit dans grimoire.db : on rafraichit."""
+        try:
+            v = self.store.q("PRAGMA data_version")[0][0]
+        except Exception:
+            return
+        old = getattr(self, "_gx_dv", None)
+        self._gx_dv = v
+        if old is not None and v != old:
+            self.store._touch()
+            self.refresh_all()
 
     def _card_at(self, x: int, y: int) -> Optional[int]:
         cx, cy = self.cv.canvasx(x), self.cv.canvasy(y)
@@ -6478,6 +7583,8 @@ class GrimoireApp(tk.Tk):
 
     def _card_press(self, e):
         self.cv.focus_set()
+        if self._card_star_click(e):
+            return
         iid = self._card_at(e.x, e.y)
         if iid is None:
             self.select_ids([])
@@ -6501,6 +7608,7 @@ class GrimoireApp(tk.Tk):
     def _card_double(self, e):
         iid = self._card_at(e.x, e.y)
         if iid:
+            self._gx_open_pulse(iid)
             self.open_item(iid)
 
     def _card_menu(self, e):
@@ -7379,8 +8487,10 @@ class GrimoireApp(tk.Tk):
                 r = t.tag_nextrange("search", "1.0")
                 if r:
                     t.see(r[0])
-        if typ == "note" or (not acts and not ext and not desc and not img_src):
-            pass
+        try:
+            self.gx_link_section(f, it, W)
+        except Exception:
+            logger.error("aperçus de liens : %s", traceback.format_exc())
         self.after_idle(lambda: sf.canvas.yview_moveto(y))
 
     def _player_row(self, f, it: Dict[str, Any]):
@@ -9155,6 +10265,15 @@ class GrimoireApp(tk.Tk):
                 if payload.get("action") == "montrer":
                     self._bring_front()
                     continue
+                if payload.get("action") == "ouvrir":
+                    self.store._touch()
+                    self.refresh_all()
+                    try:
+                        self.goto_item(int(payload.get("id")))
+                    except (TypeError, ValueError):
+                        pass
+                    self._bring_front()
+                    continue
                 if payload.get("action") == "lot":
                     with open(payload["fichier"], "r", encoding="utf-8") as f:
                         rep = import_lot(self.store, json.load(f))
@@ -9166,6 +10285,7 @@ class GrimoireApp(tk.Tk):
             if all_ids:
                 self._after_add(all_ids, None, msg=f"📥 {len(all_ids)} fiche(s) reçue(s) (envoi externe).")
                 self._bring_front()
+            self._gx_external_changes()
         except Exception:
             logger.error("inbox : %s", traceback.format_exc())
         self.after(1500, self._poll_inbox)
@@ -9485,6 +10605,17 @@ def run_shot(app: "GrimoireApp", path: str, view: str) -> None:
                 LinkDialog(app, app, "https://www.youtube.com/watch?v=aqz-KE-bpKQ")
             elif view == "verif":
                 app.check_dialog()
+            elif view == "carte":
+                app.open_mindmap()
+            elif view == "cartes2":
+                app.open_view("v:all")
+                app.set_view_mode("cards")
+            elif view == "liens":
+                app.open_view("v:all")
+                app.set_view_mode("cards")
+                tgt = os.environ.get("GX_SHOT_ITEM")
+                if tgt:
+                    app.select_ids([int(tgt)], see=True)
         except Exception:
             logger.error("capture %s : %s", view, traceback.format_exc())
         app.after(1800 if view != "verif" else 4000, step2)

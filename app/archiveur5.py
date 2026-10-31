@@ -279,6 +279,315 @@ def setup_logging() -> None:
         logger.addHandler(logging.NullHandler())
 
 
+
+# ---------------------------------------------------------------- Grimoire : ecriture directe dans grimoire.db (5.x)
+GR_MUTEX = "Local\\Grimoire_SingleInstance"
+GR_ARCHIVES_SQL = """CREATE TABLE IF NOT EXISTS archives(
+  url TEXT PRIMARY KEY, item_id INTEGER, status TEXT DEFAULT '', root TEXT DEFAULT '', folder TEXT DEFAULT '',
+  info TEXT DEFAULT '{}', created TEXT, updated TEXT);"""
+
+
+def gr_data_dir() -> str:
+    env = os.environ.get("GRIMOIRE_DATA", "").strip()
+    if env:
+        return env
+    root = os.environ.get("PADAWAN_DATA", "").strip()
+    if root:
+        return os.path.join(root, "Grimoire")
+    if os.path.isdir(r"C:\web\FTP_HOME"):
+        return os.path.join(r"C:\web\FTP_HOME", "GRIMOIRE")
+    return os.path.join(os.path.expanduser("~"), "Documents", "Padawan", "Grimoire")
+
+
+def gr_db_path() -> str:
+    return os.path.join(gr_data_dir(), "grimoire.db")
+
+
+def gr_connect():
+    import sqlite3
+    c = sqlite3.connect(gr_db_path(), timeout=20)
+    c.row_factory = sqlite3.Row
+    c.execute("PRAGMA busy_timeout=20000")
+    c.execute(GR_ARCHIVES_SQL)
+    c.commit()
+    return c
+
+
+def gr_now() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def gr_norm(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or "").lower())
+    return "".join(ch for ch in s if not unicodedata.combining(ch))
+
+
+def gr_subjects(c) -> List[Dict[str, Any]]:
+    return [dict(r) for r in c.execute("SELECT id,parent_id,name,icon,color,sort FROM subjects WHERE deleted IS NULL "
+                                       "ORDER BY pinned DESC, sort, name")]
+
+
+def gr_path(subs: List[Dict[str, Any]], sid: int) -> str:
+    by = {s["id"]: s for s in subs}
+    out, cur, n = [], by.get(sid), 0
+    while cur and n < 20:
+        out.append(cur["name"])
+        cur = by.get(cur.get("parent_id"))
+        n += 1
+    return " › ".join(reversed(out))
+
+
+def gr_suggest(subs: List[Dict[str, Any]], text: str) -> Optional[int]:
+    """sujet du Grimoire le plus proche (mots du titre, description, collections et tags de l'archive)."""
+    words = set(w for w in re.findall(r"[a-z0-9]{4,}", gr_norm(text)))
+    best, score = None, 0.0
+    for s in subs:
+        sw = [w for w in re.findall(r"[a-z0-9]{4,}", gr_norm(s["name"]))]
+        if not sw:
+            continue
+        hit = 0.0
+        for w in sw:
+            if w in words:
+                hit += 2
+            elif any(x.startswith(w[:5]) or w.startswith(x[:5]) for x in words if len(x) >= 5 and len(w) >= 5):
+                hit += 1
+        sc = hit / len(sw) + (0.2 if s.get("parent_id") else 0)
+        if hit and sc > score:
+            best, score = s["id"], sc
+    return best
+
+
+def gr_find_url(c, url: str) -> Optional[Dict[str, Any]]:
+    if not url:
+        return None
+    r = c.execute("SELECT id,title,subject_id FROM items WHERE deleted IS NULL AND url=? ORDER BY id LIMIT 1", (url,)).fetchone()
+    return dict(r) if r else None
+
+
+def gr_folder_info(folder: str) -> Dict[str, Any]:
+    files = os.listdir(folder) if os.path.isdir(folder) else []
+    ext = (".mp4", ".webm", ".mkv", ".mov", ".m4v", ".mp3", ".m4a", ".opus")
+    vids = sorted([f for f in files if f.lower().endswith(ext)], key=lambda f: -os.path.getsize(os.path.join(folder, f)))
+    imgs = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and not f.startswith("sb_")]
+    imgs.sort(key=lambda f: (0 if ("thumb" in f.lower() or "capture" in f.lower()) else 1, f))
+    return {"main": vids[0] if vids else ("lecture.html" if "lecture.html" in files else
+                                          ("page.html" if "page.html" in files else ("index.html" if "index.html" in files else ""))),
+            "video": bool(vids and not vids[0].lower().endswith((".mp3", ".m4a", ".opus"))),
+            "index": "index.html" if "index.html" in files else "", "capture": imgs[0] if imgs else "",
+            "nfiles": len(files)}
+
+
+def gr_add_subject(c, name: str, parent_id: Optional[int]) -> int:
+    par = c.execute("SELECT icon,color FROM subjects WHERE id=?", (parent_id,)).fetchone() if parent_id else None
+    srt = c.execute("SELECT COALESCE(MAX(sort),0)+1 FROM subjects WHERE parent_id IS ?", (parent_id,)).fetchone()[0]
+    now = gr_now()
+    cur = c.execute("INSERT INTO subjects(parent_id,name,icon,color,sort,created,updated) VALUES(?,?,?,?,?,?,?)",
+                    (parent_id, name.strip()[:120], "📁", (par["color"] if par else "") or "", srt, now, now))
+    c.commit()
+    return int(cur.lastrowid)
+
+
+def gr_add_fiche(c, sid: int, root: str, entry: Dict[str, Any], info: Dict[str, Any]) -> int:
+    """cree une fiche dans le Grimoire (transaction courte) + lien « permanent » vers la copie locale."""
+    folder_name = str(entry.get("folder") or "")
+    folder = os.path.join(root, folder_name)
+    url = str(info.get("url") or info.get("webpage_url") or entry.get("url") or "")
+    fi = gr_folder_info(folder)
+    title = str(info.get("title") or folder_name)[:300]
+    desc = str(info.get("description") or info.get("text") or "")[:20000]
+    typ = "video" if fi["video"] else "link"
+    site = str(info.get("platform") or info.get("extractor_key") or "")
+    try:
+        site = platform_label(info.get("platform")) or site
+    except Exception:
+        pass
+    tags = ", ".join(str(t) for t in (info.get("tags") or []) if isinstance(t, str))[:400]
+    note = f"Archive locale : {folder}"
+    if info.get("notes"):
+        note += "\nNotes de l'Archiveur : " + str(info.get("notes"))
+    body = json.dumps({"v": 1, "runs": [[note, []]]}, ensure_ascii=False, separators=(",", ":"))
+    meta = {"description": desc[:1500], "site": site, "pending": False, "fetched": gr_now(), "auto_title": False,
+            "source_archiveur": folder_name}
+    now = gr_now()
+    c.execute("BEGIN IMMEDIATE")
+    try:
+        srt = c.execute("SELECT COALESCE(MAX(sort),0)+1 FROM items WHERE subject_id=?", (sid,)).fetchone()[0]
+        cur = c.execute("INSERT INTO items(subject_id,type,title,body,body_text,url,source,author,tags,extracted,meta,sort,created,updated) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (sid, typ, title, body, note, url, "Archiveur", str(info.get("uploader") or "")[:200], tags, desc,
+                         json.dumps(meta, ensure_ascii=False), srt, now, now))
+        iid = int(cur.lastrowid)
+        thumb = ""
+        if fi["capture"]:
+            try:
+                d = os.path.join(gr_data_dir(), "medias", str(sid), "_vignettes")
+                os.makedirs(d, exist_ok=True)
+                dest = os.path.join(d, f"v{iid}.png")
+                try:
+                    from PIL import Image  # type: ignore
+                    with Image.open(os.path.join(folder, fi["capture"])) as im:
+                        im = im.convert("RGB")
+                        im.thumbnail((480, 320))
+                        im.save(dest, "PNG")
+                except Exception:
+                    dest = os.path.join(d, f"v{iid}" + os.path.splitext(fi["capture"])[1].lower())
+                    shutil.copyfile(os.path.join(folder, fi["capture"]), dest)
+                thumb = f"medias/{sid}/_vignettes/{os.path.basename(dest)}"
+                c.execute("UPDATE items SET thumb=? WHERE id=?", (thumb, iid))
+            except Exception:
+                thumb = ""
+        try:
+            c.execute("INSERT INTO fts(rowid,title,body,extracted,tags,source,url) VALUES(?,?,?,?,?,?,?)",
+                      (iid, title, note, desc + " " + meta["description"] + " " + site, tags, "Archiveur", url))
+        except Exception:
+            pass   # pas de recherche plein texte : le Grimoire reconstruit l'index au besoin
+        if url:
+            fi.update({"source": "archiveur", "copie_le": now, "title": title})
+            c.execute("INSERT OR REPLACE INTO archives(url,item_id,status,root,folder,info,created,updated) VALUES(?,?,?,?,?,?,?,?)",
+                      (url, iid, "permanent", root, folder_name, json.dumps(fi, ensure_ascii=False), now, now))
+        c.commit()
+    except Exception:
+        c.rollback()
+        raise
+    return iid
+
+
+def gr_running() -> bool:
+    if not sys.platform.startswith("win"):
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+        k32 = ctypes.windll.kernel32
+        k32.OpenMutexW.restype = wintypes.HANDLE
+        h = k32.OpenMutexW(0x00100000, False, GR_MUTEX)
+        if h:
+            k32.CloseHandle(h)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def gr_open_item(iid: int, script: str) -> None:
+    """ouvre la fiche dans le Grimoire (ouvert : message dans _inbox ; ferme : on le lance)."""
+    d = os.path.join(gr_data_dir(), "_inbox")
+    os.makedirs(d, exist_ok=True)
+    fp = os.path.join(d, f"ouvrir_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.json")
+    with open(fp + ".tmp", "w", encoding="utf-8") as f:
+        json.dump({"action": "ouvrir", "id": int(iid)}, f)
+    os.replace(fp + ".tmp", fp)
+    if not gr_running() and os.path.isfile(script):
+        py = sys.executable or "pythonw"
+        if py.lower().endswith("python.exe") and os.path.isfile(py[:-10] + "pythonw.exe"):
+            py = py[:-10] + "pythonw.exe"
+        kw: Dict[str, Any] = {"cwd": os.path.dirname(script)}
+        if sys.platform.startswith("win"):
+            kw["creationflags"] = CREATE_NO_WINDOW
+        subprocess.Popen([py, script], **kw)
+
+
+class GrimoireSendDialog(tk.Toplevel if tk is not None else object):  # type: ignore[misc]
+    """« 📚 Envoyer au Grimoire » : choisir un sujet (suggestion automatique), creer un sous-sujet au besoin."""
+
+    def __init__(self, app, entries: List[Dict[str, Any]], infos: List[Dict[str, Any]]):
+        super().__init__(app)
+        self.app, self.entries, self.infos = app, entries, infos
+        self.result: Optional[int] = None
+        self.title("📚 Envoyer au Grimoire")
+        self.configure(bg=NC_BG)
+        self.transient(app)
+        self.c = gr_connect()
+        self.subs = gr_subjects(self.c)
+        n = len(entries)
+        hdr = (f"« {str(infos[0].get('title') or entries[0].get('folder'))[:90]} »" if n == 1 else f"{n} archives sélectionnées")
+        tk.Label(self, text="📚 Dans quel sujet du Grimoire ?", bg=NC_BG, fg=NC_HI, font=FONT_TITLE).pack(anchor="w", padx=12, pady=(10, 0))
+        tk.Label(self, text=hdr, bg=NC_BG, fg=NC_FG, font=FONT_UI, wraplength=560, justify="left").pack(anchor="w", padx=12)
+        text = " ".join(str(i.get("title") or "") + " " + str(i.get("description") or "")[:600] + " " +
+                        " ".join(str(x) for x in (i.get("tags") or [])) + " " + " ".join(str(x) for x in (e.get("collections") or []))
+                        for e, i in zip(entries, infos))
+        self.sug = gr_suggest(self.subs, text)
+        if self.sug:
+            tk.Label(self, text=f"✨ Suggestion : {gr_path(self.subs, self.sug)}", bg=NC_BG, fg=NC_OK, font=FONT_SM).pack(anchor="w", padx=12, pady=(4, 0))
+        fr = tk.Frame(self, bg=NC_BG)
+        fr.pack(fill="both", expand=True, padx=12, pady=6)
+        self.tv = ttk.Treeview(fr, show="tree", selectmode="browse", height=16)
+        sb = ttk.Scrollbar(fr, orient="vertical", command=self.tv.yview)
+        self.tv.configure(yscrollcommand=sb.set)
+        self.tv.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        self.fill()
+        self.tv.bind("<Double-Button-1>", lambda _e: self.ok())
+        self.tv.bind("<Return>", lambda _e: self.ok())
+        bar = tk.Frame(self, bg=NC_BG)
+        bar.pack(fill="x", padx=12, pady=(0, 10))
+        b = app._btn(bar, "📁 Nouveau sous-sujet…", self.new_sub)
+        b.pack(side="left")
+        Tooltip(b, "Créer un sous-sujet dans le sujet choisi (ou un sujet principal si rien n'est choisi)")
+        b = app._btn(bar, "✖ Annuler", self.destroy)
+        b.pack(side="right", padx=(6, 0))
+        Tooltip(b, "Fermer sans rien envoyer (Échap)")
+        b = app._btn(bar, "📚 Envoyer", self.ok, hi=True)
+        b.pack(side="right")
+        Tooltip(b, "Crée la fiche dans le Grimoire : titre, texte, image, lien d'origine et copie locale (✔ Permanent)")
+        self.bind("<Escape>", lambda _e: self.destroy())
+        self.geometry("600x560")
+        try:
+            self.update_idletasks()
+            self.geometry(f"+{app.winfo_rootx() + 80}+{app.winfo_rooty() + 60}")
+        except Exception:
+            pass
+        self.tv.focus_set()
+        try:
+            self.grab_set()
+        except tk.TclError:
+            pass
+
+    def fill(self, sel: Optional[int] = None):
+        self.tv.delete(*self.tv.get_children())
+        kids: Dict[Any, List[Dict[str, Any]]] = {}
+        for s in self.subs:
+            kids.setdefault(s.get("parent_id"), []).append(s)
+
+        def walk(pid, node):
+            for s in kids.get(pid, []):
+                self.tv.insert(node, "end", iid=str(s["id"]), text=f"{s.get('icon') or '📁'}  {s['name']}", open=True)
+                walk(s["id"], str(s["id"]))
+        walk(None, "")
+        target = sel or self.sug or next((s["id"] for s in self.subs if s["name"] == "À classer"), None)
+        if target and self.tv.exists(str(target)):
+            self.tv.selection_set(str(target))
+            self.tv.focus(str(target))
+            self.tv.see(str(target))
+
+    def new_sub(self):
+        from tkinter import simpledialog
+        sel = self.tv.selection()
+        pid = int(sel[0]) if sel else None
+        where = f" dans « {gr_path(self.subs, pid)} »" if pid else " (sujet principal)"
+        name = simpledialog.askstring("Nouveau sous-sujet", "Nom du nouveau sujet" + where + " :", parent=self)
+        if not name or not name.strip():
+            return
+        sid = gr_add_subject(self.c, name, pid)
+        self.subs = gr_subjects(self.c)
+        self.fill(sid)
+
+    def ok(self):
+        sel = self.tv.selection()
+        if not sel:
+            messagebox.showinfo("Grimoire", "Choisis un sujet dans la liste.", parent=self)
+            return
+        self.result = int(sel[0])
+        self.destroy()
+
+    def destroy(self):
+        try:
+            self.c.close()
+        except Exception:
+            pass
+        super().destroy()
+
 class ArchiveCancelled(Exception):
     """Archivage annulé par l'utilisateur."""
 
@@ -1141,9 +1450,53 @@ def probe_resolution(video: str) -> str:
     return ""
 
 
-def generate_storyboard(folder: str, n: int = 6, duration: Optional[float] = None,
-                        force: bool = False) -> List[str]:
-    """Extrait n images de la vidéo principale (ffmpeg) dans storyboard/."""
+SB_FRAMES = 16           # images du storyboard automatique
+SB_TIMES_JSON = "storyboard.json"
+_SB_LOCK = threading.Lock()  # un seul storyboard à la fois (léger pour le PC)
+_LOW_PRIO = 0x00004000       # BELOW_NORMAL_PRIORITY_CLASS (Windows)
+
+
+def _lowprio_kwargs() -> Dict[str, Any]:
+    kw = _hidden_kwargs()
+    if sys.platform.startswith("win"):
+        kw["creationflags"] = kw.get("creationflags", 0) | _LOW_PRIO
+    return kw
+
+
+def storyboard_times(folder: str, frames: Optional[List[str]] = None,
+                     duration: Optional[float] = None) -> List[float]:
+    """Moment (s) de chaque image du storyboard : storyboard.json, sinon calculé (anciens storyboards)."""
+    frames = frames if frames is not None else list_storyboard(folder)
+    if not frames:
+        return []
+    try:
+        with open(os.path.join(folder, STORYBOARD_DIR, SB_TIMES_JSON), "r", encoding="utf-8") as f:
+            data = json.load(f)
+        by_name = data.get("frames") or {}
+        out = []
+        for fp in frames:
+            t = by_name.get(os.path.basename(fp))
+            out.append(float(t) if t is not None else -1.0)
+        if all(t >= 0 for t in out):
+            return out
+    except Exception:
+        pass
+    dur = duration
+    if not dur:
+        try:
+            dur = float(load_info(folder).get("duration") or 0) or None
+        except (TypeError, ValueError):
+            dur = None
+    if not dur:
+        return [0.0 for _ in frames]
+    n = len(frames)
+    return [dur * (i + 0.5) / n for i in range(n)]
+
+
+def generate_storyboard(folder: str, n: int = SB_FRAMES, duration: Optional[float] = None,
+                        force: bool = False, progress: Optional[Callable[[int, int], None]] = None) -> List[str]:
+    """Extrait n petites images régulièrement espacées de la vidéo principale (ffmpeg, recherche rapide
+    -ss avant -i, priorité basse) dans storyboard/ + storyboard.json (moment de chaque image)."""
     existing = list_storyboard(folder)
     if existing and not force:
         return existing
@@ -1156,30 +1509,50 @@ def generate_storyboard(folder: str, n: int = 6, duration: Optional[float] = Non
     dur = duration or probe_duration(video)
     if not dur or dur <= 0:
         dur = 10.0
+    n = max(1, min(int(n), max(1, int(dur // 2) or 1), 40))  # vidéo très courte : moins d'images
     out_dir = os.path.join(folder, STORYBOARD_DIR)
-    if force and os.path.isdir(out_dir):
-        shutil.rmtree(out_dir, ignore_errors=True)
-    os.makedirs(out_dir, exist_ok=True)
-    frames = []
+    tmp_dir = out_dir + ".tmp"
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+    os.makedirs(tmp_dir, exist_ok=True)
+    times: Dict[str, float] = {}
     for i in range(n):
         t = dur * (i + 0.5) / n
-        out = os.path.join(out_dir, f"frame_{i + 1:02d}.jpg")
+        name = f"frame_{i + 1:02d}.jpg"
+        out = os.path.join(tmp_dir, name)
         try:
             subprocess.run(
                 [ff, "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{t:.2f}", "-i", video,
-                 "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", out],
-                **_hidden_kwargs(), timeout=60,
+                 "-an", "-sn", "-frames:v", "1", "-vf", "scale=320:-2", "-q:v", "5", out],
+                **_lowprio_kwargs(), timeout=45,
             )
         except Exception:
             logger.exception("storyboard frame %s", i)
         if os.path.isfile(out) and os.path.getsize(out) > 0:
-            frames.append(out)
-    if not frames:
+            times[name] = round(t, 2)
+        if progress:
+            try:
+                progress(i + 1, n)
+            except Exception:
+                pass
+    if not times:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return []
+    try:
+        with open(os.path.join(tmp_dir, SB_TIMES_JSON), "w", encoding="utf-8") as f:
+            json.dump({"duration": dur, "frames": times}, f, ensure_ascii=False, indent=1)
+    except Exception:
+        logger.exception("storyboard.json")
+    # remplacement en une fois : jamais de storyboard à moitié fait
+    if os.path.isdir(out_dir):
         shutil.rmtree(out_dir, ignore_errors=True)
-    return frames
+    try:
+        os.replace(tmp_dir, out_dir)
+    except OSError:
+        shutil.copytree(tmp_dir, out_dir, dirs_exist_ok=True)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    return list_storyboard(folder)
 
 
-# ---------------------------------------------------------------- notifications
 def notify_desktop(title: str, message: str) -> None:
     """Notification discrète (plyer) dans un thread ; silencieux si indisponible."""
     def _go():
@@ -2117,13 +2490,13 @@ def archive_with_ytdlp(
                 if auto_convert and c.get("vcodec") and not is_compatible(main_v, c):
                     log(f"🎬 Vidéo {codec_label(c)} → conversion MP4 compatible (H.264/AAC)…")
 
-                    def _cprog(p):
+                    def _cstats(s):
                         if progress_hook:
                             try:
-                                progress_hook({"status": "converting", "pct": p})
+                                progress_hook({"status": "converting", **s})
                             except Exception:
                                 pass
-                    r = convert_to_compatible(main_v, log, progress=_cprog, cancel_event=cancel_event)
+                    r = convert_to_compatible(main_v, log, cancel_event=cancel_event, stats=_cstats)
                     if r.get("ok"):
                         vcodec_out, acodec_out = r.get("vcodec"), r.get("acodec")
                         converted_at = datetime.now().isoformat(timespec="seconds")
@@ -2168,7 +2541,7 @@ def archive_with_ytdlp(
     }
     if storyboard and quality != "audio":
         try:
-            frames = generate_storyboard(final_dir, 6, duration=info.get("duration"))
+            frames = generate_storyboard(final_dir, SB_FRAMES, duration=info.get("duration"))
             if frames:
                 log(f"Storyboard: {len(frames)} images")
         except Exception:
@@ -2416,11 +2789,129 @@ def codec_label(c: Dict[str, Any]) -> str:
     return f"{v} + {a.upper()}" if a else v
 
 
+# ---------------------------------------------------------------- conversion rapide (oct. 2026)
+# Encodeur matériel détecté une fois (test réel de 1 s), mis en cache dans archiveur_encodeur.json.
+# Ordre : NVIDIA NVENC > Intel QSV > AMD AMF > Media Foundation (matériel Windows) > libx264 veryfast.
+# Réglage optionnel dans archiveur_config.json : "video_encoder": "auto" (défaut) | "x264" | "h264_nvenc"…
+ENC_CACHE_FILE = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Archiveur",
+                              "encodeur.json")  # cache hors du dossier web
+ENC_CACHE_TTL = 7 * 86400
+HW_ENCODERS = ["h264_nvenc", "h264_qsv", "h264_amf", "h264_mf"]
+ENCODER_LABELS = {"h264_nvenc": "NVIDIA NVENC", "h264_qsv": "Intel Quick Sync", "h264_amf": "AMD AMF",
+                  "h264_mf": "Media Foundation (GPU)", "libx264": "libx264 (processeur)"}
+_ENC_LOCK = threading.Lock()
+_ENC_MEM: Dict[str, Any] = {}
+
+
+def _encoder_video_args(enc: str) -> List[str]:
+    """Arguments vidéo par encodeur — qualité visuelle ~ libx264 crf 23."""
+    if enc == "h264_nvenc":
+        return ["-c:v", "h264_nvenc", "-preset", "p4", "-tune", "hq", "-rc", "vbr", "-cq", "23", "-b:v", "0",
+                "-profile:v", "high", "-pix_fmt", "yuv420p"]
+    if enc == "h264_qsv":
+        return ["-c:v", "h264_qsv", "-preset", "faster", "-global_quality", "23", "-look_ahead", "0",
+                "-pix_fmt", "nv12"]
+    if enc == "h264_amf":
+        return ["-c:v", "h264_amf", "-quality", "balanced", "-rc", "cqp", "-qp_i", "21", "-qp_p", "23",
+                "-pix_fmt", "yuv420p"]
+    if enc == "h264_mf":
+        return ["-c:v", "h264_mf", "-hw_encoding", "1", "-rate_control", "quality", "-quality", "70",
+                "-scenario", "archive", "-pix_fmt", "nv12"]
+    return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-threads", "0", "-pix_fmt", "yuv420p"]
+
+
+def _test_encoder(ff: str, enc: str) -> bool:
+    """Encode 1 s d'une mire synthétique : vrai si l'encodeur fonctionne réellement sur ce PC."""
+    try:
+        r = subprocess.run([ff, "-hide_banner", "-nostdin", "-loglevel", "error", "-f", "lavfi",
+                            "-i", "testsrc2=size=1280x720:rate=30", "-t", "1", *_encoder_video_args(enc),
+                            "-f", "null", "-"], **_hidden_kwargs(), timeout=25)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _encoder_pref() -> str:
+    try:
+        with open(CFG_FILE, "r", encoding="utf-8") as f:
+            v = str((json.load(f) or {}).get("video_encoder") or "auto").strip().lower()
+    except Exception:
+        v = "auto"
+    if v in ("x264", "libx264", "cpu", "logiciel"):
+        return "libx264"
+    return v if v in HW_ENCODERS else "auto"
+
+
+def pick_video_encoder(log: Optional[Callable[[str], None]] = None, force: bool = False,
+                       exclude: Optional[List[str]] = None) -> str:
+    """Encodeur H.264 à utiliser (cache mémoire + fichier, re-test après 7 jours ou si ffmpeg change)."""
+    ff = find_ffmpeg()
+    if not ff:
+        return "libx264"
+    pref = _encoder_pref()
+    if pref == "libx264":
+        return "libx264"
+    try:
+        st = os.stat(ff)
+        key = f"{os.path.abspath(ff)}|{int(st.st_mtime)}|{st.st_size}"
+    except OSError:
+        key = ff
+    excl = set(exclude or [])
+    with _ENC_LOCK:
+        if not force and not excl:
+            if _ENC_MEM.get("key") == key and _ENC_MEM.get("encoder"):
+                enc = _ENC_MEM["encoder"]
+                return pref if pref != "auto" and pref in (_ENC_MEM.get("ok") or []) else enc
+            try:
+                with open(ENC_CACHE_FILE, "r", encoding="utf-8") as f:
+                    d = json.load(f)
+                if (isinstance(d, dict) and d.get("key") == key and d.get("encoder")
+                        and time.time() - float(d.get("time") or 0) < ENC_CACHE_TTL):
+                    _ENC_MEM.clear()
+                    _ENC_MEM.update(d)
+                    enc = str(d["encoder"])
+                    return pref if pref != "auto" and pref in (d.get("ok") or []) else enc
+            except Exception:
+                pass
+        ok: List[str] = []
+        order = ([pref] if pref != "auto" else []) + [e for e in HW_ENCODERS if e != pref]
+        for enc in order:
+            if enc in excl:
+                continue
+            if _test_encoder(ff, enc):
+                ok.append(enc)
+                if pref == "auto" or enc == pref:
+                    break
+        enc = ok[0] if ok else "libx264"
+        d = {"key": key, "encoder": enc, "ok": ok, "excluded": sorted(excl), "time": time.time(),
+             "date": datetime.now().isoformat(timespec="seconds")}
+        _ENC_MEM.clear()
+        _ENC_MEM.update(d)
+        try:
+            os.makedirs(os.path.dirname(ENC_CACHE_FILE), exist_ok=True)
+            _write_json_atomic(ENC_CACHE_FILE, d)
+        except Exception:
+            pass
+        if log:
+            log(f"⚙ Encodeur vidéo détecté : {ENCODER_LABELS.get(enc, enc)}")
+        return enc
+
+
+def fmt_speed(x: Optional[float]) -> str:
+    if not x or x <= 0:
+        return ""
+    return (f"{x:.1f}" if x < 10 else f"{x:.0f}").replace(".", ",") + "×"
+
+
 def convert_to_compatible(video: str, log: Callable[[str], None],
                           progress: Optional[Callable[[float], None]] = None,
-                          cancel_event: Optional[threading.Event] = None) -> Dict[str, Any]:
-    """Ré-encode en MP4 H.264 (libx264 veryfast crf 23, yuv420p) + AAC ; copie ce qui est déjà bon.
-    Remplace le fichier (même nom, extension .mp4). Retourne {'ok', 'path', 'vcodec', 'acodec', 'before'}."""
+                          cancel_event: Optional[threading.Event] = None,
+                          stats: Optional[Callable[[Dict[str, Any]], None]] = None) -> Dict[str, Any]:
+    """MP4 H.264 + AAC compatible, le plus vite possible :
+    - vidéo déjà H.264 (yuv420p) → copie (remux instantané) ; audio AAC/MP3 → copie, sinon AAC seul ;
+    - sinon ré-encodage avec l'encodeur matériel détecté (repli automatique sur libx264 veryfast).
+    Remplace le fichier (même nom, extension .mp4). Retourne {'ok', 'path', 'vcodec', 'acodec', 'before', ...}.
+    stats(dict) reçoit pct, speed (×), eta (s), mode ('remux'|'audio'|'encode'), encoder, elapsed."""
     ff = find_ffmpeg()
     if not ff:
         raise RuntimeError("ffmpeg introuvable — conversion impossible.")
@@ -2429,53 +2920,105 @@ def convert_to_compatible(video: str, log: Callable[[str], None],
     final = base + ".mp4"
     tmp = base + ".h264.tmp"
     v_ok = c.get("vcodec") == "h264" and (c.get("pix_fmt") or "") in COMPAT_PIXFMT
-    vargs = ["-c:v", "copy"] if v_ok else [
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
-        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"]
     if not c.get("acodec"):
         aargs: List[str] = []
+        a_ok = True
     elif c.get("acodec") in ("aac", "mp3"):
         aargs = ["-c:a", "copy"]
+        a_ok = True
     else:
         aargs = ["-c:a", "aac", "-b:a", "160k"]
-    cmd = [ff, "-hide_banner", "-nostdin", "-y", "-i", video, "-map", "0:v:0", "-map", "0:a:0?",
-           *vargs, *aargs, "-movflags", "+faststart", "-f", "mp4",
-           "-progress", "pipe:1", "-nostats", "-loglevel", "error", tmp]
+        a_ok = False
+    mode = ("remux" if a_ok else "audio") if v_ok else "encode"
+    enc = "copy" if v_ok else pick_video_encoder(log)
     dur = c.get("duration") or probe_duration(video) or 0
-    log(f"🎬 Conversion {os.path.basename(video)} ({codec_label(c)} → H.264 + AAC)…")
-    kw = _hidden_kwargs()
-    kw["stderr"] = subprocess.STDOUT
     t0 = time.time()
-    proc = subprocess.Popen(cmd, **kw)
-    errs: List[str] = []
-    last = -1.0
-    cancelled = False
-    try:
-        for raw in iter(proc.stdout.readline, b""):  # type: ignore[union-attr]
-            if cancel_event is not None and cancel_event.is_set():
-                cancelled = True
-                proc.kill()
-                break
-            line = raw.decode("utf-8", errors="replace").strip()
-            if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
-                try:
-                    us = int(line.split("=", 1)[1])
-                except ValueError:
-                    continue
-                if dur and progress:
-                    pct = max(0.0, min(99.0, us / 1e6 / dur * 100.0))
-                    if pct - last >= 1.0:
-                        last = pct
-                        progress(pct)
-            elif "=" not in line and line:
-                errs.append(line)
-        proc.wait(timeout=60)
-    except Exception:
+
+    def _emit(pct: float, speed: Optional[float] = None, done: bool = False) -> None:
+        if not stats:
+            return
+        el = time.time() - t0
+        eta = None
+        if 0.5 < pct < 100 and el > 1.5:
+            eta = el * (100.0 - pct) / pct
         try:
-            proc.kill()
+            stats({"pct": pct, "speed": speed, "eta": eta, "mode": mode, "encoder": enc,
+                   "elapsed": el, "done": done})
         except Exception:
             pass
-        raise
+
+    def _cmd(e: str) -> List[str]:
+        vargs = ["-c:v", "copy"] if e == "copy" else [*_encoder_video_args(e),
+                                                       "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"]
+        return [ff, "-hide_banner", "-nostdin", "-y", "-i", video, "-map", "0:v:0", "-map", "0:a:0?",
+                *vargs, *aargs, "-movflags", "+faststart", "-f", "mp4",
+                "-progress", "pipe:1", "-nostats", "-loglevel", "error", tmp]
+
+    def _run(e: str) -> Tuple[int, List[str], bool]:
+        kw = _hidden_kwargs()
+        kw["stderr"] = subprocess.STDOUT
+        proc = subprocess.Popen(_cmd(e), **kw)
+        errs: List[str] = []
+        last = -1.0
+        last_t = 0.0
+        speed: Optional[float] = None
+        cancelled = False
+        try:
+            for raw in iter(proc.stdout.readline, b""):  # type: ignore[union-attr]
+                if cancel_event is not None and cancel_event.is_set():
+                    cancelled = True
+                    proc.kill()
+                    break
+                line = raw.decode("utf-8", errors="replace").strip()
+                if line.startswith("speed="):
+                    m = re.search(r"([\d.]+)\s*x", line)
+                    if m:
+                        try:
+                            speed = float(m.group(1))
+                        except ValueError:
+                            pass
+                elif line.startswith("out_time_us=") or line.startswith("out_time_ms="):
+                    try:
+                        us = int(line.split("=", 1)[1])
+                    except ValueError:
+                        continue
+                    if dur:
+                        pct = max(0.0, min(99.0, us / 1e6 / dur * 100.0))
+                        now = time.time()
+                        if progress and pct - last >= 1.0:
+                            last = pct
+                            progress(pct)
+                        if now - last_t >= 0.4:
+                            last_t = now
+                            _emit(pct, speed)
+                elif "=" not in line and line:
+                    errs.append(line)
+            proc.wait(timeout=60)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            raise
+        return proc.returncode, errs, cancelled
+
+    what = {"remux": "remux instantané (copie)", "audio": "vidéo copiée, audio → AAC",
+            "encode": f"ré-encodage {ENCODER_LABELS.get(enc, enc)}"}[mode]
+    log(f"🎬 Conversion {os.path.basename(video)} ({codec_label(c)} → H.264 + AAC) — {what}…")
+    _emit(0.0)
+    rc, errs, cancelled = _run(enc)
+    if (not cancelled and enc in HW_ENCODERS
+            and (rc != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0)):
+        log(f"! Encodeur {ENCODER_LABELS.get(enc, enc)} en échec — repli sur libx264.")
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        enc = pick_video_encoder(log, exclude=[enc])
+        if enc != "libx264":
+            enc = "libx264"  # sécurité : on ne retente pas un 2e matériel au milieu d'une conversion
+        _emit(0.0)
+        rc, errs, cancelled = _run(enc)
     if cancelled:
         try:
             os.remove(tmp)
@@ -2483,12 +3026,12 @@ def convert_to_compatible(video: str, log: Callable[[str], None],
             pass
         log("⛔ Conversion annulée — fichier original gardé.")
         return {"ok": False, "cancelled": True, "path": video, "before": c}
-    if proc.returncode != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
+    if rc != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) == 0:
         try:
             os.remove(tmp)
         except OSError:
             pass
-        raise RuntimeError("ffmpeg a échoué : " + (" | ".join(errs[-3:]) or f"code {proc.returncode}"))
+        raise RuntimeError("ffmpeg a échoué : " + (" | ".join(errs[-3:]) or f"code {rc}"))
     try:
         os.replace(tmp, final)
         if os.path.abspath(final) != os.path.abspath(video) and os.path.exists(video):
@@ -2502,8 +3045,13 @@ def convert_to_compatible(video: str, log: Callable[[str], None],
     after = probe_codecs(final)
     if progress:
         progress(100.0)
-    log(f"✅ MP4 compatible : {os.path.basename(final)} ({codec_label(after)}) en {time.time() - t0:.0f} s")
-    return {"ok": True, "path": final, "vcodec": after.get("vcodec"), "acodec": after.get("acodec"), "before": c}
+    el = time.time() - t0
+    _emit(100.0, (dur / el) if dur and el > 0 else None, done=True)
+    log(f"✅ MP4 compatible : {os.path.basename(final)} ({codec_label(after)}) en {el:.0f} s"
+        + (f" — {fmt_speed(dur / el)}" if dur and el > 0 else "")
+        + ("" if enc == "copy" else f" · {ENCODER_LABELS.get(enc, enc)}"))
+    return {"ok": True, "path": final, "vcodec": after.get("vcodec"), "acodec": after.get("acodec"),
+            "before": c, "mode": mode, "encoder": enc, "seconds": el}
 
 
 def _refresh_index_entry(root: str, folder: str) -> None:
@@ -2521,7 +3069,8 @@ def _refresh_index_entry(root: str, folder: str) -> None:
 def fix_folder_codecs(folder_path: str, log: Callable[[str], None],
                       progress: Optional[Callable[[float], None]] = None,
                       cancel_event: Optional[threading.Event] = None,
-                      update_index: bool = True) -> str:
+                      update_index: bool = True,
+                      stats: Optional[Callable[[Dict[str, Any]], None]] = None) -> str:
     """'ok' (converti), 'skip' (déjà compatible / pas de vidéo), 'cancel'. Lève en cas d'échec."""
     main = find_main_media(folder_path)
     if not main or not main.lower().endswith(VIDEO_EXTS):
@@ -2529,7 +3078,7 @@ def fix_folder_codecs(folder_path: str, log: Callable[[str], None],
     c = probe_codecs(main)
     if is_compatible(main, c):
         return "skip"
-    r = convert_to_compatible(main, log, progress=progress, cancel_event=cancel_event)
+    r = convert_to_compatible(main, log, progress=progress, cancel_event=cancel_event, stats=stats)
     if not r.get("ok"):
         return "cancel"
     info = load_info(folder_path)
@@ -2997,6 +3546,207 @@ def delete_archives(root: str, folders: List[str]) -> int:
             n += 1
     entries = [e for e in load_archive_index(root) if e.get("folder") not in set(folders)]
     save_archive_index(root, entries)
+    return n
+
+
+# ---------------------------------------------------------------- classement simple (suggestions)
+import unicodedata as _ud
+
+COLL_SUGGEST_OFF = "collection_suggest_off"  # info.json : suggestion refusée (« Non merci »)
+
+# familles de mots-clés -> collection proposée (mots sans accents, minuscules ; « * » = début de mot)
+COLL_FAMILIES: List[Tuple[str, List[str]]] = [
+    ("Santé & Nutrition", ["sante", "nutrition", "health", "healthy", "medecine", "medicine", "medical",
+                           "medecin", "docteur", "doctor", "vaccin*", "pharma*", "vitamin*", "baking soda",
+                           "bicarbonate", "cancer", "diet*", "regime", "guerir", "remede*", "remedy",
+                           "immunit*", "maladie*", "disease", "jeune", "fasting", "sucre", "sugar",
+                           "cholesterol", "diabet*", "nutritionniste", "naturopath*", "supplement*"]),
+    ("Musique", ["music", "musique", "song", "songs", "chanson*", "official video", "clip officiel",
+                 "concert", "album", "lyrics", "paroles", "remix", "guitar*", "guitare", "piano", "dj",
+                 "official audio", "live session", "cover", "band", "orchestre", "orchestra"]),
+    ("Films & séries", ["trailer", "bande annonce", "bande-annonce", "movie", "movies", "movieclips", "film",
+                        "films", "serie", "series", "episode*", "saison", "season", "netflix", "warner",
+                        "justwatch", "imdb", "anime", "cinema", "teaser", "court metrage", "short film"]),
+    ("Documentaires", ["documentary", "documentaire*", "history", "histoire", "historique", "mystery",
+                       "mystere*", "ancient", "chronology", "chronologie", "enquete", "civilisation*",
+                       "civilization*", "archeolog*", "nobody talks about", "hidden", "secret*",
+                       "the truth", "la verite", "explained", "explique"]),
+    ("Tech & science", ["tech", "technologie", "technology", "ai", "ia", "intelligence artificielle",
+                        "musk", "tesla", "spacex", "starlink", "grok", "chatgpt", "computer", "ordinateur",
+                        "python", "logiciel", "software", "science", "scientifique", "physique", "physics",
+                        "gravity", "gravite", "nasa", "robot*", "nvidia", "gpu", "quantum", "quantique",
+                        "space", "espace", "astronom*", "invention"]),
+    ("Nature", ["nature", "animal", "animaux", "animals", "wildlife", "forest", "foret", "ocean", "oiseau*",
+                "bird*", "plante*", "plant", "jardin*", "garden*", "cat", "cats", "chat", "chats", "dog",
+                "dogs", "chien*", "lion", "bear", "ours", "geolog*", "volcan*", "montagne*", "riviere",
+                "lac", "canadian shield", "bouclier canadien"]),
+    ("Spiritualité", ["jesus", "dieu", "god", "bible", "spiritual*", "spirituel*", "spiritualite", "priere",
+                      "prayer", "meditation", "foi", "faith", "conscience", "consciousness", "ame", "soul",
+                      "angel*", "ange", "anges", "eglise", "church"]),
+    ("Actualités & politique", ["news", "nouvelles", "actualite*", "politique", "politics", "political",
+                                "election*", "gouvernement", "government", "president", "ministre",
+                                "parlement", "parliament", "tribunal", "court", "proces", "charges",
+                                "senat*", "senate", "loi", "law", "guerre", "war"]),
+    ("Humour", ["funny", "drole", "humour", "humor", "lol", "blague*", "meme", "memes", "comedy",
+                "comedie", "parodie", "parody", "prank"]),
+    ("Cuisine", ["recette*", "recipe*", "cuisine", "cooking", "chef", "patisserie", "baking", "gateau",
+                 "souper", "dinner", "bbq"]),
+]
+
+
+def _fold(text: Any) -> str:
+    """minuscules sans accents, ponctuation -> espaces."""
+    t = _ud.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode("ascii").lower()
+    return " " + re.sub(r"[^a-z0-9]+", " ", t).strip() + " "
+
+
+_FAM_RX: List[Tuple[str, List[Tuple[str, "re.Pattern[str]"]]]] = []
+
+
+def _family_patterns():
+    if not _FAM_RX:
+        for name, words in COLL_FAMILIES:
+            pats = []
+            for w in words:
+                stem = w.rstrip("*")
+                body = re.escape(_fold(stem).strip()).replace(r"\ ", " ")
+                rx = re.compile(r" " + body + (r"[a-z0-9]*" if w.endswith("*") else "") + r" ")
+                pats.append((stem, rx))
+            _FAM_RX.append((name, pats))
+    return _FAM_RX
+
+
+_SERIES_SPLIT = re.compile(r"\s+[-–—|:]\s+|\s*[|(\[]|\s+-\s*")
+_STOP_SERIES = {"", "the", "le", "la", "les", "un", "une", "a", "video", "vidéo", "live", "new", "official"}
+
+
+def _title_wo_author(e: Dict[str, Any]) -> str:
+    """Titre sans le « Auteur - » ajouté devant les posts X/Facebook."""
+    t = str(e.get("title") or "").strip()
+    up = str(e.get("uploader") or "").strip()
+    if up and t.lower().startswith(up.lower()):
+        rest = t[len(up):].lstrip(" -–—:|")
+        if rest:
+            return rest
+    return t
+
+
+def series_key(e: Dict[str, Any]) -> Tuple[str, str]:
+    """(clé, nom joli) de la « série » d'un titre : partie avant « - », « | », « ( », « : ».
+    Ex. « The Animatrix - Trailer » -> ('animatrix', 'Animatrix'). ('', '') si rien d'utile."""
+    t = _title_wo_author(e)
+    head = _SERIES_SPLIT.split(t, maxsplit=1)[0].strip(" -–—|:.\"'«»")
+    if not head or len(head) > 48:
+        return "", ""
+    words = head.split()
+    if len(words) > 5:
+        return "", ""
+    pretty_words = list(words)
+    while pretty_words and _fold(pretty_words[0]).strip() in ("the", "le", "la", "les", "l"):
+        pretty_words = pretty_words[1:]
+    pretty = " ".join(pretty_words).strip()
+    if pretty.lower().startswith("l'"):
+        pretty = pretty[2:]
+    key = _fold(pretty).strip()
+    if not key or key in _STOP_SERIES or len(key) < 3 or key.isdigit():
+        return "", ""
+    up = _fold(e.get("uploader")).strip()
+    if up and key == up:  # « Auteur - texte » : l'auteur n'est pas une série
+        return "", ""
+    return key, pretty[:40]
+
+
+def _match_existing(name: str, existing: List[str]) -> str:
+    k = _fold(name).strip()
+    for c in existing:
+        if _fold(c).strip() == k:
+            return c
+    return name
+
+
+def suggest_collection(e: Dict[str, Any], entries: List[Dict[str, Any]],
+                       existing: Optional[List[str]] = None,
+                       info: Optional[Dict[str, Any]] = None) -> Optional[Tuple[str, str]]:
+    """Propose UNE collection pour une archive : (nom, raison) ou None si aucune idée sûre.
+    Ordre : nom d'une collection existante dans le titre > même série que d'autres archives >
+    famille de mots-clés (Santé & Nutrition, Musique, Films & séries…)."""
+    existing = list(existing or [])
+    info = info or {}
+    title = _fold(e.get("title"))
+    # 1) une collection existante citée dans le titre (ou tags)
+    tagtxt = _fold(" ".join(e.get("tags") or []))
+    for c in sorted(existing, key=len, reverse=True):
+        k = _fold(c).strip()
+        if len(k) >= 3 and (f" {k} " in title or f" {k} " in tagtxt):
+            return c, "le titre mentionne cette collection"
+    # 2) même série (titres qui commencent pareil)
+    key, pretty = series_key(e)
+    if key:
+        same = [x for x in entries if x is not e and x.get("folder") != e.get("folder")
+                and series_key(x)[0] == key]
+        if same:
+            # si les autres sont déjà rangés quelque part : même endroit
+            votes: Dict[str, int] = {}
+            for x in same:
+                for c in x.get("collections") or []:
+                    votes[c] = votes.get(c, 0) + 1
+            if votes:
+                best = max(votes.items(), key=lambda kv: kv[1])[0]
+                return best, f"comme {len(same)} autre(s) archive(s) « {pretty} »"
+            return _match_existing(pretty, existing), f"même série que {len(same)} autre(s) archive(s)"
+    # 3) familles de mots-clés
+    parts = [
+        (title, 3),
+        (_fold(e.get("uploader")), 2),
+        (tagtxt, 2),
+        (_fold(" ".join(str(t) for t in (info.get("source_tags") or [])[:20])), 1),
+        (_fold(str(e.get("text_snippet") or info.get("description") or "")[:600]), 1),
+    ]
+    best_name, best_score, best_words = "", 0, []
+    for name, pats in _family_patterns():
+        score, words = 0, []
+        for txt, w in parts:
+            if not txt.strip():
+                continue
+            for stem, rx in pats:
+                if rx.search(txt):
+                    score += w
+                    if stem not in words:
+                        words.append(stem)
+        if score > best_score:
+            best_name, best_score, best_words = name, score, words
+    if best_score >= 3:
+        shown = ", ".join(best_words[:3])
+        return _match_existing(best_name, existing), f"mots repérés : {shown}"
+    return None
+
+
+def plan_auto_collections(entries: List[Dict[str, Any]], existing: Optional[List[str]] = None,
+                          root: str = "") -> List[Tuple[str, str, str]]:
+    """Plan « Ranger tout » : [(dossier, collection, raison)] pour les archives NON classées seulement."""
+    plan = []
+    for e in entries:
+        if e.get("collections") or not e.get("folder"):
+            continue
+        info = load_info(os.path.join(root, str(e.get("folder")))) if root else {}
+        if info.get(COLL_SUGGEST_OFF):
+            continue
+        sug = suggest_collection(e, entries, existing, info)
+        if sug:
+            plan.append((str(e.get("folder")), sug[0], sug[1]))
+    return plan
+
+
+def move_to_collection(root: str, folders: List[str], target: Optional[str]) -> int:
+    """Déplace : l'archive n'est plus que dans « target » (None = Non classée)."""
+    n = 0
+    for f in folders:
+        fp = os.path.join(root, f)
+        if not load_info(fp):
+            continue
+        update_info_fields(root, f, save_index=False, collections=[target] if target else [])
+        n += 1
+    refresh_entries(root, folders)
     return n
 
 
@@ -3976,7 +4726,7 @@ def archive_x_fx(url: str, root: str, log: Callable[[str], None],
     }
     if any(m.lower().endswith(VIDEO_EXTS) for m in info_out["media_files"]):
         try:
-            generate_storyboard(final_dir, 6)
+            generate_storyboard(final_dir, SB_FRAMES)
         except Exception:
             logger.exception("storyboard x")
     _write_json_atomic(os.path.join(final_dir, "info.json"), info_out)
@@ -4487,6 +5237,142 @@ class ScrollFrame(tk.Frame if tk is not None else object):  # type: ignore[misc]
             return False
 
 
+CONV_CHEERS = [
+    (5, ["🚀 Ça décolle !", "🔧 Moteurs allumés…"]),
+    (25, ["🛰 En orbite, tout roule", "💪 Ça avance bien"]),
+    (45, ["🌠 Belle vitesse de croisière", "🎞 Les images défilent…"]),
+    (60, ["🌗 À mi-chemin, capitaine", "☕ Le temps d'un café…"]),
+    (80, ["🔥 Plus que la ligne droite", "🧭 Cap maintenu, ça file !"]),
+    (100, ["🏁 Presque arrivé…", "✨ Les dernières images…"]),
+]
+
+
+def conv_cheer(pct: float, mode: str = "encode", done: bool = False) -> str:
+    if done:
+        return "Mission accomplie ✨"
+    if mode == "remux":
+        return "⚡ Déjà au bon format : rangement éclair"
+    if mode == "audio":
+        return "⚡ Vidéo déjà bonne : seul le son est converti"
+    flip = int(time.time() // 6) % 2
+    for lim, msgs in CONV_CHEERS:
+        if pct < lim:
+            return msgs[flip % len(msgs)]
+    return CONV_CHEERS[-1][1][0]
+
+
+def conv_detail(s: Dict[str, Any]) -> str:
+    """Texte vivant : message encourageant · % · vitesse · temps restant."""
+    pct = float(s.get("pct") or 0)
+    parts = [conv_cheer(pct, str(s.get("mode") or "encode"), bool(s.get("done")))]
+    parts.append(f"{pct:.0f} %")
+    sp = fmt_speed(s.get("speed")) if (s.get("mode") == "encode" or s.get("done")) else ""
+    if sp:
+        parts.append(sp)
+    if s.get("eta") and not s.get("done"):
+        parts.append(f"reste ≈ {human_duration(s['eta']) if s['eta'] >= 1 else '0:01'}")
+    enc = str(s.get("encoder") or "")
+    if s.get("mode") == "encode" and enc in HW_ENCODERS:
+        parts.append("GPU")
+    return " · ".join(parts)
+
+
+class FunBar(tk.Canvas if tk is not None else object):  # type: ignore[misc]
+    """Barre de progression animée (rayures jaune/cyan qui défilent sur fond bleu foncé).
+    Compatible avec l'API utilisée de ttk.Progressbar : configure(value=…)."""
+
+    def __init__(self, master, width: int = 170, height: int = 16, **kw):
+        super().__init__(master, width=width, height=height, highlightthickness=0, bd=0,
+                         bg=NC_ENTRY_BG, **kw)
+        self._value = 0.0
+        self._mood = "normal"
+        self._off = 0
+        self._anim = None
+        self._flash = 0
+        self.bind("<Configure>", lambda e: self._draw())
+
+    def set_mood(self, mood: str) -> None:
+        if mood != self._mood:
+            self._mood = mood
+            self._draw()
+
+    def configure(self, cnf=None, **kw):  # type: ignore[override]
+        if isinstance(cnf, dict):
+            kw = {**cnf, **kw}
+            cnf = None
+        val = kw.pop("value", None)
+        for k in ("mode", "maximum", "orient", "length", "style"):
+            kw.pop(k, None)
+        r = super().configure(**kw) if kw else None
+        if val is not None:
+            try:
+                v = max(0.0, min(100.0, float(val)))
+            except (TypeError, ValueError):
+                v = 0.0
+            if v >= 100.0 and self._value < 100.0:
+                self._flash = 12
+            if v <= 0.0:
+                self._mood = "normal"
+            self._value = v
+            self._draw()
+            self._ensure_anim()
+        return r
+
+    config = configure  # type: ignore[assignment]
+
+    def _ensure_anim(self):
+        active = 0.0 < self._value < 100.0 or self._flash > 0
+        if active and self._anim is None:
+            self._anim = self.after(70, self._tick)
+
+    def _tick(self):
+        self._anim = None
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+        self._off = (self._off + 2) % 14
+        if self._flash > 0:
+            self._flash -= 1
+        self._draw()
+        self._ensure_anim()
+
+    def _draw(self):
+        try:
+            w = max(10, int(self.winfo_width()))
+            h = max(6, int(self.winfo_height()))
+        except Exception:
+            return
+        if w <= 10:
+            w = int(self.cget("width") or 170)
+            h = int(self.cget("height") or 16)
+        self.delete("all")
+        if str(tk.Canvas.cget(self, "bg")) != NC_ENTRY_BG:
+            tk.Canvas.configure(self, bg=NC_ENTRY_BG)
+        fw = int(w * self._value / 100.0)
+        remux = self._mood == "remux"
+        base, stripe = (NC_FG, NC_HI) if remux else (NC_HI, NC_FG)
+        if self._flash > 0 and self._flash % 4 < 2:
+            base, stripe = NC_OK, NC_HI
+        if fw > 0:
+            self.create_rectangle(0, 0, fw, h, fill=base, width=0)
+            if 0 < self._value < 100:
+                x = -h - 14 + self._off
+                while x < fw:
+                    pts = [max(0, min(fw, x)), h, max(0, min(fw, x + 6)), h,
+                           max(0, min(fw, x + 6 + h)), 0, max(0, min(fw, x + h)), 0]
+                    self.create_polygon(*pts, fill=stripe, width=0)
+                    x += 14
+                # petit éclat lumineux au bout de la barre
+                self.create_rectangle(max(0, fw - 3), 0, fw, h, fill="#FFFFFF", width=0)
+        self.create_rectangle(0, 0, w - 1, h - 1, outline=NC_FG, width=1)
+        if self._value > 0:
+            txt = f"{self._value:.0f} %"
+            self.create_text(w // 2 + 1, h // 2 + 1, text=txt, fill="#000000", font=("Consolas", 8, "bold"))
+            self.create_text(w // 2, h // 2, text=txt, fill="#FFFFFF", font=("Consolas", 8, "bold"))
+
+
 class Tooltip:
     """Infobulle simple (survol 450 ms)."""
 
@@ -4966,6 +5852,16 @@ HELP_TEXT: List[Tuple[str, str]] = [
     ("h", "✂ Outils média"),
     ("p", "Capture d'image, extrait vidéo, MP3, GIF animé à partir de n'importe quelle archive vidéo. "
           "Mets la vidéo en pause au bon endroit puis « = position du lecteur ». Résultat dans extraits/."),
+    ("h", "🗂 Comment ranger ?"),
+    ("p", "À gauche, la barre « 📚 Collections » : clic sur une collection = tu ne vois qu'elle ; « 🗂 Toutes » = tout. "
+          "« 📥 Non classées » montre ce qui reste à ranger."),
+    ("p", "Pour ranger une archive : clique « ✔ Oui » sur le bandeau jaune « Ranger dans … ? » au-dessus de l'aperçu "
+          "(ou « Autre… » pour choisir), ou clic droit → 📂 Déplacer vers la collection… (marche aussi sur plusieurs "
+          "archives choisies avec Ctrl+clic). « ✨ Ranger tout automatiquement » range d'un coup les non classées : "
+          "tu vois la liste avant, et « ↩ Annuler le rangement » remet tout comme avant."),
+    ("h", "🎞 Storyboard"),
+    ("p", "Une rangée de petites images tirées de la vidéo (une à intervalles réguliers). Il se prépare tout seul en "
+          "quelques secondes. Clique sur une image : la vidéo part à ce moment-là."),
     ("h", "★ Favoris et 📚 collections"),
     ("p", "Ctrl+D ou « ☆ Favori ». Clic droit sur une ou plusieurs archives → 📚 Collections pour les classer "
           "(Recettes, Politique…). Le menu « Collection » au-dessus de l'historique filtre la liste. "
@@ -5054,6 +5950,10 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self._list_thumbs: Dict[Tuple[str, float], Any] = {}
         self._sb_busy: set = set()
         self._sb_failed: set = set()
+        self._sb_imcache: Dict[Tuple[str, float, int], Any] = {}
+        self._auto_undo: Optional[Dict[str, Any]] = None
+        self._sug: Optional[Tuple[str, str]] = None
+        self._coll_side_lock = False
         self._clip_last: Optional[str] = None
         self._clip_seen: set = set()
         self._clip_job = None
@@ -5194,6 +6094,9 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             style.map(name, background=[("selected", NC_SEL)], foreground=[("selected", NC_ON_SEL)])
             style.configure(name + ".Heading", background=NC_BG, foreground=NC_HI, font=FONT_SM, relief="raised")
             style.map(name + ".Heading", background=[("active", NC_PANEL)])
+        style.configure("Coll.Treeview", background=NC_PANEL, fieldbackground=NC_PANEL, foreground=NC_TEXT,
+                        rowheight=30, font=FONT_UI, bordercolor=NC_LINE, indent=2)
+        style.map("Coll.Treeview", background=[("selected", NC_HI)], foreground=[("selected", NC_ON_HI)])
         style.configure("TNotebook", background=NC_BG, bordercolor=NC_FG)
         style.configure("TNotebook.Tab", background=NC_PANEL, foreground=NC_FG, font=FONT_SM, padding=(10, 3))
         style.map("TNotebook.Tab", background=[("selected", NC_HI)], foreground=[("selected", NC_ON_HI)])
@@ -5263,7 +6166,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             self.update_idletasks()
             w = self.hpane.winfo_width()
             if w > 100 and not getattr(self, "_sash_user", False):
-                self.hpane.sash_place(0, max(300, min(int(w * 0.35), w - 420)), 0)
+                self.hpane.sash_place(0, max(300, min(int(w * 0.42), w - 420)), 0)
         except Exception:
             logger.exception("sash")
 
@@ -5424,8 +6327,46 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
 
     # ------------------------------------------------------------ historique
     def _build_history(self, left):
+        # barre des collections (à gauche) : clic = n'afficher que cette collection
+        side = tk.Frame(left, bg=NC_PANEL, highlightbackground=NC_LINE, highlightthickness=1)
+        self._coll_side = side
+        main = tk.Frame(left, bg=NC_BG)
+        self._hist_main = main
+        side.pack(side="left", fill="y", padx=(0, 6), pady=(2, 4))
+        main.pack(side="left", fill="both", expand=True)
+        tk.Label(side, text="📚 Collections", bg=NC_PANEL, fg=NC_HI, font=FONT_UI, anchor="w").pack(
+            fill="x", padx=6, pady=(6, 2))
+        self.coll_tree = ttk.Treeview(side, style="Coll.Treeview", show="tree", selectmode="browse", height=10)
+        try:
+            cw = max(150, tkfont.nametofont(FONT_UI, root=self).measure("Santé & Nutrition (99)") + 12)
+        except Exception:
+            cw = 180
+        self.coll_tree.column("#0", width=min(cw, 210), stretch=True)
+        self.coll_tree.tag_configure("dim", foreground=NC_DIM)
+        self.coll_tree.pack(fill="both", expand=True, padx=4)
+        self.coll_tree.bind("<<TreeviewSelect>>", self._on_coll_side)
+        self.coll_tree.bind("<Button-3>", self._coll_side_menu)
+        Tooltip(self.coll_tree, "Clic = afficher seulement cette collection.\n"
+                                "Pour ranger : clic droit sur une archive → 📂 Déplacer vers la collection…\n"
+                                "(Ctrl+clic / Maj+clic pour en choisir plusieurs)")
+        b = self._btn(side, "✨ Ranger tout\nautomatiquement", self.auto_classify, hi=True, font=FONT_SM,
+                      justify="center")
+        b.pack(fill="x", padx=4, pady=(6, 2))
+        Tooltip(b, "Propose une collection pour chaque archive NON classée (même série, santé, musique…).\n"
+                   "Tu vois la liste avant, et tu peux tout annuler après.")
+        b = self._btn(side, "➕ Nouvelle collection", self.new_collection)
+        b.pack(fill="x", padx=4, pady=(0, 2))
+        Tooltip(b, "Créer une collection (les archives sélectionnées y sont ajoutées)")
+        self.undo_btn = self._btn(side, "↩ Annuler le rangement", self.undo_auto_classify)
+        Tooltip(self.undo_btn, "Remet les archives rangées automatiquement dans « Non classées »")
+        self._undo_anchor = tk.Frame(side, bg=NC_PANEL, height=4)
+        self._undo_anchor.pack(fill="x")
+        left = main
         head = tk.Frame(left, bg=NC_BG)
         head.pack(fill="x", pady=(2, 2))
+        self._side_toggle = self._btn(head, "◀", self._toggle_coll_side)
+        self._side_toggle.pack(side="left", padx=(0, 4))
+        Tooltip(self._side_toggle, "Cacher / afficher la barre des collections")
         tk.Label(head, text="🗂 Historique", bg=NC_BG, fg=NC_HI, font=FONT_UI).pack(side="left")
         self.count_var = tk.StringVar(value="0 archive")
         tk.Label(head, textvariable=self.count_var, bg=NC_BG, fg=NC_FG, font=FONT_SM).pack(side="right", padx=4)
@@ -5533,6 +6474,8 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             ("orig", "🌐 Original", self.open_original, False, "Ouvrir la page d'origine dans le navigateur"),
             ("page", "📄 Page", self.open_selected_index, False, "Page archive locale (index.html) dans le navigateur"),
             ("folder", "📁 Dossier", self.open_selected_folder, False, "Ouvrir le dossier de l'archive"),
+            ("grim", "📚 Envoyer au Grimoire", self.send_to_grimoire, False,
+             "Crée une fiche dans le Grimoire (choix du sujet) : titre, texte, image, lien et copie locale ✔ Permanent"),
             ("media", "✂ Outils média", self.open_media_tools, False,
              "Capture d'image, extrait vidéo, audio MP3, GIF animé (dossier extraits/)"),
             ("more", "⋯ Plus ▾", lambda: self._post_menu(self._act_btns["more"], self._build_more_menu()), False,
@@ -5540,6 +6483,21 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         ):
             self._act_btns[key] = act.add(self._btn(act, txt, cmd, hi=hi), tip)
         self._act_flow = act
+
+        # bandeau « Ranger dans X ? » (suggestion, rien n'est forcé)
+        self.sug_banner = tk.Frame(prev, bg=NC_CARD, highlightbackground=NC_HI, highlightthickness=1)
+        self.sug_msg = tk.Label(self.sug_banner, text="", bg=NC_CARD, fg=NC_TEXT, font=FONT_UI,
+                                anchor="w", justify="left")
+        self.sug_msg.pack(side="left", fill="x", expand=True, padx=8, pady=4)
+        _sb = tk.Frame(self.sug_banner, bg=NC_CARD)
+        _sb.pack(side="right", padx=4, pady=3)
+        self._btn(_sb, "✔ Oui", self._sug_accept, hi=True, font=FONT_UI).pack(side="left", padx=2)
+        self._sug_other = self._btn(_sb, "Autre…", lambda: self._post_menu(self._sug_other, self._build_move_menu()))
+        self._sug_other.pack(side="left", padx=2)
+        Tooltip(self._sug_other, "Choisir une autre collection (ou en créer une)")
+        _no = self._btn(_sb, "✖", self._sug_dismiss)
+        _no.pack(side="left", padx=2)
+        Tooltip(_no, "Non merci : ne plus proposer pour cette archive")
 
         self.pscroll = ScrollFrame(prev)
         self.pscroll.pack(fill="both", expand=True, padx=2, pady=2)
@@ -5697,8 +6655,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self.cancel_btn = self._btn(hdr, "⛔ Annuler", self.cancel_current)
         self.cancel_btn.pack(side="right", padx=4, pady=2)
         Tooltip(self.cancel_btn, "Annuler l'archivage / la conversion en cours")
-        self.prog = ttk.Progressbar(hdr, style="Arch.Horizontal.TProgressbar", orient="horizontal",
-                                    mode="determinate", maximum=100, length=170)
+        self.prog = FunBar(hdr, width=170, height=16)
         self.prog.pack(side="left", padx=(10, 6), pady=4)
         self.prog_var = tk.StringVar(value="Aucun archivage en cours.")
         tk.Label(hdr, textvariable=self.prog_var, bg=NC_PANEL, fg=NC_FG, font=FONT_SM, anchor="w").pack(
@@ -6114,6 +7071,9 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             if st in ("offline", "restricted"):
                 pre += GUI_ONLINE[st][0] + " "
             title = pre + title
+            cols = [c for c in (e.get("collections") or []) if c.lower() != str(coll or "").lower()]
+            if cols:
+                title += "   📚 " + ", ".join(cols[:2])
             if e.get("tags"):
                 title += "   " + " ".join("#" + t for t in e.get("tags")[:4])
             self.tree.insert("", "end", iid=iid, image=self._list_thumb(e), values=(
@@ -6224,6 +7184,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self.files_tree.delete(*self.files_tree.get_children())
         self.tn_state.configure(text="")
         self.codec_banner.pack_forget()
+        self._hide_suggest_banner()
         self._update_states()
 
     def _tn_current(self) -> Tuple[str, str]:
@@ -6328,6 +7289,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self._render_extracts(path, main)
         self._render_gallery()
         self._render_files()
+        self._update_suggest_banner()
         self._update_states()
         self.after_idle(self._render_thumb)
 
@@ -6589,6 +7551,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         for lab in self._card_vals.values():
             lab.configure(wraplength=max(200, w - keyw - 20))
         self.codec_msg.configure(wraplength=max(200, w - 300))
+        self.sug_msg.configure(wraplength=max(200, w - 260))
         self.tr_msg.configure(wraplength=max(200, w - 20))
         self.ex_msg.configure(wraplength=max(200, w - 20))
         self.pl_note.configure(wraplength=max(200, w - 30))
@@ -6611,32 +7574,48 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             elif not find_ffmpeg():
                 self.sb_msg.configure(text="(ffmpeg requis pour le storyboard)")
             elif path in self._sb_busy:
-                self.sb_msg.configure(text="⏳ Génération du storyboard…")
-            elif path in self._sb_failed or not self.sb_var.get():
-                self.sb_msg.configure(text="(storyboard indisponible — clic droit historique : Refaire le storyboard)")
+                self.sb_msg.configure(text="⏳ Storyboard en préparation… (quelques secondes)")
+            elif path in self._sb_failed:
+                self.sb_msg.configure(text="(storyboard impossible pour cette vidéo — clic droit : 🎞 Refaire le storyboard)")
+            elif self._folder_converting(path):
+                self.sb_msg.configure(text="⏳ Storyboard après la conversion en cours…")
             else:
                 self._start_storyboard(path)
             return
-        self.sb_msg.configure(text="Clic = agrandir l'image · double-clic = ▶ lire la vidéo")
+        dur = None
+        try:
+            dur = float(self._preview_info.get("duration") or 0) or None
+        except (TypeError, ValueError):
+            dur = None
+        times = storyboard_times(path, frames, dur)
+        can_seek = bool(main) and self._integrated_ok(main)
+        if can_seek:
+            self.sb_msg.configure(text="👆 Clique sur une image pour sauter à ce moment de la vidéo")
+        else:
+            self.sb_msg.configure(text="Clic = agrandir l'image · double-clic = ▶ lire la vidéo")
         if not HAS_PIL:
             return
-        items = []
-        if self._thumb_base is not None and self._thumb_src_path and STORYBOARD_DIR not in str(self._thumb_src_path):
-            items.append(("Miniature", self._thumb_src_path))
-        items += [(f"{i + 1}", p) for i, p in enumerate(frames)]
+        items = [(fmt_ts(times[i]) if i < len(times) else f"{i + 1}", p, times[i] if i < len(times) else 0.0)
+                 for i, p in enumerate(frames)]
         avail = self._preview_width() - 8
         n_items = max(1, len(items))
-        tile_w = max(110, min(240, avail // n_items - 12))
-        cols = max(1, min(n_items, avail // (tile_w + 12)))
+        tile_w = max(96, min(200, avail // n_items - 10))
+        cols = max(1, min(n_items, avail // (tile_w + 10)))
         if cols < n_items:  # répartir sur des rangées égales
             rows = -(-n_items // cols)
             cols = -(-n_items // rows)
-            tile_w = max(90, min(240, avail // cols - 12))
-        for idx, (lab_txt, p) in enumerate(items):
+            tile_w = max(90, min(200, avail // cols - 10))
+        for idx, (lab_txt, p, t) in enumerate(items):
             try:
-                im = Image.open(p)
-                im.thumbnail((tile_w, int(tile_w * 0.75)))
-                ph = ImageTk.PhotoImage(im.convert("RGB"))
+                key = (p, os.path.getmtime(p), tile_w)
+                ph = self._sb_imcache.get(key)
+                if ph is None:
+                    im = Image.open(p)
+                    im.thumbnail((tile_w, int(tile_w * 0.75)))
+                    ph = ImageTk.PhotoImage(im.convert("RGB"))
+                    if len(self._sb_imcache) > 400:
+                        self._sb_imcache.clear()
+                    self._sb_imcache[key] = ph
             except Exception:
                 continue
             self._sb_photos.append(ph)
@@ -6646,8 +7625,25 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
                           bd=0, padx=2, pady=2, cursor="hand2")
             lb.pack()
             tk.Label(cell, text=lab_txt, bg=NC_BG, fg=NC_DIM, font=FONT_SM).pack()
-            lb.bind("<Button-1>", lambda e, pp=p: self._show_big(pp))
-            lb.bind("<Double-Button-1>", lambda e: self.open_selected_media())
+            if can_seek:
+                lb.bind("<Button-1>", lambda e, tt=t: self._sb_jump(tt))
+                Tooltip(lb, f"▶ Lire à partir de {lab_txt}")
+            else:
+                lb.bind("<Button-1>", lambda e, pp=p: self._show_big(pp))
+                lb.bind("<Double-Button-1>", lambda e: self.open_selected_media())
+
+    def _sb_jump(self, t: float):
+        """Clic sur une image du storyboard : la vidéo part à ce moment-là."""
+        try:
+            self.player_seek_to(max(0.0, float(t)), play=True)
+            self.status.set(f"▶ Lecture à {fmt_ts(t)}")
+        except Exception:
+            logger.exception("storyboard jump")
+
+    def _folder_converting(self, path: str) -> bool:
+        folder = os.path.basename(path)
+        return any(j.get("kind") == "convert" and j.get("folder") == folder and j.get("status") in ("cours", "attente")
+                   for j in self.jobs)
 
     def _thumb_src_path_shown(self):
         return getattr(self, "_shown_path", None) or getattr(self, "_thumb_src_path", None)
@@ -6666,16 +7662,35 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             logger.exception("show big")
 
     def _start_storyboard(self, path: str, force: bool = False):
+        """Storyboard en arrière-plan (fil séparé, ffmpeg en priorité basse, un à la fois) : l'interface reste libre."""
         if path in self._sb_busy:
             return
         self._sb_busy.add(path)
-        self.sb_msg.configure(text="⏳ Génération du storyboard (ffmpeg)…")
+        self._sb_failed.discard(path)
+        if self._preview_path == path:
+            self.sb_msg.configure(text="⏳ Storyboard en préparation… (quelques secondes)")
         dur = self._preview_info.get("duration") if self._preview_path == path else None
+        if not dur:
+            try:
+                dur = load_info(path).get("duration")
+            except Exception:
+                dur = None
+        try:
+            dur = float(dur) if dur else None
+        except (TypeError, ValueError):
+            dur = None
+
+        def _prog(i, n):
+            def _ui():
+                if self._preview_path == path and path in self._sb_busy and not list_storyboard(path):
+                    self.sb_msg.configure(text=f"⏳ Storyboard en préparation… {i}/{n}")
+            self.ui(_ui)
 
         def _job():
             frames = []
             try:
-                frames = generate_storyboard(path, 6, duration=dur, force=force)
+                with _SB_LOCK:
+                    frames = generate_storyboard(path, SB_FRAMES, duration=dur, force=force, progress=_prog)
             except Exception:
                 logger.exception("storyboard")
             self._sb_busy.discard(path)
@@ -6687,9 +7702,9 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
                     self._render_storyboard()
                     self._render_files()
                 if frames:
-                    self.log(f"🎞 Storyboard prêt ({len(frames)} images).")
+                    self.log(f"🎞 Storyboard prêt ({len(frames)} images) : {os.path.basename(path)}")
             self.ui(_done)
-        threading.Thread(target=_job, daemon=True).start()
+        threading.Thread(target=_job, daemon=True, name="storyboard").start()
 
     def regen_storyboard(self):
         path = self._folder_path()
@@ -7306,9 +8321,16 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         else:
             self._refresh_queue_view()
         if j["status"] == "cours":
+            try:
+                self.prog.set_mood("remux" if j.get("conv_mode") in ("remux", "audio") else "normal")
+            except Exception:
+                pass
             self.prog.configure(value=j["pct"])
             name = (j["title"] or j["url"])[:70]
-            self.prog_var.set(f"⬇ {name} — {j.get('detail') or 'Préparation…'}")
+            if j.get("conv_mode"):
+                self.prog_var.set(f"{j.get('detail') or '🎬 Conversion…'} — {name.lstrip('🎬 ')}")
+            else:
+                self.prog_var.set(f"⬇ {name} — {j.get('detail') or 'Préparation…'}")
             self.cancel_btn.configure(state="normal")
         else:
             self._refresh_queue_view()
@@ -7351,7 +8373,8 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
                 self.ui(lambda: self._job_changed(job))
             elif st == "converting":
                 job["pct"] = float(d.get("pct") or 0)
-                job["detail"] = f"🎬 Conversion MP4 compatible (H.264) {job['pct']:.0f} %"
+                job["conv_mode"] = str(d.get("mode") or "encode")
+                job["detail"] = "🎬 " + conv_detail(d)
                 self.ui(lambda: self._job_changed(job))
             elif st == "finished":
                 state["q"] = -1
@@ -7415,12 +8438,13 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         o = job["opts"]
         fp = os.path.join(o["root"], job["folder"])
 
-        def prog(p):
-            job["pct"] = p
-            job["detail"] = f"🎬 Conversion H.264 {p:.0f} %"
+        def stats(s):
+            job["pct"] = float(s.get("pct") or 0)
+            job["conv_mode"] = str(s.get("mode") or "encode")
+            job["detail"] = "🎬 " + conv_detail(s)
             self.ui(lambda: self._job_changed(job))
         try:
-            r = fix_folder_codecs(fp, self.log, progress=prog, cancel_event=self._cancel_event)
+            r = fix_folder_codecs(fp, self.log, cancel_event=self._cancel_event, stats=stats)
             if r == "cancel":
                 job.update(status="annule", detail="")
                 self._run_stats["annule"] += 1
@@ -7586,6 +8610,15 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self.refresh_list()
         if not self.select_folder(entry.get("folder")):
             self.show_preview(entry)
+        # storyboard tout de suite après l'archivage (arrière-plan), même si une autre archive est affichée
+        try:
+            path = os.path.join(self.archive_root_path(), str(entry.get("folder") or ""))
+            main = find_main_media(path) if entry.get("folder") else None
+            if main and main.lower().endswith(VIDEO_EXTS) and not list_storyboard(path) and find_ffmpeg() \
+                    and not self._folder_converting(path):
+                self._start_storyboard(path)
+        except Exception:
+            logger.exception("storyboard après archivage")
 
     def _on_queue_done(self):
         s = self._run_stats
@@ -8475,7 +9508,9 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             self._preview_info[k] = info.get(k)
         self._set_card("online", self._online_text(self._preview_info), ("action", "online"))
         self._set_card("collections", self._collections_text(self._preview_info), ("action", "collections"))
+        self._preview_info[COLL_SUGGEST_OFF] = info.get(COLL_SUGGEST_OFF)
         self._update_fav_button()
+        self._update_suggest_banner()
 
     def _update_fav_button(self):
         b = self._act_btns.get("fav")
@@ -8539,7 +9574,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         noff = sum(1 for e in self.entries if e.get("online_status") in ("offline", "restricted"))
         nnone = sum(1 for e in self.entries if not e.get("collections"))
         for lab, key, n in (("★ Favoris", COLL_FAV, nfav), ("🗣 Avec transcription", COLL_TRANSCRIPT, ntr),
-                            ("⚠ Plus en ligne", COLL_OFFLINE, noff), ("· Sans collection", COLL_NONE, nnone)):
+                            ("⚠ Plus en ligne", COLL_OFFLINE, noff), ("📥 Non classées", COLL_NONE, nnone)):
             cmap[f"{lab} ({n})"] = key
         counts: Dict[str, int] = {}
         for e in self.entries:
@@ -8552,6 +9587,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         self.coll_cb.configure(values=list(cmap.keys()))
         lab = next((k for k, v in cmap.items() if v == cur_key), COLL_ALL_LABEL)
         self.coll_var.set(lab)
+        self._fill_coll_side(counts, nnone, nfav)
 
     def _coll_key(self) -> str:
         return self._coll_map.get(self.coll_var.get(), "")
@@ -8559,7 +9595,342 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
     def _on_coll_filter(self):
         self.cfg["collection_filter"] = self._coll_key()
         save_cfg(self.cfg)
+        self._sync_coll_side()
         self.apply_filter()
+
+    # ---------------------------------------------------------------- barre des collections (classement simple)
+    def _fill_coll_side(self, counts: Dict[str, int], nnone: int, nfav: int):
+        t = getattr(self, "coll_tree", None)
+        if t is None:
+            return
+        self._coll_side_lock = True
+        try:
+            t.delete(*t.get_children())
+            t.insert("", "end", iid="c::", text=f" 🗂 Toutes ({len(self.entries)})")
+            t.insert("", "end", iid="c::" + COLL_NONE, text=f" 📥 Non classées ({nnone})",
+                     tags=() if nnone else ("dim",))
+            t.insert("", "end", iid="c::" + COLL_FAV, text=f" ★ Favoris ({nfav})", tags=() if nfav else ("dim",))
+            for c in load_collections(self.archive_root_path(), self.entries):
+                n = counts.get(c.lower(), 0)
+                t.insert("", "end", iid="c::" + c, text=f" 📚 {c} ({n})", tags=() if n else ("dim",))
+        except Exception:
+            logger.exception("barre collections")
+        finally:
+            self._coll_side_lock = False
+        self._sync_coll_side()
+
+    def _sync_coll_side(self):
+        t = getattr(self, "coll_tree", None)
+        if t is None:
+            return
+        iid = "c::" + self._coll_key()
+        self._coll_side_lock = True
+        try:
+            if t.exists(iid):
+                if t.selection() != (iid,):
+                    t.selection_set(iid)
+                t.see(iid)
+            else:
+                t.selection_remove(*t.selection())
+        except Exception:
+            pass
+        finally:
+            self.after(10, lambda: setattr(self, "_coll_side_lock", False))
+
+    def _on_coll_side(self, _e=None):
+        if self._coll_side_lock:
+            return
+        sel = self.coll_tree.selection()
+        if not sel:
+            return
+        key = sel[0][3:]
+        lab = next((k for k, v in self._coll_map.items() if v == key), None)
+        if lab is None or self.coll_var.get() == lab:
+            return
+        self.coll_var.set(lab)
+        self._on_coll_filter()
+
+    def _coll_side_menu(self, event):
+        iid = self.coll_tree.identify_row(event.y)
+        name = iid[3:] if iid and iid.startswith("c::") else ""
+        m = self._menu()
+        m.add_command(label="➕ Nouvelle collection…", command=self.new_collection)
+        m.add_command(label="✨ Ranger tout automatiquement…", command=self.auto_classify)
+        if self._auto_undo:
+            m.add_command(label="↩ Annuler le dernier rangement automatique", command=self.undo_auto_classify)
+        if name and not name.startswith("__"):
+            m.add_separator()
+            m.add_command(label=f"✏ Renommer « {name} »…", command=lambda: self.rename_collection(name))
+            m.add_command(label=f"🗑 Supprimer « {name} » (les archives restent)",
+                          command=lambda: self.delete_collection(name))
+        try:
+            m.tk_popup(event.x_root, event.y_root)
+        finally:
+            try:
+                m.grab_release()
+            except Exception:
+                pass
+        return "break"
+
+    def _toggle_coll_side(self):
+        if self._coll_side.winfo_manager():
+            self._coll_side.pack_forget()
+            self._side_toggle.configure(text="▶ 📚")
+        else:
+            self._coll_side.pack(side="left", fill="y", padx=(0, 6), pady=(2, 4), before=self._hist_main)
+            self._side_toggle.configure(text="◀")
+
+    def rename_collection(self, name: str):
+        new = self._ask_string(f"Nouveau nom pour la collection « {name} » :", initial=name, parent=self)
+        new = re.sub(r"\s+", " ", (new or "")).strip()[:40]
+        if not new or new == name:
+            return
+        root = self.archive_root_path()
+        members = [str(e.get("folder")) for e in self.entries
+                   if name.lower() in {c.lower() for c in (e.get("collections") or [])}]
+        try:
+            backup_index(root, min_interval=0)
+            names = [n for n in load_collections(root, self.entries) if n.lower() != name.lower()]
+            if new.lower() not in {n.lower() for n in names}:
+                names.append(new)
+            save_collections(root, names)
+            for f in members:
+                info = load_info(os.path.join(root, f))
+                cols = [c for c in (info.get("collections") or []) if isinstance(c, str) and c.lower() != name.lower()]
+                if new.lower() not in {c.lower() for c in cols}:
+                    cols.append(new)
+                update_info_fields(root, f, save_index=False, collections=cols)
+            refresh_entries(root, members)
+        except Exception as ex:
+            logger.exception("renommer collection")
+            messagebox.showerror(APP_NAME, f"Renommage impossible :\n{friendly_error(ex)}", parent=self)
+        if self._coll_key().lower() == name.lower():
+            self.cfg["collection_filter"] = new
+        self.log(f"✏ Collection « {name} » → « {new} » ({len(members)} archive(s))")
+        self._reload_entries()
+        if self.cfg.get("collection_filter") == new:
+            lab = next((k for k, v in self._coll_map.items() if v == new), COLL_ALL_LABEL)
+            self.coll_var.set(lab)
+            self._on_coll_filter()
+
+    def _build_move_menu(self, parent=None):
+        """Menu « Déplacer vers » : l'archive (ou la sélection) va dans UNE collection."""
+        m = tk.Menu(parent or self, tearoff=0, bg=NC_PANEL, fg=NC_FG, activebackground=NC_SEL,
+                    activeforeground=NC_ON_SEL, font=FONT_UI)
+        names = load_collections(self.archive_root_path(), self.entries)
+        sug = self._sug[1] if self._sug and len(self._selected_folders()) <= 1 else ""
+        if sug and sug.lower() not in {n.lower() for n in names}:
+            m.add_command(label=f"✨ {sug} (nouvelle, proposée)", command=lambda: self.move_selected_to(sug))
+        for c in names:
+            m.add_command(label=f"📚 {c}", command=lambda cc=c: self.move_selected_to(cc))
+        if names or sug:
+            m.add_separator()
+        m.add_command(label="➕ Nouvelle collection…", command=self._move_to_new)
+        m.add_command(label="📥 Non classée (retirer des collections)", command=lambda: self.move_selected_to(None))
+        return m
+
+    def _move_to_new(self):
+        name = self._ask_string("Nom de la nouvelle collection :\n(ex. Animatrix, Santé, Musique, À revoir)",
+                                parent=self)
+        name = re.sub(r"\s+", " ", (name or "")).strip()[:40]
+        if name:
+            self.move_selected_to(name)
+
+    def move_selected_to(self, name: Optional[str], folders: Optional[List[str]] = None):
+        folders = folders or self._selected_folders()
+        if not folders:
+            return
+        root = self.archive_root_path()
+        try:
+            if name:
+                names = load_collections(root, self.entries)
+                hit = next((n for n in names if n.lower() == name.lower()), None)
+                if hit:
+                    name = hit
+                else:
+                    save_collections(root, names + [name])
+            n = move_to_collection(root, folders, name)
+        except Exception as ex:
+            logger.exception("déplacer collection")
+            messagebox.showerror(APP_NAME, f"Classement impossible :\n{friendly_error(ex)}", parent=self)
+            return
+        msg = (f"📚 Rangé dans « {name} »" if name else "📥 Remis dans « Non classées »") + (f" ({n} archives)" if n > 1 else "")
+        self.status.set(msg)
+        self.log(msg)
+        self._reload_entries()
+
+    # ---------------------------------------------------------------- suggestion « Ranger dans X ? »
+    def _hide_suggest_banner(self):
+        self._sug = None
+        try:
+            self.sug_banner.pack_forget()
+        except Exception:
+            pass
+
+    def _update_suggest_banner(self):
+        e = self._preview_entry
+        info = self._preview_info or {}
+        if not e or not e.get("folder") or info.get("collections") or info.get(COLL_SUGGEST_OFF):
+            self._hide_suggest_banner()
+            return
+        try:
+            names = load_collections(self.archive_root_path(), self.entries)
+            sug = suggest_collection(e, self.entries, names, info)
+        except Exception:
+            logger.exception("suggestion collection")
+            sug = None
+        if not sug:
+            self._hide_suggest_banner()
+            return
+        self._sug = (str(e.get("folder")), sug[0])
+        self.sug_msg.configure(text=f"📚 Ranger dans « {sug[0]} » ?   ({sug[1]})",
+                               wraplength=max(200, self._preview_width() - 260))
+        if not self.sug_banner.winfo_manager():
+            self.sug_banner.pack(fill="x", padx=6, pady=(0, 4), before=self.pscroll)
+
+    def _sug_accept(self):
+        if not self._sug:
+            return
+        folder, name = self._sug
+        self.move_selected_to(name, folders=[folder])
+
+    def _sug_dismiss(self):
+        if not self._sug:
+            return
+        folder, name = self._sug
+        try:
+            update_info_fields(self.archive_root_path(), folder, save_index=False, **{COLL_SUGGEST_OFF: name})
+            self._preview_info[COLL_SUGGEST_OFF] = name
+        except Exception:
+            logger.exception("suggestion refusée")
+        self._hide_suggest_banner()
+        self.status.set("D'accord — je ne propose plus de collection pour cette archive.")
+
+    # ---------------------------------------------------------------- « Ranger tout automatiquement »
+    def auto_classify(self):
+        root = self.archive_root_path()
+        names = load_collections(root, self.entries)
+        self.status.set("✨ Je regarde les archives non classées…")
+        self.update_idletasks()
+        try:
+            plan = plan_auto_collections(self.entries, names, root)
+        except Exception as ex:
+            logger.exception("plan rangement")
+            messagebox.showerror(APP_NAME, f"Rangement impossible :\n{friendly_error(ex)}", parent=self)
+            return
+        nonclass = sum(1 for e in self.entries if not e.get("collections"))
+        if not plan:
+            self.status.set("Rien à ranger automatiquement.")
+            messagebox.showinfo(APP_NAME, ("Toutes tes archives sont déjà classées. 👍" if not nonclass else
+                                           f"{nonclass} archive(s) non classée(s), mais je n'ai pas d'idée sûre "
+                                           "pour elles.\n\nClic droit sur une archive → 📂 Déplacer vers la "
+                                           "collection… pour la ranger toi-même."), parent=self)
+            return
+        title_of = {str(e.get("folder")): str(e.get("title") or e.get("folder")) for e in self.entries}
+        groups: Dict[str, List[str]] = {}
+        for f, n, _r in plan:
+            groups.setdefault(n, []).append(f)
+        win = self._dialog("ranger automatiquement", 760, 560, modal=True)
+        self._auto_win = win
+        rest = nonclass - len(plan)
+        head = (f"Je propose de ranger {len(plan)} archive(s) non classée(s) dans {len(groups)} collection(s) :"
+                + (f"\n{rest} archive(s) resteront dans « 📥 Non classées » (pas d'idée sûre)." if rest > 0 else "")
+                + "\nTes archives déjà classées ne bougent pas. Tu pourras tout annuler d'un clic (↩).")
+        tk.Label(win, text=head, bg=NC_BG, fg=NC_TEXT, font=FONT_UI, justify="left", anchor="w",
+                 wraplength=720).pack(fill="x", padx=12, pady=(10, 6))
+        fr, txt = self._scrolled_text(win, height=16, bg=NC_PANEL, fg=NC_TEXT, font=FONT_TEXT)
+        fr.pack(fill="both", expand=True, padx=12, pady=4)
+        txt.tag_configure("h", foreground=NC_HI, font=FONT_UI, spacing1=8)
+        new_lower = {n.lower() for n in names}
+        for n in sorted(groups, key=lambda k: (-len(groups[k]), k.lower())):
+            mark = "" if n.lower() in new_lower else "  (nouvelle)"
+            txt.insert("end", f"📚 {n} — {len(groups[n])}{mark}\n", ("h",))
+            for f in groups[n]:
+                txt.insert("end", f"     • {title_of.get(f, f)[:110]}\n")
+        txt.configure(state="disabled")
+        row = tk.Frame(win, bg=NC_BG)
+        row.pack(fill="x", padx=12, pady=(4, 10))
+
+        def go():
+            win.destroy()
+            self._apply_auto_plan(plan, names)
+        self._btn(row, "✔ Ranger", go, hi=True, font=FONT_UI).pack(side="right", padx=(6, 0))
+        self._btn(row, "Annuler", win.destroy, font=FONT_UI).pack(side="right")
+        self.status.set("✨ Vérifie la proposition puis « ✔ Ranger ».")
+        return win
+
+    def _apply_auto_plan(self, plan: List[Tuple[str, str, str]], names: List[str]):
+        root = self.archive_root_path()
+        self.status.set("✨ Rangement en cours…")
+        try:
+            self.configure(cursor="watch")
+            self.update_idletasks()
+        except Exception:
+            pass
+        done: List[Tuple[str, str]] = []
+        created: List[str] = []
+        try:
+            backup_index(root, min_interval=0)
+            low = {n.lower() for n in names}
+            for _f, n, _r in plan:
+                if n.lower() not in low:
+                    created.append(n)
+                    low.add(n.lower())
+            if created:
+                save_collections(root, names + created)
+            groups: Dict[str, List[str]] = {}
+            for f, n, _r in plan:
+                groups.setdefault(n, []).append(f)
+            for n, fl in groups.items():
+                set_collections(root, fl, add=n)
+                done += [(f, n) for f in fl]
+        except Exception as ex:
+            logger.exception("rangement auto")
+            messagebox.showerror(APP_NAME, f"Rangement interrompu :\n{friendly_error(ex)}\n\n"
+                                 "Ce qui est déjà rangé peut être annulé (↩).", parent=self)
+        finally:
+            try:
+                self.configure(cursor="")
+            except Exception:
+                pass
+        self._auto_undo = {"done": done, "created": created}
+        if done:
+            self.undo_btn.pack(fill="x", padx=4, pady=(0, 4), after=self._undo_anchor)
+        ncol = len({n for _f, n in done})
+        msg = f"✅ {len(done)} archive(s) rangée(s) dans {ncol} collection(s) — « ↩ Annuler le rangement » si ça ne te plaît pas."
+        self.status.set(msg)
+        self.log(msg)
+        self._reload_entries()
+
+    def undo_auto_classify(self):
+        u = self._auto_undo
+        if not u:
+            return
+        root = self.archive_root_path()
+        try:
+            groups: Dict[str, List[str]] = {}
+            for f, n in u.get("done") or []:
+                groups.setdefault(n, []).append(f)
+            for n, fl in groups.items():
+                set_collections(root, [f for f in fl if os.path.isdir(os.path.join(root, f))], remove=n)
+            ents = load_archive_index(root)
+            used = {c.lower() for e in ents for c in (e.get("collections") or [])}
+            drop = {c.lower() for c in u.get("created") or [] if c.lower() not in used}
+            if drop:
+                save_collections(root, [n for n in load_collections(root) if n.lower() not in drop])
+        except Exception as ex:
+            logger.exception("annuler rangement")
+            messagebox.showerror(APP_NAME, f"Annulation impossible :\n{friendly_error(ex)}", parent=self)
+            return
+        self._auto_undo = None
+        self.undo_btn.pack_forget()
+        if self._coll_key() and not self._coll_key().startswith("__"):
+            self.coll_var.set(COLL_ALL_LABEL)
+            self.cfg["collection_filter"] = ""
+        msg = "↩ Rangement annulé : les archives sont revenues dans « Non classées »."
+        self.status.set(msg)
+        self.log(msg)
+        self._reload_entries()
 
     def _reload_entries(self):
         """Relit l'index (après une action groupée) sans rebalayer le disque."""
@@ -8600,7 +9971,9 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
             m.add_separator()
         m.add_command(label="☆ Retirer des favoris" if allfav else "★ Ajouter aux favoris  (Ctrl+D)",
                       command=self.toggle_favorite)
-        m.add_cascade(label="📚 Collections", menu=self._build_coll_menu(parent=m))
+        m.add_cascade(label="📂 Déplacer vers la collection…" + ("" if n == 1 else f" ({n})"),
+                      menu=self._build_move_menu(parent=m))
+        m.add_cascade(label="📚 Collections (cocher plusieurs)", menu=self._build_coll_menu(parent=m))
         m.add_command(label="🏷 Ajouter des tags…", command=self.add_tags_selected)
         m.add_separator()
         if n == 1:
@@ -8610,9 +9983,8 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         else:
             m.add_command(label=f"📋 Copier les {n} liens", command=self.copy_links_selected)
             m.add_command(label=f"📋 Copier les {n} résumés", command=self.copy_summary)
-        if os.path.isfile(self._grimoire_script()):
-            m.add_command(label="📖 Envoyer au Grimoire" + ("" if n == 1 else f" ({n})"),
-                          command=self.send_to_grimoire)
+        m.add_command(label="📚 Envoyer au Grimoire…" + ("" if n == 1 else f" ({n})"),
+                      command=self.send_to_grimoire)
         m.add_separator()
         m.add_command(label="📡 Vérifier si l'original est en ligne" if n == 1 else f"📡 Vérifier en ligne ({n})",
                       command=lambda: self.check_online_selected(False))
@@ -8640,72 +10012,96 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), "grimoire1.py")
 
     def send_to_grimoire(self):
-        """Envoie les archives sélectionnées au Grimoire (sujet « À classer ») :
-        lien d'origine + titre + auteur + tags + chemin de l'archive locale.
-        Le Grimoire ouvert les reçoit tout de suite ; fermé, il les ajoute directement."""
-        script = self._grimoire_script()
+        """📚 Envoyer au Grimoire : choisir le sujet, puis creer la fiche directement dans grimoire.db
+        (titre, texte, image, lien d'origine, copie locale « ✔ Permanent »). Marche Grimoire ouvert ou ferme."""
         ents = self._selected_entries()
-        if not ents or not os.path.isfile(script):
-            if not os.path.isfile(script):
-                messagebox.showwarning(APP_NAME, f"Grimoire introuvable :\n{script}", parent=self)
+        if not ents:
+            messagebox.showinfo(APP_NAME, "Choisis d'abord une archive (ou plusieurs) dans la liste.", parent=self)
+            return
+        if not os.path.isfile(gr_db_path()):
+            messagebox.showwarning(APP_NAME, f"Grimoire introuvable :\n{gr_db_path()}\n\nOuvre le Grimoire une première fois.", parent=self)
             return
         root = self.archive_root_path()
-        jobs = []
+        infos = []
         for e in ents:
-            folder = os.path.join(root, str(e.get("folder")))
             info = dict(e)
             try:
-                info.update(load_info(folder))
+                info.update(load_info(os.path.join(root, str(e.get("folder")))))
             except Exception:
                 pass
-            url = str(info.get("url") or info.get("webpage_url") or "")
-            target = url or find_main_media(folder) or folder
-            meta = [platform_label(info.get("platform"))]
-            if info.get("upload_date"):
-                meta.append(fmt_upload_date(info.get("upload_date")))
-            note = ["Archive locale : " + folder, " · ".join(x for x in meta if x)]
-            if info.get("notes"):
-                note.append("Notes de l'Archiveur : " + str(info.get("notes")))
-            args = [_python_console_exe(), script, "--ajouter", target,
-                    "--titre", str(info.get("title") or e.get("folder") or "")[:300],
-                    "--note", "\n".join(x for x in note if x.strip())]
-            if info.get("uploader"):
-                args += ["--auteur", str(info.get("uploader"))[:200]]
-            if info.get("tags"):
-                args += ["--etiquettes", ", ".join(str(t) for t in info.get("tags") or [])]
-            jobs.append(args)
-        self.status.set(f"📖 Envoi au Grimoire ({len(jobs)})…")
-
-        def work():
-            ok = 0
-            err = ""
-            for args in jobs:
+            infos.append(info)
+        # doublons : lien deja dans une fiche ?
+        try:
+            c = gr_connect()
+            dups = []
+            for e, i in zip(list(ents), list(infos)):
+                d = gr_find_url(c, str(i.get("url") or i.get("webpage_url") or ""))
+                if d:
+                    dups.append((e, i, d))
+            c.close()
+        except Exception as ex:
+            messagebox.showerror(APP_NAME, f"Lecture du Grimoire impossible : {ex}", parent=self)
+            return
+        if dups:
+            if len(ents) == 1:
+                d = dups[0][2]
+                if messagebox.askyesno(APP_NAME, f"Ce lien est déjà dans le Grimoire :\n« {d['title']} »\n\nL'ouvrir dans le Grimoire ?",
+                                       parent=self):
+                    gr_open_item(d["id"], self._grimoire_script())
+                return
+            keep = [(e, i) for e, i in zip(ents, infos) if not any(e is x[0] for x in dups)]
+            messagebox.showinfo(APP_NAME, f"{len(dups)} archive(s) déjà dans le Grimoire : elles sont ignorées.", parent=self)
+            if not keep:
+                return
+            ents, infos = [k[0] for k in keep], [k[1] for k in keep]
+        dlg = GrimoireSendDialog(self, ents, infos)
+        self.wait_window(dlg)
+        sid = dlg.result
+        if not sid:
+            return
+        ids, err = [], ""
+        try:
+            c = gr_connect()
+            subs = gr_subjects(c)
+            for e, i in zip(ents, infos):
                 try:
-                    kw: Dict[str, Any] = {"cwd": os.path.dirname(script), "stdin": subprocess.DEVNULL,
-                                          "stdout": subprocess.DEVNULL, "stderr": subprocess.PIPE,
-                                          "timeout": 180}
-                    if sys.platform.startswith("win"):
-                        kw["creationflags"] = CREATE_NO_WINDOW
-                    r = subprocess.run(args, **kw)
-                    if r.returncode == 0:
-                        ok += 1
-                    else:
-                        err = (r.stderr or b"").decode("utf-8", "replace").strip()[-300:]
+                    ids.append(gr_add_fiche(c, sid, root, e, i))
                 except Exception as ex:
                     err = str(ex)
-            def done():
-                msg = f"📖 Envoyé au Grimoire : {ok}/{len(jobs)} (sujet « À classer »)."
-                self.status.set(msg)
-                try:
-                    self.log(msg + (f" Erreur : {err}" if err else ""), "warning" if err else "info")
-                except Exception:
-                    pass
+            name = gr_path(subs, sid)
+            c.close()
+        except Exception as ex:
+            err, name = str(ex), "?"
+        if ids:
+            msg = f"✔ Ajouté au Grimoire « {name} »" + ("" if len(ids) == 1 else f" ({len(ids)} fiches)")
+            self.status.set(msg)
             try:
-                self.after(0, done)
+                self.log(msg, "info")
             except Exception:
                 pass
+            self._grimoire_toast(msg, ids[0])
+        if err:
+            messagebox.showerror(APP_NAME, f"Envoi au Grimoire incomplet : {err}", parent=self)
 
-        threading.Thread(target=work, daemon=True).start()
+    def _grimoire_toast(self, msg: str, iid: int):
+        try:
+            t = tk.Toplevel(self)
+            t.overrideredirect(True)
+            t.configure(bg=NC_HI)
+            tk.Label(t, text=msg, bg=NC_HI, fg=NC_ON_HI, font=FONT_UI, padx=12, pady=8).pack(side="left")
+            b = tk.Button(t, text="📖 Ouvrir dans le Grimoire", command=lambda: (gr_open_item(iid, self._grimoire_script()), t.destroy()),
+                          bg=NC_BTN, fg=NC_BTN_FG, font=FONT_SM, relief="raised", bd=1, cursor="hand2")
+            b.pack(side="left", padx=6, pady=6)
+            Tooltip(b, "Montre la nouvelle fiche dans le Grimoire (le lance s'il est fermé)")
+            x = tk.Button(t, text="✖", command=t.destroy, bg=NC_HI, fg=NC_ON_HI, relief="flat", font=FONT_SM, cursor="hand2")
+            x.pack(side="left", padx=(0, 6))
+            t.update_idletasks()
+            t.geometry(f"+{self.winfo_rootx() + (self.winfo_width() - t.winfo_reqwidth()) // 2}+"
+                       f"{self.winfo_rooty() + self.winfo_height() - t.winfo_reqheight() - 70}")
+            t.attributes("-topmost", True)
+            self.after(9000, lambda: t.winfo_exists() and t.destroy())
+        except Exception:
+            pass
 
     def _build_coll_menu(self, parent=None):
         """Menu des collections : coche = l'archive (toutes celles sélectionnées) en fait partie."""
@@ -9190,7 +10586,8 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
                            anchor="w", highlightthickness=0).pack(fill="x", padx=14, pady=(4, 0))
             tk.Label(body, text=tip, bg=NC_BG, fg=NC_DIM, font=FONT_SM, anchor="w", justify="left",
                      wraplength=560).pack(fill="x", padx=38)
-        vchk("🎞 Storyboard (6 images de la vidéo pour l'aperçu)", self.sb_var, "Extrait par ffmpeg après le téléchargement.")
+        vchk("🎞 Storyboard aussi pendant l'archivage", self.sb_var,
+             "Sinon il se prépare tout seul en arrière-plan juste après (ou à l'affichage) — clic sur une image = lecture à ce moment.")
         vchk("🎬 MP4 compatible automatique", self.conv_var,
              "Si la vidéo reçue est en AV1/VP9/Opus, la convertir en MP4 H.264 + AAC (lisible partout, à vie).")
         vchk("🔔 Notification Windows à la fin de l'archivage", self.notif_var, "Petite bulle en bas à droite de l'écran.")
@@ -9359,6 +10756,7 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         style.configure("Arch.Treeview", rowheight=max(52, ls + 10))
         style.configure("Files.Treeview", rowheight=max(22, ls + 8))
         style.configure("Queue.Treeview", rowheight=max(22, ls + 8))
+        style.configure("Coll.Treeview", rowheight=max(28, font_px(self, FONT_UI) + 12))
 
     # ---------------------------------------------------------------- aide
     def open_help(self):
@@ -9875,6 +11273,8 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
                 self._scroll_to_widget(self.tr_box)
             elif action == "extracts":
                 self._scroll_to_widget(self.ex_box)
+            elif action == "storyboard":
+                self._scroll_to_widget(self.sb_title)
             elif action == "card":
                 self._scroll_to_widget(self.card)
             elif action == "queue":
@@ -9886,6 +11286,20 @@ class ArchiveurApp(_TkBase):  # type: ignore[misc]
         safe = bool(self._root_override)
         st: List[Any] = []
         st.append(self._refresh_filter_values)
+        st += [lambda: self.coll_tree.selection_set("c::" + COLL_NONE), 300,
+               lambda: self.coll_tree.selection_set("c::"), 300,
+               lambda: self._build_move_menu().destroy(), lambda: self._update_suggest_banner(),
+               lambda: print(f"SMOKE_SUGGEST {self._sug}", flush=True),
+               lambda: self._toggle_coll_side(), 200, lambda: self._toggle_coll_side()]
+        if safe:
+            st += [lambda: self.auto_classify(), 600,
+                   lambda: getattr(self, "_auto_win", None) and self._auto_win.destroy(),
+                   lambda: self._apply_auto_plan(plan_auto_collections(self.entries, load_collections(
+                       self.archive_root_path(), self.entries), self.archive_root_path()),
+                       load_collections(self.archive_root_path(), self.entries)), 500,
+                   lambda: print("SMOKE_CLASSES " + str(sorted(self._coll_map.keys())), flush=True),
+                   lambda: self.undo_auto_classify(), 500,
+                   lambda: print("SMOKE_UNDO " + str(sorted(self._coll_map.keys())), flush=True)]
         for lab in list(self._coll_map.keys()) + [COLL_ALL_LABEL]:
             st.append(lambda l=lab: (self.coll_var.set(l), self.apply_filter()))
         st.append(lambda: self.search_var.set("zoo"))

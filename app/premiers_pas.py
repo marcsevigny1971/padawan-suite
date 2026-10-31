@@ -150,6 +150,12 @@ def run_gui():
     sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
     w, h = min(980, sw - 60), min(760, sh - 90)
     root.geometry(f"{w}x{h}+{(sw - w) // 2}+{max(0, (sh - h) // 2 - 20)}")
+    # Ouvre agrandi (maximise) comme le Gestionnaire de fichiers
+    try:
+        if os.name == "nt":
+            root.state("zoomed")
+    except Exception:
+        pass
     try:
         root.iconbitmap(os.path.join(pc.HERE, "padawan_tray.ico"))
     except Exception:

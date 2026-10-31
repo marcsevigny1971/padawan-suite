@@ -938,6 +938,12 @@ def run_gui(test_ms=0):
     sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
     W, H = min(1080, sw - 40), min(760, sh - 110)
     root.geometry(f"{W}x{H}+{max(0,(sw-W)//2)}+{max(0,min(10,(sh-H)//2))}"); root.minsize(820, 560)
+    # Ouvre agrandi (maximise) comme le Gestionnaire de fichiers
+    try:
+        if os.name == "nt":
+            root.state("zoomed")
+    except Exception:
+        pass
     try:
         root.iconbitmap(os.path.join(HERE, "chantier1.ico"))
     except Exception:

@@ -105,6 +105,14 @@ Padawan ne remplace pas tout. Voici où il se situe face à des outils connus.
 - 🔁 Mise à jour : réinstalle simplement la nouvelle version par-dessus. Tes données restent là.
 - 🧹 Désinstaller : Paramètres > Applications > « Projet Padawan ». Tes données sont gardées.
 
+## ✨ Nouveautés v1.2 : cartes, liens permanents et curseur vivant (31 octobre 2026)
+
+- 📓 **Journal de bord 1.4** : la date normale dans le titre (la date stellaire devient une option), 4 thèmes (Papier, Nuit douce, Forêt + l'original), animations discrètes, modèles d'entrée, favoris, corbeille, impression et export, série de jours d'écriture. À l'ouverture, il sait quel jour on est : nouvelle entrée ou suite de ton quart de nuit, l'heure ajoutée dans le texte comme des notes au dossier, et un **curseur vivant** qui respire là où tu écris.
+- 🔗 **Liens permanents** : chaque lien collé dans le Journal ou le Grimoire affiche un aperçu (image, site, titre). Le bouton **📦 Rendre permanent** le fait archiver par l'Archiveur, et la copie se joue directement dans l'entrée. Nouveau panneau **🔗 Mes liens**.
+- 📚 **Grimoire 1.5** : les fiches en belles cartes avec images, une **carte des sujets** animée (F8), et le bouton **📚 Envoyer au Grimoire** dans l'Archiveur.
+- 🎞️ **Archiveur** : conversion beaucoup plus rapide avec la carte graphique (NVENC / Quick Sync / Media Foundation, retour automatique au processeur), barre de progression vivante, **storyboard automatique** cliquable, et **collections** avec classement proposé en un clic (annulable).
+- 🧭 **Tableau de bord et menu de l'icône** : outils les plus utilisés en haut, serveurs en bas, barre de défilement, et les fenêtres s'ouvrent agrandies.
+
 ## ✨ Nouveautés v1.1 : Journal de bord (24 octobre 2026)
 
 - 📓 **Journal de bord** : le journal du capitaine, privé par défaut. `Ctrl+V` colle n'importe quoi (texte, lien, image, capture, fichier), `Ctrl+Alt+K` envoie ce que tu viens de copier dans l'entrée du jour, les liens deviennent permanents, les mémos vocaux se glissent dans les entrées, et tu partages seulement le passage que tu choisis.

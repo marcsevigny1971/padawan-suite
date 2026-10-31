@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import padawan_commun as pc
 
 APP = "Journal de bord"
-VERSION = "1.0"
+VERSION = "1.4"
 SETTINGS = "journal.json"
 HERE = pc.HERE
 IS_WIN = pc.IS_WIN
@@ -48,7 +48,54 @@ FLAVOR = ["Journal de bord du capitaine, date stellaire {sd}.",
 DEFAULT_SETTINGS = {"animations": True, "mode_avance": False, "liens_auto": False, "wayback": False,
                     "verrou": {"actif": False, "sel": "", "hash": ""}, "verrou_propose": False,
                     "derniere": "", "jalons": [], "geometrie": "",
-                    "fenetre": "agrandie"}   # agrandie (par defaut) | plein | normale
+                    "fenetre": "agrandie",   # agrandie (par defaut) | plein | normale
+                    "theme": "cosmos", "date_stellaire": False,
+                    "debut_journee": 5, "quart_heures": 8, "horodatage": True}
+STAMP_RX = re.compile(r"^(\*\*)?\d{1,2} h \d{2} \u2014")
+STAMP_LINE = re.compile(r"^\s*(\*\*)?\s*(\w+ \d{1,2} \w+ \d{4} \u2014 )?\d{1,2} h \d{2}( \u2014)?\s*(\*\*)?\s*$")
+
+
+def body_sans_stamps(md):
+    return "\n".join(ln for ln in str(md or "").split("\n") if not STAMP_LINE.match(ln))
+
+
+def stamp_text(d=None):
+    d = d or dt.datetime.now()
+    return f"{date_fr(d, False).capitalize()} \u2014 {d.hour} h {d.minute:02d}"
+OPTS = {"stellaire": False}   # date stellaire : seulement si on la demande (Apparence)
+TEMPLATES = [
+    ("\u2600 Ma journ\u00e9e", "Ma journ\u00e9e",
+     "# Ce qui s'est pass\u00e9 aujourd'hui\n\n# Ce qui m'a fait du bien\n\n# Ce que je retiens\n"),
+    ("\U0001f4a1 Une id\u00e9e", "Une id\u00e9e",
+     "# L'id\u00e9e\n\n# Pourquoi c'est int\u00e9ressant\n\n# Premier petit pas\n"),
+    ("\U0001f64f Gratitude", "Gratitude",
+     "# Aujourd'hui, je dis merci pour\u2026\n\u2022 \n\u2022 \n\u2022 \n"),
+    ("\U0001f6e0 Travail", "Travail",
+     "# Fait aujourd'hui\n\u2022 \n\n# \u00c0 faire ensuite\n\u2022 \n\n# Notes / questions\n"),
+    ("\U0001f319 R\u00eave", "Un r\u00eave",
+     "# Ce dont je me souviens\n\n# Ce que j'ai ressenti\n"),
+    ("\U0001f333 Sortie nature", "Sortie nature",
+     "# O\u00f9 je suis all\u00e9\n\n# Ce que j'ai vu, entendu, senti\n\n# Un moment \u00e0 garder\n"),
+]
+# Th\u00e8mes : chaque cl\u00e9 doit avoir une couleur distincte (le changement en direct remplace couleur par couleur)
+THEMES = {
+    "cosmos": ("\U0001f30c Cosmos (classique)", {}),
+    "papier": ("\U0001f4dc Papier (clair, doux pour les yeux)", {
+        "BG": "#f7f1e3", "PANEL": "#efe6d2", "CARD": "#fffaf0", "TEXT": "#2b2419", "DIM": "#7a6a55",
+        "ACC": "#9a5b1e", "ACC2": "#b2452e", "ENTRY": "#fffdf7", "BTN": "#e6d9bf", "BTNH": "#d8c39b",
+        "LINE": "#cdbb98", "DEEP": "#3a2f22", "OK": "#2e7d32", "REC": "#c62828", "WAX": "#a3263a",
+        "WAX2": "#cf4a5c", "ONACC": "#fffef9", "SEL": "#f0d9a8"}),
+    "nuit": ("\U0001f319 Nuit douce (sombre, chaleureux)", {
+        "BG": "#1e1b24", "PANEL": "#26222e", "CARD": "#2f2a39", "TEXT": "#ece6f2", "DIM": "#a99fb8",
+        "ACC": "#c9a7ff", "ACC2": "#ffb38a", "ENTRY": "#17151c", "BTN": "#3a3347", "BTNH": "#4b4160",
+        "LINE": "#3d3550", "DEEP": "#0d0b12", "OK": "#8fe3a8", "REC": "#ff6b81", "WAX": "#a8243a",
+        "WAX2": "#d9475b", "ONACC": "#1a1424", "SEL": "#5a4a78"}),
+    "foret": ("\U0001f332 For\u00eat (nature, apaisant)", {
+        "BG": "#14201a", "PANEL": "#1a2a21", "CARD": "#22362b", "TEXT": "#e9f2e6", "DIM": "#a7bfa9",
+        "ACC": "#7fd18b", "ACC2": "#f2c46d", "ENTRY": "#0f1914", "BTN": "#2b4535", "BTNH": "#3a5c46",
+        "LINE": "#30503c", "DEEP": "#08110c", "OK": "#b6f5bd", "REC": "#ff7a6b", "WAX": "#8c2f2f",
+        "WAX2": "#c0504d", "ONACC": "#0c1a10", "SEL": "#3f6b4f"}),
+}
 
 
 # ------------------------------------------------------------------ chemins
@@ -228,6 +275,8 @@ class Journal:
 
     # chemins
     def abs(self, rel):
+        if rel and (os.path.isabs(str(rel)) or re.match(r"^[A-Za-z]:[\\/]", str(rel))):
+            return str(rel)                       # copie gardee par l'Archiveur (chemin complet)
         return os.path.join(self.root, *str(rel or "").split("/")) if rel else ""
 
     def rel(self, p):
@@ -501,7 +550,7 @@ def entry_plain(e, embeds, header=True):
     head = []
     if header:
         head.append(e.get("title") or "Entr\u00e9e sans titre")
-        bits = [date_fr(d), f"date stellaire {stardate(d)}"]
+        bits = [date_fr(d)] + ([f"date stellaire {stardate(d)}"] if OPTS["stellaire"] else [])
         if e.get("lieu"):
             bits.append(e["lieu"])
         if e.get("mood") or e.get("weather"):
@@ -913,6 +962,240 @@ def make_permanent(j, m, log=lambda s: None, wayback=False):
                           meta=json.dumps(meta, ensure_ascii=False))
 
 
+# ------------------------------------------------------------------ 1.4 : apercus de liens + Archiveur
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+
+
+def _http(url, timeout=12, limit=3_000_000, headers=None):
+    import urllib.request
+    h = {"User-Agent": UA, "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.8"}
+    h.update(headers or {})
+    req = urllib.request.Request(url, headers=h)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read(limit), r.headers.get("Content-Type", ""), r.geturl()
+
+
+def _http_json(url, timeout=12):
+    raw, _c, _u = _http(url, timeout, headers={"Accept": "application/json"})
+    return json.loads(raw.decode("utf-8", "replace"))
+
+
+def _og(raw_html, *names):
+    for n in names:
+        mo = re.search(r'(?is)<meta[^>]+(?:property|name)=["\']' + re.escape(n) + r'["\'][^>]*content=["\']([^"\']*)', raw_html) or \
+            re.search(r'(?is)<meta[^>]+content=["\']([^"\']*)["\'][^>]*(?:property|name)=["\']' + re.escape(n) + r'["\']', raw_html)
+        if mo and mo.group(1).strip():
+            return html.unescape(re.sub(r"\s+", " ", mo.group(1))).strip()
+    return ""
+
+
+def preview_dir(j):
+    d = os.path.join(j.root, "apercus")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def preview_cached(j, url):
+    p = os.path.join(preview_dir(j), hashlib.sha1(url.encode("utf-8")).hexdigest()[:16] + ".json")
+    return pc.read_json(p, None) if os.path.isfile(p) else None
+
+
+def fetch_preview(j, url):
+    """apercu d'un lien (titre, site, description, miniature) ; garde une copie dans apercus\\ (marche hors ligne)."""
+    key = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+    d = preview_dir(j)
+    jp = os.path.join(d, key + ".json")
+    old = pc.read_json(jp, None) if os.path.isfile(jp) else None
+    if old and (old.get("ok") or time.time() - float(old.get("t") or 0) < 3600):
+        return old
+    host = (urlparse(url).hostname or "").lower().replace("www.", "")
+    res = {"url": url, "title": "", "site": host, "desc": "", "image": "", "author": "", "ok": False, "t": time.time()}
+    img_url = ""
+    try:
+        if host in ("youtube.com", "m.youtube.com", "youtu.be", "music.youtube.com"):
+            o = _http_json("https://www.youtube.com/oembed?format=json&url=" + urllib_quote(url))
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="YouTube")
+            img_url = o.get("thumbnail_url", "")
+        elif host.endswith("vimeo.com"):
+            o = _http_json("https://vimeo.com/api/oembed.json?url=" + urllib_quote(url))
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="Vimeo",
+                       desc=str(o.get("description") or "")[:300])
+            img_url = o.get("thumbnail_url", "")
+        elif host.endswith("tiktok.com"):
+            o = _http_json("https://www.tiktok.com/oembed?url=" + urllib_quote(url))
+            res.update(title=o.get("title", ""), author=o.get("author_name", ""), site="TikTok")
+            img_url = o.get("thumbnail_url", "")
+        elif host in ("x.com", "twitter.com", "mobile.twitter.com", "fxtwitter.com", "vxtwitter.com") and "/status/" in url:
+            mo = re.search(r"/([A-Za-z0-9_]{1,15})/status(?:es)?/(\d+)", url)
+            o = _http_json(f"https://api.fxtwitter.com/{mo.group(1)}/status/{mo.group(2)}")["tweet"]
+            a = o.get("author") or {}
+            txt = str(o.get("text") or "")
+            res.update(title=(a.get("name") or "") + (f" (@{a.get('screen_name')})" if a.get("screen_name") else ""),
+                       author=a.get("name") or "", site="X", desc=txt[:400])
+            med = o.get("media") or {}
+            if med.get("photos"):
+                img_url = med["photos"][0].get("url", "")
+            elif med.get("videos"):
+                img_url = med["videos"][0].get("thumbnail_url", "")
+                res["video"] = True
+            else:
+                img_url = a.get("avatar_url", "")
+        if not res["title"]:
+            raw, ctype, final = _http(url, 12, 1_500_000)
+            if "html" in ctype.lower() or not ctype:
+                t = raw.decode("utf-8", "replace")
+                res["title"] = _og(t, "og:title", "twitter:title") or html.unescape(
+                    re.sub(r"\s+", " ", (re.search(r"(?is)<title[^>]*>(.*?)</title>", t) or [None, ""])[1])).strip()
+                res["desc"] = res["desc"] or _og(t, "og:description", "twitter:description", "description")[:400]
+                res["site"] = _og(t, "og:site_name") or res["site"]
+                img_url = img_url or _og(t, "og:image", "og:image:url", "twitter:image", "twitter:image:src")
+                if img_url and img_url.startswith("/"):
+                    pu = urlparse(final)
+                    img_url = f"{pu.scheme}://{pu.netloc}{img_url}"
+            else:
+                res["title"] = os.path.basename(urlparse(url).path) or url
+                res["desc"] = ctype
+        res["title"] = res["title"][:200]
+        res["ok"] = bool(res["title"] or res["desc"])
+        if img_url:
+            try:
+                raw, _c, _u = _http(img_url, 15, 8_000_000)
+                from PIL import Image
+                import io
+                im = Image.open(io.BytesIO(raw)).convert("RGB")
+                im.thumbnail((480, 300))
+                im.save(os.path.join(d, key + ".jpg"), "JPEG", quality=85)
+                res["image"] = key + ".jpg"
+            except Exception:
+                pass
+    except Exception as ex:
+        res["erreur"] = str(ex)[:200]
+    try:
+        with open(jp, "w", encoding="utf-8") as f:
+            json.dump(res, f, ensure_ascii=False)
+    except Exception:
+        pass
+    return res
+
+
+def urllib_quote(u):
+    from urllib.parse import quote
+    return quote(u, safe="")
+
+
+ARCH_SCRIPT = r"""
+import sys, os, json
+sys.path.insert(0, sys.argv[1]); url = sys.argv[2]
+import archiveur5 as a
+a.setup_logging()
+def hook(d):
+    try:
+        if d.get("status") == "downloading":
+            t = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+            if t:
+                print("@@P@@%.1f" % (100.0 * (d.get("downloaded_bytes") or 0) / t), flush=True)
+        elif d.get("status") == "finished":
+            print("@@P@@100", flush=True)
+    except Exception:
+        pass
+cfg = a.load_cfg()
+root = cfg.get("archive_root") or a.DEFAULT_ROOT
+os.makedirs(root, exist_ok=True)
+if not a._cli_ensure_ytdlp():
+    print("@@E@@yt-dlp introuvable", flush=True); sys.exit(2)
+entries = a.sync_index_with_disk(root)
+d = a.find_duplicates(entries, url)
+if d:
+    folder, dup = d[0].get("folder"), True
+else:
+    info = a.archive_url(url, root, a._cli_log, progress_hook=hook, quality=cfg.get("quality") or "best",
+                         subtitles=bool(cfg.get("subtitles", True)), storyboard=True, tags=["Journal de bord"],
+                         notes="Depuis le Journal de bord", web_capture=bool(cfg.get("web_capture", True)),
+                         use_fx=bool(cfg.get("x_fxtwitter", True)), auto_convert=bool(cfg.get("auto_convert", True)))
+    folder, dup = a.register_archive(root, info)["folder"], False
+try:
+    a.set_collections(root, [folder], add="Journal de bord")
+except Exception:
+    pass
+print("@@R@@" + json.dumps({"root": root, "folder": folder, "dup": dup}), flush=True)
+"""
+
+
+def archiveur_ok():
+    return os.path.isfile(os.path.join(HERE, "archiveur5.py"))
+
+
+def archive_via_archiveur(url, on_event=lambda k, v: None, timeout=3600):
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+    p = subprocess.Popen([_console_python(), "-c", ARCH_SCRIPT, HERE, url], cwd=HERE, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
+                         errors="replace", creationflags=NOWIN, env=env)
+    res, tail, t0 = None, [], time.time()
+    for line in p.stdout:
+        line = line.rstrip()
+        if line.startswith("@@P@@"):
+            try:
+                on_event("pct", float(line[5:]))
+            except ValueError:
+                pass
+        elif line.startswith("@@R@@"):
+            res = json.loads(line[5:])
+        elif line.startswith("@@E@@"):
+            tail.append(line[5:])
+        elif line.strip():
+            tail = (tail + [line])[-8:]
+            on_event("log", line)
+        if time.time() - t0 > timeout:
+            p.kill(); break
+    p.wait()
+    if not res:
+        fails = [x for x in tail if "FAIL" in x or "rror" in x]
+        raise RuntimeError((fails or tail or ["l'Archiveur n'a rien gard\u00e9"])[-1][-240:])
+    return res
+
+
+def make_permanent_archiveur(j, m, on_event=lambda k, v: None):
+    r = archive_via_archiveur(m["url"], on_event)
+    folder = os.path.join(r["root"], r["folder"])
+    files = os.listdir(folder) if os.path.isdir(folder) else []
+    if not files:
+        raise RuntimeError("dossier d'archive introuvable")
+    info = pc.read_json(os.path.join(folder, "info.json"), {}) or {}
+    vids = sorted([f for f in files if f.lower().endswith((".mp4", ".webm", ".mkv", ".mov", ".m4v", ".mp3", ".m4a", ".opus"))],
+                  key=lambda f: -os.path.getsize(os.path.join(folder, f)))
+    imgs = [f for f in files if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and not f.startswith("sb_")]
+    imgs.sort(key=lambda f: (0 if ("thumb" in f.lower() or "capture" in f.lower()) else 1, f))
+    meta = emeta(m)
+    meta.update({"source": "archiveur", "archiveur_dossier": r["folder"], "copie_le": now_iso(),
+                 "main": vids[0] if vids else ("lecture.html" if "lecture.html" in files else
+                                                ("page.html" if "page.html" in files else "index.html")),
+                 "video": bool(vids and not vids[0].lower().endswith((".mp3", ".m4a", ".opus"))),
+                 "index": "index.html" if "index.html" in files else "",
+                 "lecture": "lecture.html" if "lecture.html" in files else "",
+                 "pdf": next((f for f in files if f.lower().endswith(".pdf")), ""),
+                 "capture": imgs[0] if imgs else "",
+                 "texte": str(info.get("description") or info.get("text") or "")[:20000]})
+    title = m.get("title") or info.get("title") or m["url"]
+    return j.update_embed(m["id"], archive=folder, status="permanent", title=title, meta=json.dumps(meta, ensure_ascii=False))
+
+
+def cheer(pct, log=""):
+    if pct is None:
+        if re.search(r"(?i)ffmpeg|convert|encod|remux|storyboard", log or ""):
+            return "\U0001f39e L'Archiveur peaufine la copie\u2026 presque fini !"
+        return "\U0001f6f0 L'Archiveur met ce lien \u00e0 l'abri\u2026 tu peux continuer d'\u00e9crire."
+    p = int(pct)
+    if p < 5:
+        return "\U0001f680 C'est parti, on va chercher \u00e7a\u2026"
+    if p < 40:
+        return f"\U0001f4e5 {p} % \u2014 \u00e7a avance bien !"
+    if p < 80:
+        return f"\u2728 {p} % \u2014 plus de la moiti\u00e9 !"
+    if p < 100:
+        return f"\U0001f3c1 {p} % \u2014 derni\u00e8re ligne droite !"
+    return "\U0001f39e T\u00e9l\u00e9charg\u00e9 ! L'Archiveur range la copie\u2026"
+
+
 def fetch_title(url):
     try:
         import urllib.request
@@ -1092,7 +1375,7 @@ def entry_html(j, e, embeds, rel_files=None, compact=False):
     x = html.escape
     ttl = e.get("title") or "Entr\u00e9e sans titre"
     return (f'<article><h2>{x(ttl)}</h2>'
-            f'<div class="meta">{x(date_fr(d))} \u00b7 date stellaire {stardate(d)}<br>'
+            f'<div class="meta">{x(date_fr(d))}' + (f' \u00b7 date stellaire {stardate(d)}' if OPTS["stellaire"] else '') + '<br>'
             + "".join(f'<span class="chip">{x(c)}</span>' for c in chips) + "</div>"
             f'<div class="body">{md_to_html(j, e.get("body"), embeds, rel_files, compact)}</div></article>')
 
@@ -1450,7 +1733,16 @@ def append_to_entry(j, e, md):
 
 # ================================================================== interface
 C = dict(pc.C)
-C.update({"DEEP": "#070b16", "REC": "#ff4d6d", "OK": "#55ff99", "WAX": "#b3263a", "WAX2": "#e0485c", "LINE": "#2a3b63"})
+C.update({"DEEP": "#070b16", "REC": "#ff4d6d", "OK": "#55ff99", "WAX": "#b3263a", "WAX2": "#e0485c", "LINE": "#2a3b63",
+          "ONACC": "#06121f", "SEL": "#2f5597"})
+C_COSMOS = dict(C)
+THEMES["cosmos"] = (THEMES["cosmos"][0], dict(C_COSMOS))
+
+
+def theme_colors(key):
+    pal = dict(C_COSMOS)
+    pal.update(THEMES.get(key, THEMES["cosmos"])[1])
+    return pal
 EMOJI_FONT = ("Segoe UI Emoji", 13)
 
 
@@ -1475,7 +1767,7 @@ class Anim:
         return bool(self.app.st.get("animations", True))
 
     # ---- ouverture : saut en distorsion dans un champ d'etoiles
-    def warp(self, root, done, seconds=2.4, full=False):
+    def warp(self, root, done, seconds=2.1, full=False):
         import tkinter as tk
         if not self.on:
             done(); return
@@ -1502,13 +1794,21 @@ class Anim:
                           None])
         shades = [_mix(C["DEEP"], "#ffffff", i / 12.0) for i in range(13)]   # 13 teintes pre-calculees (leger pour le CPU)
         f1, f2 = int(20 * min(zf, 1.9)), int(11 * min(zf, 1.6))
-        title = cv.create_text(cx, h * 0.74, text="", fill=C["TEXT"], font=("Segoe UI", f1, "bold"))
-        sub = cv.create_text(cx, h * 0.74 + f1 * 1.9 * q, text="", fill=C["ACC"], font=("Consolas", f2))
+        now = dt.datetime.now()
+        hr = now.hour
+        greet = ("Bonne nuit" if hr < 5 else "Bon matin" if hr < 12 else "Bon apr\u00e8s-midi" if hr < 18 else "Bonne soir\u00e9e")
+        fd = int(f1 * 1.7)
+        hello = cv.create_text(cx, cy - fd * 1.5 * q, text=f"{greet} !", fill=C["DEEP"], font=("Segoe UI", f2 + 2))
+        bigd = cv.create_text(cx, cy, text=date_fr(now, False).capitalize(), fill=C["DEEP"], font=("Segoe UI", fd, "bold"))
+        bigh = cv.create_text(cx, cy + fd * 1.25 * q, text=f"{now.hour} h {now.minute:02d}", fill=C["DEEP"], font=("Segoe UI", f2 + 4))
+        title = cv.create_text(cx, h * 0.80, text="", fill=C["TEXT"], font=("Segoe UI", f1, "bold"))
+        sub = cv.create_text(cx, h * 0.80 + f1 * 1.9 * q, text="", fill=C["ACC"], font=("Consolas", f2))
         cv.create_text(cx, h - 18 * z, text="clic ou \u00c9chap pour passer", fill="#3d4d6e", font=("Segoe UI", 8 + int(zf > 1.5)))
         t0 = time.time()
         state = {"done": False, "shown": False}
-        full_t = "\U0001f4d3 Journal de bord du capitaine"
-        full_s = f"date stellaire {stardate()} \u00b7 tout reste \u00e0 bord"
+        full_t = "\U0001f4d3 Journal de bord"
+        full_s = (f"date stellaire {stardate()} \u00b7 tout reste \u00e0 bord" if OPTS["stellaire"]
+                  else "tout reste sur ce PC")
         fade = 0.45
 
         def reveal():
@@ -1550,7 +1850,13 @@ class Anim:
                     top.attributes("-alpha", max(0.0, (seconds - t) / fade))
                 except Exception:
                     pass
-            speed = 1 + 14 * min(1.0, t / 1.1) * (1 - max(0, t - 1.6) / 0.8 * 0.85)
+            # 0-0.7 s : la date apparait (etoiles calmes) ; ensuite : le saut, la date s'envole
+            kd = min(1.0, t / 0.35) if t < 0.9 else max(0.0, 1 - (t - 0.9) / 0.45)
+            cv.itemconfigure(bigd, fill=_mix(C["DEEP"], "#ffffff", kd))
+            cv.itemconfigure(hello, fill=_mix(C["DEEP"], C["ACC2"], kd))
+            cv.itemconfigure(bigh, fill=_mix(C["DEEP"], C["ACC"], kd))
+            tt = max(0.0, t - 0.7)
+            speed = 0.4 + 14 * min(1.0, tt / 0.6) * (1 - max(0, tt - 0.8) / 0.6 * 0.85)
             for s in stars:
                 s[1] += s[2] * speed * 2.2 * z
                 if s[1] > rmax:
@@ -1563,11 +1869,11 @@ class Anim:
                 if look != s[4]:
                     s[4] = look
                     cv.itemconfigure(s[3], fill=shades[look[0]], width=look[1])
-            if t > 0.9:
-                k = min(1.0, (t - 0.9) / 0.7)
+            if t > 1.0:
+                k = min(1.0, (t - 1.0) / 0.4)
                 cv.itemconfigure(title, text=full_t[:max(1, int(len(full_t) * k))])
-            if t > 1.4:
-                k = min(1.0, (t - 1.4) / 0.6)
+            if t > 1.3:
+                k = min(1.0, (t - 1.3) / 0.4)
                 cv.itemconfigure(sub, text=full_s[:int(len(full_s) * k)])
             top.after(33, tick)
         top.after(10, tick)
@@ -1761,6 +2067,10 @@ class JournalApp:
         self.tk, self.ttk = tk, ttk
         self.args = args
         self.st = settings()
+        OPTS["stellaire"] = bool(self.st.get("date_stellaire"))
+        if self.st.get("theme") not in THEMES:
+            self.st["theme"] = "cosmos"
+        C.update(theme_colors(self.st.get("theme")))
         self.anim = Anim(self)
         self.j = Journal()
         self.dnd = None
@@ -1771,7 +2081,7 @@ class JournalApp:
         except Exception:
             self.root = tk.Tk()
         r = self.root
-        r.title(f"\U0001f4d3 {APP} \u2014 Padawan Suite")
+        self._update_title()
         r.configure(bg=C["BG"])
         try:
             r.iconbitmap(os.path.join(HERE, "journal_bord.ico") if os.path.isfile(os.path.join(HERE, "journal_bord.ico"))
@@ -1902,9 +2212,9 @@ class JournalApp:
     # ------------------------------------------------------------ petits outils
     def btn(self, parent, text, cmd, acc=False, small=False, bg=None, tip=None):
         b = self.tk.Button(parent, text=text, command=cmd, bg=bg or (C["ACC"] if acc else C["BTN"]),
-                           fg="#06121f" if acc else C["TEXT"], activebackground=C["BTNH"], activeforeground=C["TEXT"],
+                           fg=C["ONACC"] if acc else C["TEXT"], activebackground=C["BTNH"], activeforeground=C["TEXT"],
                            relief="flat", bd=0, font=("Segoe UI", 9 if small else 10, "bold"),
-                           padx=6 if small else 10, pady=2 if small else 4, cursor="hand2")
+                           padx=8 if small else 12, pady=3 if small else 5, cursor="hand2")
         if tip:
             self._tip(b, tip)
         return b
@@ -1933,7 +2243,23 @@ class JournalApp:
                  justify="left").pack(side="left")
         for lab, fn in actions:
             self.btn(f, lab, lambda fn=fn: (fn(), f.destroy()), acc=True, small=True).pack(side="left", padx=4)
-        f.place(relx=1.0, rely=1.0, x=-18, y=-40, anchor="se")
+        for wdg in [f] + list(f.winfo_children()):
+            if isinstance(wdg, tk.Label):
+                wdg.bind("<Button-1>", lambda e: f.winfo_exists() and f.destroy())
+        if self.anim.on:                                   # glisse doucement depuis la droite
+            t0 = time.time()
+
+            def slide():
+                if not f.winfo_exists():
+                    return
+                k = min(1.0, (time.time() - t0) / 0.22)
+                k = 1 - (1 - k) ** 3
+                f.place(relx=1.0, rely=1.0, x=int(-18 + (1 - k) * self.px(460)), y=-40, anchor="se")
+                if k < 1:
+                    f.after(15, slide)
+            slide()
+        else:
+            f.place(relx=1.0, rely=1.0, x=-18, y=-40, anchor="se")
         f.after(int(seconds * 1000), lambda: f.winfo_exists() and f.destroy())
 
     def status(self, text, ok=False):
@@ -2024,11 +2350,22 @@ class JournalApp:
         main.pack(fill="both", expand=True)      # apres la barre du bas : elle reste toujours visible
         self.st_lbl = tk.Label(bar, text="Pr\u00eat. Tout reste sur ce PC.", bg=C["PANEL"], fg=C["DIM"], font=("Segoe UI", 9))
         self.st_lbl.pack(side="left", padx=10, pady=4)
+        self.wc_lbl = tk.Label(bar, text="", bg=C["PANEL"], fg=C["DIM"], font=("Segoe UI", 9))
+        self.wc_lbl.pack(side="left", padx=10)
         self.v_anim = tk.BooleanVar(value=self.st.get("animations", True))
         self.v_adv = tk.BooleanVar(value=self.st.get("mode_avance", False))
         for txt, var, fn in (("\u2728 Animations", self.v_anim, self._toggle_anim), ("\u2699 Mode avanc\u00e9", self.v_adv, self._toggle_adv)):
             tk.Checkbutton(bar, text=txt, variable=var, command=fn, bg=C["PANEL"], fg=C["DIM"], selectcolor=C["ENTRY"],
                            activebackground=C["PANEL"], activeforeground=C["TEXT"], font=("Segoe UI", 9)).pack(side="right", padx=6)
+        self.btn(bar, "\u2754 Guide", self.help, small=True, tip="Guide du journal (F1)").pack(side="right", padx=3, pady=2)
+        self.btn(bar, "\u26f6 Plein \u00e9cran", lambda: self.set_fullscreen(), small=True,
+                 tip="Plein \u00e9cran (F11) \u00b7 \u00c9chap ou F11 pour revenir").pack(side="right", padx=3, pady=2)
+        self.mb_theme = tk.Menubutton(bar, text="\U0001f3a8 Th\u00e8me \u25be", bg=C["BTN"], fg=C["TEXT"], relief="flat",
+                                      activebackground=C["BTNH"], activeforeground=C["TEXT"], font=("Segoe UI", 9, "bold"),
+                                      padx=8, pady=3, cursor="hand2")
+        self.mb_theme.configure(menu=self._theme_menu(self.mb_theme))
+        self.mb_theme.pack(side="right", padx=3, pady=2)
+        self._tip(self.mb_theme, "Changer les couleurs du journal (aussi : menu Apparence)")
         self.offer = tk.Frame(bar, bg=C["PANEL"])
         self.offer.pack(side="right", padx=10)
         self._apply_adv()
@@ -2046,9 +2383,7 @@ class JournalApp:
         elif "--nouvelle" in self.args or not self.j.count():
             self.new_entry()
         else:
-            last = self.st.get("derniere")
-            self.open_entry(last if last and self.j.entry(last) and not self.j.entry(last).get("deleted")
-                            and not self.j.entry(last).get("sealed") else (self._first_open_id() or ""))
+            self._smart_start()
         self._maybe_offer_lock()
         mem = self._ce_jour_la()
         if mem and "--selftest" not in self.args:
@@ -2058,8 +2393,12 @@ class JournalApp:
         r.bind_all("<Control-s>", lambda e: (self.consign(), "break")[1])
         r.bind_all("<Control-f>", lambda e: (self.search_en.focus_set(), "break")[1])
         r.bind_all("<F1>", lambda e: self.help())
+        r.bind_all("<Control-p>", lambda e: (self.print_entry(), "break")[1])
         r.bind_all("<F11>", lambda e: (self.set_fullscreen(), "break")[1])
         r.bind("<Escape>", self._esc, add="+")
+        self._update_wc()
+        self._caret_start()
+        r.after(150, self._focus_editor); r.after(900, self._focus_editor)
 
     def _first_open_id(self):
         for e in self.j.entries():
@@ -2074,11 +2413,18 @@ class JournalApp:
         m.add_command(label="\u2795 Nouvelle entr\u00e9e  (Ctrl+N)", command=self.new_entry)
         m.add_command(label="\U0001f4cb Coller dans l'entr\u00e9e du jour", command=self.paste_today)
         m.add_command(label="\u2726 Consigner l'entr\u00e9e  (Ctrl+S)", command=self.consign)
+        m.add_cascade(label="\U0001f4dd Commencer avec un mod\u00e8le", menu=self._template_menu(m))
+        m.add_command(label="\u2b50 Favori : ajouter / enlever", command=lambda: self.toggle_fav())
+        m.add_command(label="\U0001f50e Chercher  (Ctrl+F)", command=lambda: self.search_en.focus_set())
+        m.add_separator()
+        m.add_command(label="\U0001f5a8 Imprimer l'entr\u00e9e  (Ctrl+P)", command=lambda: self.print_entry())
+        m.add_command(label="\U0001f9fe Enregistrer en fichier texte (.txt)\u2026", command=lambda: self.share("txt", self._current_saved_id()))
         m.add_separator()
         m.add_command(label="\U0001f4c2 Ouvrir le dossier du journal", command=lambda: pc.open_path(self.j.root))
         m.add_command(label="\U0001f4e4 Dossier des partages", command=lambda: pc.open_path(partages_dir()))
         m.add_separator()
-        m.add_command(label="\U0001f5d1 Supprimer l'entr\u00e9e", command=self.delete_current)
+        m.add_command(label="\U0001f5d1 Supprimer l'entr\u00e9e (va \u00e0 la corbeille)", command=self.delete_current)
+        m.add_command(label="\u267b Corbeille : retrouver une entr\u00e9e\u2026", command=self.open_trash)
         m.add_separator()
         m.add_command(label="\u26f6 Plein \u00e9cran  (F11 \u00b7 \u00c9chap pour revenir)", command=self.set_fullscreen)
         m.add_command(label="Quitter", command=self.on_close)
@@ -2086,6 +2432,14 @@ class JournalApp:
         self.share_menu = tk.Menu(mb, tearoff=0)
         self._fill_share_menu(self.share_menu)
         mb.add_cascade(label="Partager", menu=self.share_menu)
+        mb.add_cascade(label="Apparence", menu=self._theme_menu(mb))
+        lm = tk.Menu(mb, tearoff=0)
+        self.v_auto = tk.BooleanVar(value=self.st.get("liens_auto", False))
+        lm.add_command(label="\U0001f517 Tous mes liens (et leur copie)\u2026", command=self.open_links)
+        lm.add_separator()
+        lm.add_checkbutton(label="Rendre les liens permanents automatiquement (envoi \u00e0 l'Archiveur)", variable=self.v_auto,
+                           command=lambda: self._set("liens_auto", self.v_auto.get()))
+        mb.add_cascade(label="Liens", menu=lm)
         ia = tk.Menu(mb, tearoff=0)
         ia.add_command(label="\U0001f9e0 R\u00e9sum\u00e9 de ma semaine (IA locale)", command=self.ai_week)
         ia.add_command(label="\U0001f4ac Pose une question \u00e0 ton journal\u2026", command=self.ai_ask)
@@ -2093,7 +2447,6 @@ class JournalApp:
         self.adv_menu = tk.Menu(mb, tearoff=0)
         self.adv_menu.add_command(label="\U0001f511 Verrou du journal (code)\u2026", command=self.lock_settings)
         self.adv_menu.add_command(label="\U0001f512 Sceller l'entr\u00e9e (chiffr\u00e9e)\u2026", command=self.seal_current)
-        self.v_auto = tk.BooleanVar(value=self.st.get("liens_auto", False))
         self.v_way = tk.BooleanVar(value=self.st.get("wayback", False))
         self.adv_menu.add_checkbutton(label="Rendre les liens permanents automatiquement", variable=self.v_auto,
                                       command=lambda: self._set("liens_auto", self.v_auto.get()))
@@ -2113,6 +2466,8 @@ class JournalApp:
         m.add_command(label="\U0001f4c4 PDF\u2026", command=lambda: self.share("pdf", eid_fn()))
         m.add_command(label="\U0001f5dc Paquet complet (.zip)\u2026", command=lambda: self.share("zip", eid_fn()))
         m.add_command(label="\U0001f4cb Copier pour partager (texte)", command=lambda: self.share("texte", eid_fn()))
+        m.add_command(label="\U0001f9fe Fichier texte (.txt)\u2026", command=lambda: self.share("txt", eid_fn()))
+        m.add_command(label="\U0001f5a8 Imprimer\u2026", command=lambda: self.print_entry(eid_fn()))
         m.add_separator()
         m.add_command(label="\U0001f4d6 Envoyer au Grimoire", command=lambda: self.share("grimoire", eid_fn()))
         m.add_command(label="\U0001f4e8 Pr\u00e9parer pour le Messager", command=lambda: self.share("messager", eid_fn()))
@@ -2153,11 +2508,17 @@ class JournalApp:
                  tip="Ctrl+N \u00b7 ou Ctrl+Alt+J depuis n'importe o\u00f9").pack(fill="x")
         self.btn(top, "\U0001f4cb  Coller dans le journal", self.paste_today,
                  tip="Ce que tu as copi\u00e9 va dans l'entr\u00e9e du jour (aussi : Ctrl+Alt+K partout)").pack(fill="x", pady=(5, 0))
+        self.streak_lbl = tk.Label(top, text="", bg=C["PANEL"], fg=C["ACC2"], font=("Segoe UI", 10, "bold"), anchor="w")
+        self.streak_lbl.pack(fill="x", pady=(6, 0))
         sf = tk.Frame(f, bg=C["PANEL"]); sf.pack(fill="x", padx=10, pady=6)
         self.v_search = tk.StringVar()
         self.search_en = tk.Entry(sf, textvariable=self.v_search, bg=C["ENTRY"], fg=C["TEXT"], insertbackground=C["TEXT"],
                                   relief="flat", font=("Segoe UI", 11))
-        self.search_en.pack(fill="x", ipady=4)
+        self.btn(sf, "\u2715", self._clear_search, small=True,
+                 tip="Effacer la recherche (\u00c9chap)").pack(side="right", padx=(4, 0))
+        self.search_en.pack(side="left", fill="x", expand=True, ipady=4)
+        self._tip(self.search_en, "Chercher partout (Ctrl+F)")
+        self.search_en.bind("<Escape>", lambda e: (self._clear_search(), "break")[1])
         self._placeholder(self.search_en, self.v_search, "\U0001f50e Chercher partout (textes, liens, vocaux\u2026)")
         self.v_search.trace_add("write", lambda *a: self._debounce_list())
         fr = tk.Frame(f, bg=C["PANEL"]); fr.pack(fill="x", padx=10)
@@ -2174,13 +2535,25 @@ class JournalApp:
             mm.add_command(label=f"{ic}  {nm}", command=lambda ic=ic: self._set_mood_filter(ic))
         self.mb_mood.configure(menu=mm)
         self.mb_mood.pack(side="left", padx=(6, 0))
+        self._tip(self.mb_mood, "Montrer seulement les entr\u00e9es d'une humeur")
         tabs = tk.Frame(f, bg=C["PANEL"]); tabs.pack(fill="x", padx=10, pady=(8, 2))
         self.tab_btns = {}
-        for key, lab in (("chrono", "\U0001f30c Chronologie"), ("cal", "\U0001f4c5 Calendrier"), ("jour", "\u2728 Ce jour-l\u00e0")):
+        tips = {"chrono": "Toutes tes entr\u00e9es, de la plus r\u00e9cente \u00e0 la plus ancienne",
+                "cal": "Un calendrier : les jours avec une entr\u00e9e sont color\u00e9s",
+                "jour": "Tes souvenirs des autres ann\u00e9es, \u00e0 la m\u00eame date",
+                "fav": "Les entr\u00e9es marqu\u00e9es d'une \u00e9toile (bouton \u2606 Favori)"}
+        for n, (key, lab) in enumerate((("chrono", "\U0001f30c Chronologie"), ("cal", "\U0001f4c5 Calendrier"),
+                                         ("jour", "\u2728 Ce jour-l\u00e0"), ("fav", "\u2b50 Favoris"))):
             b = tk.Button(tabs, text=lab, relief="flat", bd=0, font=("Segoe UI", 9, "bold"), cursor="hand2",
-                          command=lambda k=key: self.set_view(k), padx=6, pady=3)
-            b.pack(side="left", expand=True, fill="x", padx=1)
+                          command=lambda k=key: self.set_view(k), padx=6, pady=5)
+            b.grid(row=n // 2, column=n % 2, sticky="nsew", padx=1, pady=1)
+            tabs.columnconfigure(n % 2, weight=1)
+            self._tip(b, tips[key])
             self.tab_btns[key] = b
+        lb_ = tk.Button(tabs, text="\U0001f517 Mes liens", relief="flat", bd=0, font=("Segoe UI", 9, "bold"), cursor="hand2",
+                        command=self.open_links, padx=6, pady=5, bg=C["CARD"], fg=C["TEXT"], activebackground=C["BTNH"])
+        lb_.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=1, pady=1)
+        self._tip(lb_, "Tous les liens de ton journal, avec leur copie permanente")
         self.cal_frame = tk.Frame(f, bg=C["PANEL"])
         self.list_head = tk.Label(f, text="", bg=C["PANEL"], fg=C["ACC2"], font=("Segoe UI", 9, "italic"),
                                   anchor="w", justify="left", wraplength=self.px(320))
@@ -2234,7 +2607,7 @@ class JournalApp:
     def _paint_tabs(self):
         for k, b in self.tab_btns.items():
             on = k == self.view
-            b.configure(bg=C["ACC"] if on else C["CARD"], fg="#06121f" if on else C["TEXT"],
+            b.configure(bg=C["ACC"] if on else C["CARD"], fg=C["ONACC"] if on else C["TEXT"],
                         activebackground=C["BTNH"])
         if self.view == "cal":
             self.cal_frame.pack(fill="x", padx=10, pady=4, before=self.list_head)
@@ -2266,10 +2639,10 @@ class JournalApp:
             if mth > 12:
                 y, mth = y + 1, 1
             self.cal_month = dt.date(y, mth, 1); self._draw_calendar()
-        self.btn(head, "\u25c0", lambda: shift(-1), small=True).pack(side="left")
+        self.btn(head, "\u25c0", lambda: shift(-1), small=True, tip="Mois pr\u00e9c\u00e9dent").pack(side="left")
         tk.Label(head, text=f"{MOIS[m0.month - 1].capitalize()} {m0.year}", bg=C["PANEL"], fg=C["TEXT"],
                  font=("Segoe UI", 11, "bold")).pack(side="left", expand=True)
-        self.btn(head, "\u25b6", lambda: shift(1), small=True).pack(side="right")
+        self.btn(head, "\u25b6", lambda: shift(1), small=True, tip="Mois suivant").pack(side="right")
         g = tk.Frame(self.cal_frame, bg=C["PANEL"]); g.pack(fill="x", pady=4)
         for i, d in enumerate("LMMJVSD"):
             tk.Label(g, text=d, bg=C["PANEL"], fg=C["DIM"], font=("Segoe UI", 8)).grid(row=0, column=i, sticky="nsew")
@@ -2293,7 +2666,7 @@ class JournalApp:
             txt = f"{d}\n{dot}"
             b = tk.Button(g, text=txt, relief="flat", bd=0, font=("Segoe UI", 8), cursor="hand2",
                           bg=C["ACC2"] if sel else (C["ACC"] if has else C["CARD"]),
-                          fg="#06121f" if (has or sel) else (C["TEXT"] if dt.date(m0.year, m0.month, d) != today else C["ACC2"]),
+                          fg=C["ONACC"] if (has or sel) else (C["TEXT"] if dt.date(m0.year, m0.month, d) != today else C["ACC2"]),
                           command=lambda d=d: self._pick_day(dt.date(m0.year, m0.month, d)))
             b.grid(row=1 + pos // 7, column=pos % 7, sticky="nsew", padx=1, pady=1)
 
@@ -2315,6 +2688,10 @@ class JournalApp:
             ds = self.day_filter.isoformat()
             es = [e for e in es if e["created"][:10] == ds]
             head = f"\U0001f4c5 {date_fr(dt.datetime.combine(self.day_filter, dt.time()), False)}"
+        elif self.view == "fav":
+            es = [e for e in es if e.get("favori")]
+            head = ("\u2b50 Tes entr\u00e9es favorites" if es else
+                    "\u2b50 Aucun favori encore : clique \u00ab \u2606 Favori \u00bb au-dessus d'une entr\u00e9e pour la garder ici.")
         elif self.view == "cal":
             pre = self.cal_month.strftime("%Y-%m")
             es = [e for e in es if e["created"].startswith(pre)]
@@ -2343,6 +2720,14 @@ class JournalApp:
         if not es:
             tk.Label(self.lbody, text="Aucune entr\u00e9e ici pour l'instant.\nClique \u00ab Nouvelle entr\u00e9e \u00bb pour commencer ton r\u00e9cit.",
                      bg=C["PANEL"], fg=C["DIM"], font=("Segoe UI", 10), justify="center").pack(pady=30)
+        try:
+            with self.j.lock:
+                rows = self.j.db.execute("SELECT entry_id, url, status FROM embeds WHERE kind='link'").fetchall()
+            self._emb_links = {}
+            for r_ in rows:
+                self._emb_links.setdefault(r_[0], {})[r_[1]] = r_[2]
+        except Exception:
+            self._emb_links = {}
         self._list_state = {"last_month": None, "es": es, "shown": 0, "more": None}
         self._list_more(fades)
         for n, ws in fades:
@@ -2350,6 +2735,7 @@ class JournalApp:
         self.lcv.yview_moveto(0)
         if self.view == "cal":
             self._draw_calendar()
+        self._paint_streak()
 
     def _list_more(self, fades=None):
         """affiche les cartes par paquets de 60 (rapide meme avec des milliers d'entrees)."""
@@ -2380,13 +2766,16 @@ class JournalApp:
             l1 = tk.Label(card, text=icon, bg=cb, fg=C["TEXT"], font=("Segoe UI Emoji", 16))
             l1.pack(side="left", padx=(0, 8))
             col = tk.Frame(card, bg=cb); col.pack(side="left", fill="x", expand=True)
-            title = e.get("title") or self._auto_title(e)
+            title = ("\u2605 " if e.get("favori") else "") + (e.get("title") or self._auto_title(e))
             l2 = tk.Label(col, text=title[:60], bg=cb, fg=C["TEXT"], font=("Segoe UI", 10, "bold"), anchor="w", justify="left")
             l2.pack(fill="x")
             yr = f" {d.year}" if d.year != dt.date.today().year else ""
             sub = f"{JOURS[d.weekday()][:3]}. {d.day} {MOIS[d.month - 1][:4]}.{yr} \u00b7 {d.hour} h {d.minute:02d}"
             if e.get("lieu"):
                 sub += f" \u00b7 \U0001f4cd {e['lieu'][:24]}"
+            nl = self._link_count(e)
+            if nl:
+                sub += f" \u00b7 \U0001f517 {nl}"
             l3 = tk.Label(col, text=sub, bg=cb, fg=C["DIM"], font=("Segoe UI", 8), anchor="w")
             l3.pack(fill="x")
             if e.get("sealed"):
@@ -2398,6 +2787,7 @@ class JournalApp:
             l4.pack(fill="x")
             for wdg in (card, l1, col, l2, l3, l4):
                 wdg.bind("<Button-1>", lambda ev, i=e["id"]: self.open_entry(i))
+                wdg.bind("<Double-Button-1>", lambda ev, i=e["id"]: self.open_entry(i))
                 wdg.bind("<Button-3>", lambda ev, i=e["id"]: self._list_menu(ev, i))
                 wdg.bind("<MouseWheel>", lambda ev: self.lcv.yview_scroll(int(-ev.delta / 120), "units"))
             self.list_cards[e["id"]] = card
@@ -2423,13 +2813,15 @@ class JournalApp:
         m = tk.Menu(self.root, tearoff=0)
         e = self.j.entry(eid)
         m.add_command(label="Ouvrir", command=lambda: self.open_entry(eid))
+        m.add_command(label="\u2606 Enlever des favoris" if e.get("favori") else "\u2b50 Ajouter aux favoris",
+                      command=lambda: self.toggle_fav(eid))
         if not e.get("sealed"):
             m.add_separator()
             self._fill_share_menu(m, lambda: eid)
             if self.st.get("mode_avance"):
                 m.add_command(label="\U0001f512 Sceller\u2026", command=lambda: self.seal_dialog(eid))
         m.add_separator()
-        m.add_command(label="\U0001f5d1 Supprimer", command=lambda: self.delete_entry(eid))
+        m.add_command(label="\U0001f5d1 Supprimer (va \u00e0 la corbeille)", command=lambda: self.delete_entry(eid))
         m.tk_popup(ev.x_root, ev.y_root)
 
     # ------------------------------------------------------------ editeur
@@ -2462,18 +2854,25 @@ class JournalApp:
         self.mood_btns, self.weather_btns = {}, {}
         self.v_moodsel, self.v_weathersel = "", ""
         for ic, nm in MOODS:
-            b = tk.Label(moods, text=ic, bg=C["BG"], font=EMOJI_FONT, cursor="hand2", padx=2)
-            b.pack(side="left"); b.bind("<Button-1>", lambda e, ic=ic: self._pick_mood(ic)); self._tip(b, nm)
+            b = tk.Label(moods, text=ic, bg=C["BG"], font=EMOJI_FONT, cursor="hand2", padx=3, pady=1,
+                         highlightthickness=2, highlightbackground=C["BG"])
+            b.pack(side="left", padx=1); b.bind("<Button-1>", lambda e, ic=ic: self._pick_mood(ic))
+            self._tip(b, f"Humeur : {nm} (clic pour choisir, re-clic pour enlever)")
             self.mood_btns[ic] = b
         tk.Label(moods, text="  \u2502  ", bg=C["BG"], fg=C["LINE"]).pack(side="left")
         for ic, nm in WEATHER:
-            b = tk.Label(moods, text=ic, bg=C["BG"], fg=C["TEXT"], font=EMOJI_FONT, cursor="hand2", padx=2)
-            b.pack(side="left"); b.bind("<Button-1>", lambda e, ic=ic: self._pick_weather(ic)); self._tip(b, nm)
+            b = tk.Label(moods, text=ic, bg=C["BG"], fg=C["TEXT"], font=EMOJI_FONT, cursor="hand2", padx=3, pady=1,
+                         highlightthickness=2, highlightbackground=C["BG"])
+            b.pack(side="left", padx=1); b.bind("<Button-1>", lambda e, ic=ic: self._pick_weather(ic))
+            self._tip(b, f"M\u00e9t\u00e9o : {nm} (clic pour choisir, re-clic pour enlever)")
             self.weather_btns[ic] = b
+        self.mood_lbl = tk.Label(head, text="", bg=C["BG"], fg=C["DIM"], font=("Segoe UI", 9, "italic"), anchor="w")
+        self.mood_lbl.pack(fill="x")
         tb = tk.Frame(f, bg=C["PANEL"]); tb.pack(fill="x", padx=18, pady=(6, 0))
         self.toolbar = tb
         for txt, fn, tip in (("B", lambda: self._toggle_tag("b"), "Gras (Ctrl+B)"), ("I", lambda: self._toggle_tag("i"), "Italique (Ctrl+I)"),
-                             ("T", self._toggle_h1, "Sous-titre"), ("\u2022", self._bullet, "Puce")):
+                             ("T", self._toggle_h1, "Sous-titre (la ligne o\u00f9 est le curseur)"),
+                             ("\u2022", self._bullet, "Puce (d\u00e9but de ligne)")):
             self.btn(tb, txt, fn, small=True, tip=tip).pack(side="left", padx=1, pady=3)
         tk.Label(tb, text=" ", bg=C["PANEL"]).pack(side="left")
         for txt, fn, tip in (("\U0001f399 Vocal", self.record, "Enregistrer un m\u00e9mo vocal"),
@@ -2482,18 +2881,27 @@ class JournalApp:
                              ("\U0001f517 Lien", self.ask_link, "Ajouter un lien \u2014 on peut le rendre permanent"),
                              ("\U0001f4cb Coller", self.smart_paste, "Coller n'importe quoi (Ctrl+V)")):
             self.btn(tb, txt, fn, small=True, tip=tip).pack(side="left", padx=2, pady=3)
+        self.mb_tpl = tk.Menubutton(tb, text="\U0001f4dd Mod\u00e8le \u25be", bg=C["BTN"], fg=C["TEXT"], relief="flat",
+                                    activebackground=C["BTNH"], activeforeground=C["TEXT"], font=("Segoe UI", 9, "bold"),
+                                    padx=8, pady=3, cursor="hand2")
+        self.mb_tpl.configure(menu=self._template_menu(self.mb_tpl)); self.mb_tpl.pack(side="left", padx=2, pady=3)
+        self._tip(self.mb_tpl, "Commencer avec un mod\u00e8le : Journ\u00e9e, Id\u00e9e, Gratitude, Travail\u2026")
         self.btn(tb, "\u2726 Consigner", self.consign, acc=True, small=True,
                  tip="Enregistre avec le sceau (Ctrl+S) \u2014 tout est aussi enregistr\u00e9 automatiquement").pack(side="right", padx=3)
         self.b_share = tk.Menubutton(tb, text="\U0001f4e4 Partager \u25be", bg=C["BTN"], fg=C["TEXT"], relief="flat",
                                      activebackground=C["BTNH"], font=("Segoe UI", 9, "bold"), padx=6)
         sm = tk.Menu(self.b_share, tearoff=0); self._fill_share_menu(sm); self.b_share.configure(menu=sm)
         self.b_share.pack(side="right", padx=3)
+        self._tip(self.b_share, "Partager cette entr\u00e9e : page web, PDF, texte, impression (Ctrl+P)\u2026")
+        self.b_fav = self.btn(tb, "\u2606 Favori", lambda: self.toggle_fav(), small=True,
+                              tip="Garder cette entr\u00e9e dans l'onglet \u2b50 Favoris")
+        self.b_fav.pack(side="right", padx=3)
         self.b_seal = self.btn(tb, "\U0001f512 Sceller", self.seal_current, small=True, tip="Chiffrer cette entr\u00e9e (mode avanc\u00e9)")
         holder = tk.Frame(f, bg=C["BG"]); holder.pack(fill="both", expand=True, padx=18, pady=(6, 8))
         self.holder = holder
         self.txt = tk.Text(holder, wrap="word", undo=True, bg=C["ENTRY"], fg=C["TEXT"], insertbackground=C["ACC"],
                            relief="flat", font=("Segoe UI", self.fs), padx=self.px(16), pady=self.px(12), spacing1=2, spacing3=4,
-                           selectbackground="#2f5596", selectforeground=C["TEXT"], highlightthickness=0)
+                           selectbackground=C["SEL"], selectforeground=C["TEXT"], highlightthickness=0)
         sb = self.ttk.Scrollbar(holder, orient="vertical", command=self.txt.yview, style="J.Vertical.TScrollbar")
         self.txt.configure(yscrollcommand=sb.set)
         self.txt.pack(side="left", fill="both", expand=True); sb.pack(side="right", fill="y")
@@ -2534,7 +2942,8 @@ class JournalApp:
         for txt, fn in (("\U0001f4cb Copier ce passage", lambda: self.copy_passage("riche")),
                         ("\U0001f9f9 Texte seul", lambda: self.copy_passage("texte")),
                         ("\U0001f4c4 Mini-page", lambda: self.copy_passage("page"))):
-            self.btn(self.selbar, txt, fn, small=True).pack(side="left", padx=2, pady=2)
+            self.btn(self.selbar, txt, fn, small=True,
+                     tip="Ctrl+C" if "Copier" in txt else None).pack(side="left", padx=2, pady=2)
 
     def _pick_mood(self, ic):
         self.v_moodsel = "" if self.v_moodsel == ic else ic
@@ -2545,10 +2954,21 @@ class JournalApp:
         self._paint_moods(); self._mark_dirty()
 
     def _paint_moods(self):
-        for ic, b in self.mood_btns.items():
-            b.configure(bg=C["BTNH"] if ic == self.v_moodsel else C["BG"])
-        for ic, b in self.weather_btns.items():
-            b.configure(bg=C["BTNH"] if ic == self.v_weathersel else C["BG"])
+        for btns, cur in ((self.mood_btns, self.v_moodsel), (self.weather_btns, self.v_weathersel)):
+            for ic, b in btns.items():
+                on = ic == cur
+                b.configure(bg=C["SEL"] if on else C["BG"], highlightbackground=C["ACC"] if on else C["BG"])
+        names = dict(MOODS); wn = dict(WEATHER)
+        bits = []
+        if self.v_moodsel:
+            bits.append("Humeur : " + names.get(self.v_moodsel, ""))
+        if self.v_weathersel:
+            bits.append("M\u00e9t\u00e9o : " + wn.get(self.v_weathersel, ""))
+        try:
+            self.mood_lbl.configure(text=" \u00b7 ".join(bits) if bits else "\u2190 ton humeur et la m\u00e9t\u00e9o du jour (facultatif)",
+                                    fg=C["ACC"] if bits else C["DIM"])
+        except Exception:
+            pass
 
     # ---- mise en forme
     def _toggle_tag(self, tag):
@@ -2753,6 +3173,8 @@ class JournalApp:
         elif k == "link":
             meta = emeta(m)
             url = m.get("url", "")
+            self._preview_block(fr, url, W, bgc, lambda mid=m["id"]: self.refresh_card(mid) if mid not in self.copying else None,
+                                archive_dir=absp(m.get("archive")) if m.get("status") == "permanent" else "", meta=meta)
             tl = tk.Label(fr, text="\U0001f517 " + (m.get("title") or url)[:90], bg=bgc, fg=C["ACC"], cursor="hand2",
                           font=("Segoe UI", 10, "bold"), wraplength=W - 20, justify="left")
             tl.pack(anchor="w")
@@ -2760,7 +3182,19 @@ class JournalApp:
             tk.Label(fr, text=url[:110], bg=bgc, fg=C["DIM"], font=("Segoe UI", 8)).pack(anchor="w")
             row = tk.Frame(fr, bg=bgc); row.pack(fill="x", pady=(5, 0))
             folder = absp(m.get("archive"))
-            if m.get("status") == "permanent" and folder and os.path.isdir(folder):
+            if m.get("status") == "permanent" and folder and os.path.isdir(folder) and meta.get("source") == "archiveur":
+                tk.Label(row, text=f"\u2714 Permanent \u00b7 dans l'Archiveur \u00b7 {str(meta.get('copie_le', ''))[:10]}", bg=bgc,
+                         fg=C["OK"], font=("Segoe UI", 9, "bold")).pack(side="left")
+                self.btn(row, "\U0001f4c2 Dossier", lambda: pc.open_path(folder), small=True,
+                         tip="Le dossier de la copie (dans l'Archiveur, collection \u00ab Journal de bord \u00bb)").pack(side="right", padx=2)
+                if meta.get("index") and os.path.isfile(os.path.join(folder, meta["index"])):
+                    self.btn(row, "\U0001f4f0 Copie locale", lambda: pc.open_path(os.path.join(folder, meta["index"])), small=True,
+                             tip="La page de l'archive : marche m\u00eame si le lien original dispara\u00eet").pack(side="right", padx=2)
+                mp = os.path.join(folder, meta.get("main") or "")
+                if meta.get("main") and os.path.isfile(mp) and mp.lower().endswith((".mp4", ".webm", ".mkv", ".mov", ".m4v", ".mp3", ".m4a", ".opus")):
+                    self.btn(row, "\u25b6 Regarder" if meta.get("video") else "\u25b6 \u00c9couter", lambda: pc.open_path(mp),
+                             small=True, acc=True, tip="Lire la copie gard\u00e9e sur ton PC").pack(side="right", padx=2)
+            elif m.get("status") == "permanent" and folder and os.path.isdir(folder):
                 tk.Label(row, text=f"\U0001f6e1 Permanent \u00b7 copie du {str(meta.get('copie_le', ''))[:10]}", bg=bgc,
                          fg=C["OK"], font=("Segoe UI", 9, "bold")).pack(side="left")
                 for lab, key in (("PDF", "pdf"), ("Capture", "capture")):
@@ -2772,15 +3206,15 @@ class JournalApp:
                 else:
                     self.btn(row, "Copie locale", lambda: pc.open_path(folder), small=True, acc=True).pack(side="right", padx=2)
             elif m.get("status") == "copie" and m["id"] in self.copying:
-                self._scan_beam(fr, W)
+                self._scan_beam(fr, W, m["id"])
             else:
                 msg = "\U0001f517 Lien vivant" if m.get("status") != "erreur" else "\u26a0 Copie impossible pour l'instant (hors ligne ?)"
                 tk.Label(row, text=msg, bg=bgc, fg=C["DIM"] if m.get("status") != "erreur" else C["ACC2"],
                          font=("Segoe UI", 9)).pack(side="left")
                 if not readonly:
-                    self.btn(row, "\U0001f6e1 Rendre ce lien permanent" if m.get("status") != "erreur" else "R\u00e9essayer",
+                    self.btn(row, "\U0001f4e6 Rendre permanent" if m.get("status") != "erreur" else "\u21bb R\u00e9essayer",
                              lambda: self.make_link_permanent(m["id"]), small=True, acc=True,
-                             tip="Garde une copie de la page sur ton PC : le lien ne cassera jamais").pack(side="right")
+                             tip="Envoie le lien \u00e0 l'Archiveur : une copie reste sur ton PC, m\u00eame si le lien dispara\u00eet").pack(side="right")
             self.btn(row, "Ouvrir l'original", lambda: pc.open_url(url), small=True).pack(side="right", padx=2)
         else:
             row = tk.Frame(fr, bg=bgc); row.pack(fill="x")
@@ -2803,11 +3237,12 @@ class JournalApp:
             for wdg in [fr] + list(fr.winfo_children()):
                 wdg.bind("<Button-3>", menu, add="+")
 
-    def _scan_beam(self, fr, W):
-        """rayon de balayage pendant la copie d'une page, puis coche."""
+    def _scan_beam(self, fr, W, key=None):
+        """barre vivante pendant la copie (pourcentage + encouragements), puis coche."""
         tk = self.tk
         lab = tk.Label(fr, text="\U0001f6f0 Copie de la page en cours\u2026 tu peux continuer d'\u00e9crire.", bg=C["CARD"],
                        fg=C["ACC2"], font=("Segoe UI", 9))
+        prog = getattr(self, "copy_progress", {})
         lab.pack(anchor="w", pady=(4, 0))
         cv = tk.Canvas(fr, width=W - 20, height=self.px(10), bg=C["ENTRY"], highlightthickness=0)
         cv.pack(fill="x", pady=(3, 0))
@@ -2818,12 +3253,19 @@ class JournalApp:
                 return
             cv.delete("all")
             w = cv.winfo_width() or W
+            pg = prog.get(key) if key else None
+            if pg:
+                try:
+                    lab.configure(text=cheer(pg.get("pct"), pg.get("log", "")))
+                except Exception:
+                    return
+                if pg.get("pct") is not None:
+                    cv.create_rectangle(0, 0, w * min(1.0, pg["pct"] / 100.0), 10, outline="", fill=_mix(C["ENTRY"], C["OK"], 0.55))
             x = ((time.time() - t0) * 0.6 % 1.0) * (w + 120) - 60
             for k in range(12):
                 cv.create_rectangle(x - 60 + k * 10, 0, x - 50 + k * 10, 10, outline="",
                                     fill=_mix(C["ENTRY"], C["ACC"], 1 - abs(k - 6) / 6))
-            if self.anim.on:
-                cv.after(40, tick)
+            cv.after(40 if self.anim.on else 400, tick)
         tick()
 
     def _check_flash(self, fr):
@@ -2953,6 +3395,13 @@ class JournalApp:
         if missing:   # une piece n'est jamais perdue : on la remet a la fin
             body = body.rstrip() + "\n" + "\n".join(f"\u27e6e:{i}\u27e7" for i in missing)
         self.insert_md("1.0", body, embeds)
+        self._tag_stamps()
+        for fr in list(getattr(self, "tprev", {}).values()):
+            try:
+                fr.destroy()
+            except Exception:
+                pass
+        self.tprev = {}
         d = parse_iso(e["created"])
         try:
             foc = self.root.focus_get()
@@ -2969,8 +3418,13 @@ class JournalApp:
         t.edit_reset(); t.edit_modified(False)
         self.dirty = False
         self.loading = False
-        fl = random.Random(e["id"]).choice(FLAVOR).format(sd=stardate(d))
+        if OPTS["stellaire"]:
+            fl = random.Random(e["id"]).choice(FLAVOR).format(sd=stardate(d))
+        else:
+            fl = "\u270e " + date_fr(d).capitalize()
         self.anim.typewrite(self.flavor, fl)
+        self._paint_fav(); self._update_wc()
+        self.root.after(30, lambda: self._scan_text_links(False))
 
     def open_entry(self, eid):
         if not eid:
@@ -2986,6 +3440,8 @@ class JournalApp:
         self.st["derniere"] = eid; save_settings(self.st)
         self._highlight_list()
         self.txt.mark_set("insert", "end-1c")
+        self._continue_here(e, parse_iso(e.get("updated") or e["created"]))
+        self._highlight_hits()
 
     def _highlight_list(self):
         for i, card in getattr(self, "list_cards", {}).items():
@@ -3004,6 +3460,8 @@ class JournalApp:
         self.save_now()
         self.cur = self.j.new_entry()
         self._load_into_editor(self.cur)
+        if self.st.get("horodatage", True):
+            self._insert_stamp()
         self._highlight_list()
         self.txt.focus_set()
         self.status("\u2795 Nouvelle entr\u00e9e : \u00e9cris, colle, parle\u2026 tout s'enregistre tout seul.")
@@ -3020,7 +3478,13 @@ class JournalApp:
 
     def collect(self):
         e = self.cur
-        e["body"] = self.serialize()
+        body = self.serialize()
+        ls = body.rstrip().split("\n")
+        while ls and STAMP_LINE.match(ls[-1]) and ls[-1].strip():   # une heure seule a la fin (rien ecrit dessous) n'est pas gardee
+            ls.pop()
+            while ls and not ls[-1].strip():
+                ls.pop()
+        e["body"] = "\n".join(ls) if ls != body.rstrip().split("\n") else body
         e["title"] = self._val(self.title_en, self.v_title).strip()
         e["lieu"] = self._val(self.lieu_en, self.v_lieu).strip()
         e["tags"] = ", ".join(t.strip() for t in self._val(self.tags_en, self.v_tags).split(",") if t.strip())
@@ -3036,6 +3500,9 @@ class JournalApp:
         if self.txt.edit_modified():
             self.txt.edit_modified(False)
             self._mark_dirty()
+            if getattr(self, "_wc_job", None):
+                self.root.after_cancel(self._wc_job)
+            self._wc_job = self.root.after(400, self._update_wc)
 
     def _mark_dirty(self):
         if self.loading or not self.cur:
@@ -3044,7 +3511,7 @@ class JournalApp:
         if self.save_job:
             self.root.after_cancel(self.save_job)
         self.save_job = self.root.after(1500, self.save_now)
-        self.status("\u270d \u2026")
+        self.status("\u270d \u00c9criture\u2026 (enregistrement automatique)")
 
     def save_now(self, force=False):
         if self.save_job:
@@ -3058,7 +3525,7 @@ class JournalApp:
         try:
             e = self.collect()
             new = not self.j.exists(e["id"])
-            empty = not EMB_RX.sub("", e["body"]).strip() and not e["title"] and not md_embed_ids(e["body"]) \
+            empty = not EMB_RX.sub("", body_sans_stamps(e["body"])).strip() and not e["title"] and not md_embed_ids(e["body"]) \
                 and not e["lieu"] and not e["tags"] and not e["mood"]
             if new and empty:
                 return False
@@ -3067,6 +3534,7 @@ class JournalApp:
             self.status(f"\u2714 Enregistr\u00e9 \u00e0 {time.strftime('%H:%M:%S')}", True)
             if new:
                 self.refresh_list(); self._milestone()
+                self._pulse(getattr(self, "list_cards", {}).get(e["id"]))
             else:
                 self._update_list_card(e)
             return True
@@ -3106,7 +3574,10 @@ class JournalApp:
         ok = self.save_now(force=True)
         if ok or self.j.exists(self.cur["id"]):
             self.anim.seal(self.holder)
-            self.status(f"\u2726 Consign\u00e9 au journal de bord \u00b7 date stellaire {stardate()}", True)
+            self.status(f"\u2726 Consign\u00e9 au journal \u00b7 {time.strftime('%H:%M')}"
+                        + (f" \u00b7 date stellaire {stardate()}" if OPTS["stellaire"] else ""), True)
+            self.toast("\u2714 Consign\u00e9 ! Ton entr\u00e9e est bien gard\u00e9e sur ce PC.", seconds=2.6)
+            self._paint_streak()
         else:
             self.status("Rien \u00e0 consigner pour l'instant : \u00e9cris quelques mots d'abord.")
 
@@ -3135,7 +3606,7 @@ class JournalApp:
             nxt = self._first_open_id()
             self.open_entry(nxt) if nxt else self.new_entry()
         self.refresh_list()
-        self.toast("Entr\u00e9e retir\u00e9e du journal.", [("Annuler", lambda: (self.j.delete_entry(eid, undo=True), self.refresh_list(), self.open_entry(eid)))], 8)
+        self.toast("\U0001f5d1 Entr\u00e9e mise \u00e0 la corbeille (Journal \u25b8 Corbeille pour la retrouver).", [("Annuler", lambda: (self.j.delete_entry(eid, undo=True), self.refresh_list(), self.open_entry(eid)))], 8)
 
     # ------------------------------------------------------------ coller : tout devient la bonne piece
     def smart_paste(self):
@@ -3393,14 +3864,33 @@ class JournalApp:
             fr = self.refresh_card(emb_id)
             if fr:
                 self._check_flash(fr)
-            self.status("\U0001f6e1 Lien rendu permanent : la copie est sur ton PC.", True)
+            m3 = self.j.embed(emb_id) or {}
+            self.status("\u2714 Lien rendu permanent : la copie est sur ton PC" +
+                        (" (Archiveur, collection \u00ab Journal de bord \u00bb)." if emeta(m3).get("source") == "archiveur" else "."), True)
+            self.toast("\u2714 Permanent ! M\u00eame si le lien dispara\u00eet, ta copie reste dans ton journal.", seconds=4)
 
         def err(msg):
             self.copying.discard(emb_id)
             self.j.update_embed(emb_id, status="erreur")
             self.refresh_card(emb_id)
             self.status("\u26a0 Copie impossible pour l'instant (connexion ?). Le lien reste dans l'entr\u00e9e ; tu pourras r\u00e9essayer.")
-        self.bg(lambda: make_permanent(self.j, self.j.embed(emb_id), logs.append, way), done, err)
+        if not hasattr(self, "copy_progress"):
+            self.copy_progress = {}
+        prog = self.copy_progress[emb_id] = {"pct": None, "log": ""}
+
+        def ev(k, v):
+            prog[k] = v
+
+        def work():
+            m0 = self.j.embed(emb_id)
+            if archiveur_ok():
+                try:
+                    return make_permanent_archiveur(self.j, m0, ev)
+                except Exception as ex:
+                    logs.append(f"Archiveur : {ex}")
+                    traceback.print_exc()
+            return make_permanent(self.j, m0, logs.append, way)
+        self.bg(work, done, err)
 
     # ------------------------------------------------------------ images / fichiers
     def pick_image(self):
@@ -3537,6 +4027,16 @@ class JournalApp:
             self.bg(lambda: fn(self.j, [eid], out),
                     lambda p: self.toast("\u2728 C'est pr\u00eat ! Seule cette entr\u00e9e est dedans.",
                                          [("Ouvrir", lambda: pc.open_path(p)), ("Montrer", lambda: pc.reveal(p))], 9))
+        elif how == "imprimer":
+            self.print_entry(eid)
+        elif how == "txt":
+            out = filedialog.asksaveasfilename(parent=self.root, initialdir=partages_dir(), initialfile=base + ".txt",
+                                               defaultextension=".txt", filetypes=[("Texte", "*.txt")])
+            if not out:
+                return
+            with open(out, "w", encoding="utf-8-sig") as f:
+                f.write(entry_plain(e, self.j.embeds(eid)))
+            self.toast("\U0001f9fe Fichier texte pr\u00eat.", [("Ouvrir", lambda: pc.open_path(out)), ("Montrer", lambda: pc.reveal(out))], 8)
         elif how == "texte":
             txt = entry_plain(e, self.j.embeds(eid))
             if not clipboard_write(txt):
@@ -3566,7 +4066,7 @@ class JournalApp:
         tk.Label(top, text="Seules les entr\u00e9es coch\u00e9es seront dans le partage. Les scell\u00e9es n'y sont jamais.",
                  bg=C["BG"], fg=C["DIM"], font=("Segoe UI", 9)).pack(anchor="w", padx=14)
         lb = tk.Listbox(top, selectmode="multiple", bg=C["ENTRY"], fg=C["TEXT"], selectbackground=C["ACC"],
-                        selectforeground="#06121f", relief="flat", font=("Segoe UI", 10), activestyle="none")
+                        selectforeground=C["ONACC"], relief="flat", font=("Segoe UI", 10), activestyle="none")
         lb.pack(fill="both", expand=True, padx=14, pady=8)
         for e in es:
             d = parse_iso(e["created"])
@@ -3577,18 +4077,24 @@ class JournalApp:
             ids = [es[i]["id"] for i in lb.curselection()]
             if not ids:
                 return
-            ext = {"html": ".html", "pdf": ".pdf", "zip": ".zip"}[kind]
+            ext = {"html": ".html", "pdf": ".pdf", "zip": ".zip", "txt": ".txt"}[kind]
             out = filedialog.asksaveasfilename(parent=top, initialdir=partages_dir(), defaultextension=ext,
                                                initialfile=f"journal_{len(ids)}_entrees_{time.strftime('%Y-%m-%d')}{ext}")
             if not out:
                 return
             top.destroy()
+            if kind == "txt":
+                with open(out, "w", encoding="utf-8-sig") as f:
+                    f.write(("\n\n" + "\u2500" * 40 + "\n\n").join(entry_plain(self.j.entry(i), self.j.embeds(i)) for i in ids))
+                self.toast(f"\U0001f9fe {len(ids)} entr\u00e9e(s) en texte.", [("Ouvrir", lambda: pc.open_path(out))], 8)
+                return
             fn = {"html": export_html, "pdf": export_pdf, "zip": export_zip}[kind]
             self.bg(lambda: fn(self.j, ids, out),
                     lambda p: self.toast(f"\u2728 {len(ids)} entr\u00e9e(s) pr\u00eate(s) \u00e0 partager.",
                                          [("Ouvrir", lambda: pc.open_path(p)), ("Montrer", lambda: pc.reveal(p))], 9))
         self.btn(row, "Tout cocher", lambda: lb.select_set(0, "end"), small=True).pack(side="left")
-        for k, lab in (("zip", "\U0001f5dc .zip"), ("pdf", "\U0001f4c4 PDF"), ("html", "\U0001f310 Page web")):
+        lb.bind("<MouseWheel>", lambda ev: lb.yview_scroll(int(-ev.delta / 120), "units"))
+        for k, lab in (("txt", "\U0001f9fe Texte"), ("zip", "\U0001f5dc .zip"), ("pdf", "\U0001f4c4 PDF"), ("html", "\U0001f310 Page web")):
             self.btn(row, lab, lambda k=k: go(k), acc=(k == "html")).pack(side="right", padx=3)
 
     # ------------------------------------------------------------ verrou (doux, facultatif)
@@ -3708,7 +4214,7 @@ class JournalApp:
         top = tk.Toplevel(self.root); top.title("\U0001f512 Entr\u00e9e scell\u00e9e (lecture)"); top.configure(bg=C["BG"]); top.transient(self.root)
         top.geometry(f"{self.px(760)}x{self.px(620)}+{self.root.winfo_rootx() + self.px(120)}+{self.root.winfo_rooty() + self.px(40)}")
         d = parse_iso(e["created"])
-        tk.Label(top, text=f"Date stellaire {stardate(d)} \u00b7 {date_fr(d)}", bg=C["BG"], fg=C["ACC"], font=("Consolas", 10)).pack(anchor="w", padx=16, pady=(10, 0))
+        tk.Label(top, text=(f"Date stellaire {stardate(d)} \u00b7 " if OPTS["stellaire"] else "") + date_fr(d), bg=C["BG"], fg=C["ACC"], font=("Consolas", 10)).pack(anchor="w", padx=16, pady=(10, 0))
         tk.Label(top, text=(e.get("mood") or "") + " " + (e.get("title") or "Entr\u00e9e"), bg=C["BG"], fg=C["TEXT"],
                  font=("Segoe UI", 16, "bold")).pack(anchor="w", padx=16)
         txt = tk.Text(top, wrap="word", bg=C["ENTRY"], fg=C["TEXT"], relief="flat", font=("Segoe UI", 12), padx=14, pady=10)
@@ -3785,6 +4291,746 @@ class JournalApp:
         en.bind("<Return>", go)
 
     # ------------------------------------------------------------ aide
+
+    # ------------------------------------------------------------ 1.1 : date, themes, modeles, favoris, corbeille...
+    def _update_title(self):
+        now = dt.datetime.now()
+        try:
+            self.root.title(f"\U0001f4d3 {APP} \u2014 {date_fr(now, False)} \u2014 Padawan Suite")
+        except Exception:
+            return
+        day = now.date()
+        if getattr(self, "_title_day", None) not in (None, day) and hasattr(self, "lbody"):
+            self.refresh_list()                     # minuit : serie et « Ce jour-la » a jour
+        self._title_day = day
+        self.root.after(30000, self._update_title)
+
+    def _theme_menu(self, parent):
+        tk = self.tk
+        m = tk.Menu(parent, tearoff=0)
+        if not hasattr(self, "v_theme"):
+            self.v_theme = tk.StringVar(value=self.st.get("theme", "cosmos"))
+            self.v_stel = tk.BooleanVar(value=bool(self.st.get("date_stellaire")))
+        for key, (lab, _p) in THEMES.items():
+            m.add_radiobutton(label=lab, variable=self.v_theme, value=key, command=lambda k=key: self.set_theme(k))
+        m.add_separator()
+        m.add_checkbutton(label="Afficher la date stellaire (pour les fans de Star Trek)", variable=self.v_stel,
+                          command=self._toggle_stellaire)
+        m.add_cascade(label="\U0001f552 Journ\u00e9e et quart de travail", menu=self._shift_menu(m))
+        return m
+
+    def set_theme(self, key):
+        if key not in THEMES:
+            return
+        old = dict(C)
+        new = theme_colors(key)
+        C.update(new)
+        try:
+            self._recolor(old, new)
+            self._style()
+            self.txt.configure(selectbackground=C["SEL"], insertbackground=C["ACC"])
+            self._paint_tabs(); self._paint_moods(); self._paint_fav()
+            self.refresh_list()
+            self._highlight_hits()
+        except Exception:
+            traceback.print_exc()
+        self.v_theme.set(key)
+        self._set("theme", key)
+        self.status(f"\U0001f3a8 Th\u00e8me : {THEMES[key][0]}", True)
+
+    def _recolor(self, old, new):
+        mp = {}
+        for k, v in old.items():
+            if isinstance(v, str) and v.startswith("#"):
+                mp.setdefault(v.lower(), new.get(k, v))
+        opts = ("bg", "fg", "activebackground", "activeforeground", "highlightbackground", "highlightcolor",
+                "insertbackground", "selectbackground", "selectforeground", "selectcolor", "troughcolor")
+
+        def walk(w):
+            for o in opts:
+                try:
+                    v = str(w.cget(o)).lower()
+                except Exception:
+                    continue
+                if v in mp:
+                    try:
+                        w.configure(**{o: mp[v]})
+                    except Exception:
+                        pass
+            try:
+                if w.winfo_class() == "Text":
+                    for tg in w.tag_names():
+                        for o in ("foreground", "background"):
+                            v = str(w.tag_cget(tg, o) or "").lower()
+                            if v in mp:
+                                w.tag_configure(tg, **{o: mp[v]})
+            except Exception:
+                pass
+            for c in w.winfo_children():
+                walk(c)
+        walk(self.root)
+
+    def _toggle_stellaire(self):
+        OPTS["stellaire"] = bool(self.v_stel.get())
+        self._set("date_stellaire", OPTS["stellaire"])
+        if self.cur:
+            d = parse_iso(self.cur["created"])
+            self.flavor.configure(text=random.Random(self.cur["id"]).choice(FLAVOR).format(sd=stardate(d))
+                                  if OPTS["stellaire"] else "\u270e " + date_fr(d).capitalize())
+
+    def _template_menu(self, parent):
+        m = self.tk.Menu(parent, tearoff=0)
+        for lab, ttl, body in TEMPLATES:
+            m.add_command(label=lab, command=lambda t=ttl, b=body: self.apply_template(t, b))
+        return m
+
+    def apply_template(self, title, body):
+        if not self.cur:
+            self.new_entry()
+        t = self.txt
+        empty = not body_sans_stamps(t.get("1.0", "end-1c")).strip() and not self.card_frames
+        if empty:
+            if not self._val(self.title_en, self.v_title).strip():
+                self.title_en._ph = False; self.title_en.configure(fg=C["TEXT"]); self.v_title.set(title)
+            start = t.index("end-1c")
+            self.insert_md("end-1c", body)
+            t.mark_set("insert", f"{start} +1 lines linestart")
+        else:
+            t.mark_set("insert", "end-1c")
+            self.insert_md("insert", "\n" + body)
+        self._mark_dirty(); t.focus_set(); t.see("insert")
+        self.status(f"\U0001f4dd Mod\u00e8le \u00ab {title} \u00bb : remplis les sections, ou efface ce qui ne sert pas.")
+
+    def toggle_fav(self, eid=None):
+        if eid is None or (self.cur and eid == self.cur.get("id")):
+            if not self.cur:
+                return
+            self.cur["favori"] = 0 if self.cur.get("favori") else 1
+            on = self.cur["favori"]
+            self.dirty = True
+            self.save_now(force=True)
+            if not self.j.exists(self.cur["id"]):
+                self.toast("\u2b50 \u00c9toile not\u00e9e : elle sera gard\u00e9e d\u00e8s que tu \u00e9cris quelques mots.")
+        else:
+            e = self.j.entry(eid)
+            if not e:
+                return
+            e["favori"] = 0 if e.get("favori") else 1
+            on = e["favori"]
+            self.j.save_entry(e)
+        self._paint_fav(); self.refresh_list()
+        self.status("\u2b50 Ajout\u00e9e aux favoris" if on else "\u2606 Retir\u00e9e des favoris", True)
+
+    def _paint_fav(self):
+        try:
+            on = bool(self.cur and self.cur.get("favori"))
+            self.b_fav.configure(text="\u2605 Favori" if on else "\u2606 Favori", fg=C["ACC2"] if on else C["TEXT"])
+        except Exception:
+            pass
+
+    def _clear_search(self):
+        self.v_search.set("")
+        if self.root.focus_get() is not self.search_en and hasattr(self.search_en, "_show_ph"):
+            self.search_en._show_ph()
+        self.txt.tag_remove("hit", "1.0", "end")
+
+    def _highlight_hits(self):
+        t = self.txt
+        t.tag_remove("hit", "1.0", "end")
+        q = self._val(self.search_en, self.v_search).strip()
+        if not q:
+            return
+        words = [w for w in re.split(r"\s+", q) if len(w) > 1][:6]
+        first = None
+        for w in words:
+            idx, n = "1.0", 0
+            while n < 300:
+                cnt = self.tk.IntVar()
+                pos = t.search(w, idx, "end", nocase=True, count=cnt)
+                if not pos or not cnt.get():
+                    break
+                end = f"{pos}+{cnt.get()}c"
+                t.tag_add("hit", pos, end)
+                if first is None or t.compare(pos, "<", first):
+                    first = pos
+                idx, n = end, n + 1
+        if first is None:
+            return
+        t.tag_raise("sel")
+        t.see(first)
+        final = _mix(C["ENTRY"], C["ACC2"], 0.38)
+        if not self.anim.on:
+            t.tag_configure("hit", background=final); return
+        t0 = time.time()
+
+        def tick():
+            k = min(1.0, (time.time() - t0) / 1.2)
+            try:
+                t.tag_configure("hit", background=_mix(C["ACC2"], final, k))
+            except Exception:
+                return
+            if k < 1:
+                t.after(40, tick)
+        tick()
+
+    def _update_wc(self):
+        self._wc_job = None
+        if not self.loading:
+            try:
+                self._scan_text_links(True)
+            except Exception:
+                traceback.print_exc()
+        try:
+            n = len(re.findall(r"\w+", self.txt.get("1.0", "end-1c")))
+            mins = max(1, round(n / 200))
+            self.wc_lbl.configure(text=f"\U0001f4dd {n} mot{'s' if n > 1 else ''}" + (f" \u00b7 environ {mins} min de lecture" if n >= 150 else ""))
+        except Exception:
+            pass
+
+    def _streak(self):
+        days = {e["created"][:10] for e in self.j.entries()}
+        d = dt.date.today()
+        today = d.isoformat() in days
+        if not today:
+            d -= dt.timedelta(days=1)
+        n = 0
+        while d.isoformat() in days:
+            n += 1; d -= dt.timedelta(days=1)
+        return n, today
+
+    def _paint_streak(self):
+        try:
+            n, today = self._streak()
+            if n >= 2:
+                txt = f"\U0001f525 {n} jours de suite" + (" \u2014 bravo !" if today else " \u2014 \u00e9cris aujourd'hui pour continuer !")
+            elif today:
+                txt = "\u270d \u00c9crit aujourd'hui \u2014 reviens demain pour une s\u00e9rie !"
+            else:
+                txt = "\u270d Une petite entr\u00e9e aujourd'hui ?"
+            self.streak_lbl.configure(text=txt)
+        except Exception:
+            pass
+
+    def _pulse(self, card):
+        """une nouvelle entree arrive dans la chronologie : petite lueur douce."""
+        if not card or not self.anim.on:
+            return
+        ws = [card]
+        for w in card.winfo_children():
+            ws.append(w); ws += list(w.winfo_children())
+        t0 = time.time()
+
+        def tick():
+            k = min(1.0, (time.time() - t0) / 0.9)
+            col = _mix(C["ACC"], C["BTNH"], k)
+            for w in ws:
+                try:
+                    w.configure(bg=col)
+                except Exception:
+                    pass
+            if k < 1 and card.winfo_exists():
+                card.after(30, tick)
+        tick()
+
+    def print_entry(self, eid=None):
+        eid = eid or self._current_saved_id()
+        if not eid:
+            self.toast("\u00c9cris d'abord quelques mots : il n'y a rien \u00e0 imprimer."); return
+        e = self.j.entry(eid)
+        if not e or e.get("sealed"):
+            self.toast("Les entr\u00e9es scell\u00e9es ne s'impriment pas."); return
+        d = os.path.join(tempfile.gettempdir(), "padawan_journal_impression")
+        os.makedirs(d, exist_ok=True)
+        out = os.path.join(d, "impression.html")
+
+        def work():
+            p = export_html(self.j, [eid], out)
+            with open(p, encoding="utf-8") as f:
+                h = f.read()
+            js = "<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},500)});</script>"
+            h = h.replace("</body>", js + "</body>") if "</body>" in h else h + js
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(h)
+            return p
+        self.status("\U0001f5a8 Pr\u00e9paration de l'impression\u2026")
+        self.bg(work, lambda p: (pc.open_path(p), self.toast("\U0001f5a8 La page s'ouvre dans ton navigateur : la fen\u00eatre d'impression appara\u00eet toute seule.", seconds=7)))
+
+    def open_trash(self):
+        tk = self.tk
+        es = [e for e in self.j.entries(include_deleted=True) if e.get("deleted")]
+        top = tk.Toplevel(self.root); top.title("Corbeille du journal"); top.configure(bg=C["BG"]); top.transient(self.root)
+        top.geometry(f"{self.px(560)}x{self.px(460)}+{self.root.winfo_rootx() + self.px(160)}+{self.root.winfo_rooty() + self.px(80)}")
+        tk.Label(top, text="\u267b Corbeille", bg=C["BG"], fg=C["TEXT"], font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=14, pady=(12, 0))
+        tk.Label(top, text="Les entr\u00e9es supprim\u00e9es attendent ici : rien n'est effac\u00e9 pour de bon.\n"
+                           "Choisis-en une et clique \u00ab Restaurer \u00bb (ou double-clic).",
+                 bg=C["BG"], fg=C["DIM"], font=("Segoe UI", 9), justify="left").pack(anchor="w", padx=14)
+        lb = tk.Listbox(top, bg=C["ENTRY"], fg=C["TEXT"], selectbackground=C["ACC"], selectforeground=C["ONACC"],
+                        relief="flat", font=("Segoe UI", 11), activestyle="none")
+        lb.pack(fill="both", expand=True, padx=14, pady=8)
+        lb.bind("<MouseWheel>", lambda ev: lb.yview_scroll(int(-ev.delta / 120), "units"))
+        for e in es:
+            dd = parse_iso(e["created"])
+            lb.insert("end", f"{dd.strftime('%Y-%m-%d')}  {e.get('mood') or ''}  {e.get('title') or self._auto_title(e)}")
+        if not es:
+            lb.insert("end", "  (La corbeille est vide.)")
+        row = tk.Frame(top, bg=C["BG"]); row.pack(fill="x", padx=14, pady=(0, 12))
+
+        def restore(_e=None):
+            sel = lb.curselection()
+            if not sel or not es:
+                return
+            e = es.pop(sel[0]); lb.delete(sel[0])
+            self.j.delete_entry(e["id"], undo=True)
+            self.refresh_list()
+            if not e.get("sealed"):
+                self.open_entry(e["id"])
+            self.status("\u267b Entr\u00e9e restaur\u00e9e dans le journal.", True)
+        lb.bind("<Double-Button-1>", restore)
+        self.btn(row, "Fermer", top.destroy, small=True).pack(side="right", padx=3)
+        self.btn(row, "\u267b Restaurer", restore, acc=True, tip="Remettre l'entr\u00e9e choisie dans le journal").pack(side="right", padx=3)
+
+
+    # ------------------------------------------------------------ 1.2 : demarrage intelligent, quart, curseur vivant
+    def _shift_menu(self, parent):
+        tk = self.tk
+        m = tk.Menu(parent, tearoff=0)
+        if not hasattr(self, "v_debut"):
+            self.v_debut = tk.IntVar(value=int(self.st.get("debut_journee", 5)))
+            self.v_quart = tk.IntVar(value=int(self.st.get("quart_heures", 8)))
+            self.v_horo = tk.BooleanVar(value=bool(self.st.get("horodatage", True)))
+        m.add_command(label="\u2753 Comment \u00e7a marche ?", command=self._shift_help)
+        m.add_separator()
+        d = tk.Menu(m, tearoff=0)
+        for hh in (0, 3, 4, 5, 6, 7, 8):
+            d.add_radiobutton(label=f"\u00e0 {hh} h" + (" (minuit)" if hh == 0 else "") + (" (conseill\u00e9)" if hh == 5 else ""),
+                              variable=self.v_debut, value=hh, command=lambda: self._set("debut_journee", self.v_debut.get()))
+        m.add_cascade(label="Une nouvelle journ\u00e9e commence\u2026", menu=d)
+        qm = tk.Menu(m, tearoff=0)
+        for hh in (2, 4, 6, 8, 10, 12):
+            qm.add_radiobutton(label=f"moins de {hh} heures" + (" (conseill\u00e9)" if hh == 8 else ""), variable=self.v_quart,
+                               value=hh, command=lambda: self._set("quart_heures", self.v_quart.get()))
+        m.add_cascade(label="Continuer mon quart si j'ai \u00e9crit il y a\u2026", menu=qm)
+        m.add_checkbutton(label="Mettre l'heure au d\u00e9but de chaque nouvelle note (comme les notes au dossier)",
+                          variable=self.v_horo, command=lambda: self._set("horodatage", bool(self.v_horo.get())))
+        return m
+
+    def _shift_help(self):
+        from tkinter import messagebox
+        messagebox.showinfo(APP, "\u00c0 l'ouverture, le journal regarde l'heure :\n\n"
+                            "\u2022 Si ta derni\u00e8re entr\u00e9e est d'aujourd'hui, il la rouvre et met le curseur \u00e0 la fin, "
+                            "pr\u00eat \u00e0 continuer.\n"
+                            "\u2022 Si elle date d'un autre jour, il pr\u00e9pare une nouvelle entr\u00e9e (rien n'est enregistr\u00e9 "
+                            "tant que tu n'\u00e9cris pas).\n\n"
+                            "Travail de nuit : la journ\u00e9e commence \u00e0 5 h (r\u00e9glable). Et si tu as \u00e9crit il y a "
+                            "moins de 8 heures (r\u00e9glable), on continue le m\u00eame quart, m\u00eame apr\u00e8s minuit.\n\n"
+                            "Chaque fois que tu reviens, l'heure est mise au d\u00e9but de la nouvelle note "
+                            "(ex. \u00ab 15 h 24 \u2014 \u00bb), comme des notes au dossier. Tu peux l'enlever dans ce menu.",
+                            parent=self.root)
+
+    def _logical_day(self, d):
+        return (d - dt.timedelta(hours=int(self.st.get("debut_journee", 5)))).date()
+
+    def _smart_start(self):
+        now = dt.datetime.now()
+        cands = [e for e in self.j.entries() if not e.get("sealed") and not e.get("jour")]
+        last = max(cands, key=lambda e: e.get("updated") or e["created"]) if cands else None
+        if last:
+            upd = parse_iso(last.get("updated") or last["created"])
+            created = parse_iso(last["created"])
+            same_day = self._logical_day(created) == self._logical_day(now) or self._logical_day(upd) == self._logical_day(now)
+            in_shift = (now - upd) < dt.timedelta(hours=int(self.st.get("quart_heures", 8)))
+            if same_day or in_shift:
+                self.open_entry(last["id"])
+                if created.date() != now.date():
+                    when = "hier" if created.date() == now.date() - dt.timedelta(days=1) else f"le {created.day} {MOIS[created.month - 1]}"
+                    self._banner(f"\U0001f319 On continue ton quart commenc\u00e9 {when} \u00e0 {created.hour} h {created.minute:02d}.")
+                else:
+                    self._banner(f"\u270d On continue ta journ\u00e9e \u2014 derni\u00e8re \u00e9criture \u00e0 {upd.hour} h {upd.minute:02d}.")
+                return
+        self.new_entry()
+        if last:
+            ld = parse_iso(last.get("updated") or last["created"])
+            self._banner(f"\u2600 Nouvelle journ\u00e9e \u2014 bonne \u00e9criture ! (derni\u00e8re entr\u00e9e : {date_fr(ld, False)})",
+                         [("\u21a9 Reprendre la derni\u00e8re entr\u00e9e", lambda: self.open_entry(last["id"]))])
+        else:
+            self._banner("\u2600 Bienvenue ! \u00c9cris ta premi\u00e8re entr\u00e9e \u2014 tout reste sur ce PC.")
+
+    def _continue_here(self, e, upd):
+        """curseur a la fin, ligne vide + heure (notes au dossier) ; rien n'est enregistre tant qu'on n'ecrit pas."""
+        t = self.txt
+        body = e.get("body") or ""
+        lines = [ln for ln in body.rstrip().split("\n") if ln.strip()]
+        if self.st.get("horodatage", True) and not (lines and STAMP_LINE.match(lines[-1])):
+            self._insert_stamp()
+        else:
+            self.loading = True
+            try:
+                if t.get("1.0", "end-1c").strip() or md_embed_ids(body):
+                    tail = t.get("end-3c", "end-1c")
+                    if not tail.endswith("\n\n"):
+                        t.insert("end-1c", "\n" if tail.endswith("\n") else "\n\n")
+                t.mark_set("insert", "end-1c")
+                t.edit_reset(); t.edit_modified(False)
+            finally:
+                self.loading = False
+                self.dirty = False
+        t.see("insert")
+        self._focus_editor()
+
+    def _insert_stamp(self):
+        """a l'endroit ou on ecrit : ligne vide, puis la date et l'heure, puis le curseur dessous (rien n'est enregistre
+        tant qu'on n'ecrit pas ; une entree avec seulement l'heure compte comme vide)."""
+        t = self.txt
+        self.loading = True
+        try:
+            has = bool(t.get("1.0", "end-1c").strip()) or bool(self.card_frames)
+            if has:
+                tail = t.get("end-3c", "end-1c")
+                if not tail.endswith("\n\n"):
+                    t.insert("end-1c", "\n" if tail.endswith("\n") else "\n\n")
+            else:
+                t.delete("1.0", "end-1c")
+            a = t.index("end-1c")
+            t.insert("end-1c", stamp_text(), ("b",))
+            t.tag_add("stamp", a, "end-1c")
+            t.insert("end-1c", "\n")
+            t.mark_set("insert", "end-1c")
+            t.edit_reset(); t.edit_modified(False)
+        finally:
+            self.loading = False
+            self.dirty = False
+        t.see("insert")
+
+    def _tag_stamps(self):
+        t = self.txt
+        t.tag_configure("stamp", foreground=C["ACC"])
+        n = int(t.index("end-1c").split(".")[0])
+        for ln in range(1, n + 1):
+            s_ = t.get(f"{ln}.0", f"{ln}.12")
+            full = t.get(f"{ln}.0", f"{ln}.end")
+            if STAMP_LINE.match(full) and full.strip():
+                t.tag_add("stamp", f"{ln}.0", f"{ln}.end")
+                continue
+            mo = re.match(r"\d{1,2} h \d{2} \u2014", s_)
+            if mo:
+                t.tag_add("stamp", f"{ln}.0", f"{ln}.{mo.end()}")
+
+    def _banner(self, text, actions=(), seconds=9):
+        tk = self.tk
+        try:
+            if getattr(self, "_bn", None) is not None and self._bn.winfo_exists():
+                self._bn.destroy()
+        except Exception:
+            pass
+        f = tk.Frame(self.right, bg=C["CARD"], highlightthickness=1, highlightbackground=C["ACC"], padx=12, pady=6)
+        lab = tk.Label(f, text=text, bg=C["CARD"], fg=C["TEXT"], font=("Segoe UI", 10))
+        lab.pack(side="left")
+        for txt, fn in actions:
+            self.btn(f, txt, lambda fn=fn: (fn(), f.destroy()), acc=True, small=True).pack(side="left", padx=(10, 0))
+        x = self.btn(f, "\u2715", f.destroy, small=True, tip="Fermer")
+        x.pack(side="left", padx=(8, 0))
+        lab.bind("<Button-1>", lambda e: f.destroy())
+        self._bn = f
+        if self.anim.on:
+            t0 = time.time()
+
+            def drop():
+                if not f.winfo_exists():
+                    return
+                k = min(1.0, (time.time() - t0) / 0.3); k = 1 - (1 - k) ** 3
+                f.place(relx=0.5, y=int(-40 + 46 * k), anchor="n")
+                if k < 1:
+                    f.after(15, drop)
+            drop()
+        else:
+            f.place(relx=0.5, y=6, anchor="n")
+        f.after(int(seconds * 1000), lambda: f.winfo_exists() and f.destroy())
+
+    def _focus_editor(self):
+        try:
+            f = self.root.focus_get()
+            if f is None or f.winfo_class() not in ("Entry", "TCombobox", "Listbox"):
+                self.txt.focus_force()
+                self.txt.see("insert")
+        except Exception:
+            pass
+
+    # ---- curseur vivant : un bloc qui respire dans la couleur du theme, et la ligne courante qui luit doucement
+    def _caret_start(self):
+        self._caret = {"t0": time.time(), "line": None, "key": 0.0, "on": None}
+        t = self.txt
+        t.tag_configure("curline", background=C["ENTRY"])
+        t.tag_lower("curline")
+        t.bind("<Key>", lambda e: self._caret.__setitem__("key", time.time()), add="+")
+        self.root.after(60, self._caret_tick)
+
+    def _caret_tick(self):
+        t = self.txt
+        st = self._caret
+        try:
+            on = self.anim.on
+            if on != st["on"]:
+                st["on"] = on
+                if on:
+                    t.configure(insertofftime=0, insertontime=600)
+                else:
+                    t.configure(insertwidth=2, insertofftime=300, insertontime=600, insertbackground=C["ACC"])
+                    t.tag_remove("curline", "1.0", "end")
+                    st["line"] = None
+            if on:
+                now = time.time()
+                age = now - st["t0"]
+                base = self.px(4)
+                land = max(0.0, 1 - age / 0.7)                       # a l'ouverture : un gros cube qui se pose
+                w = int(base + self.px(10) * land * land)
+                typing = now - st["key"] < 0.6
+                k = 1.0 if typing else 0.5 + 0.5 * math.sin(age * 2 * math.pi / 2.2)
+                col = _mix(_mix(C["ENTRY"], C["ACC"], 0.35), C["ACC"], k)
+                t.configure(insertwidth=w, insertbackground=col)
+                ln = t.index("insert").split(".")[0]
+                if ln != st["line"] or not t.tag_ranges("curline"):
+                    t.tag_remove("curline", "1.0", "end")
+                    t.tag_add("curline", f"{ln}.0", f"{ln}.0 lineend +1c")
+                    st["line"] = ln
+                t.tag_configure("curline", background=_mix(C["ENTRY"], C["ACC"], 0.05 + 0.04 * k))
+        except Exception:
+            pass
+        self.root.after(70, self._caret_tick)
+
+
+    # ------------------------------------------------------------ 1.4 : apercus de liens, Archiveur, « Mes liens »
+    def _link_count(self, e):
+        urls = set(URL_RX.findall(EMB_RX.sub(" ", e.get("body") or ""))) if not e.get("sealed") else set()
+        urls |= set(getattr(self, "_emb_links", {}).get(e["id"], {}).keys())
+        return len(urls)
+
+    def _preview_block(self, fr, url, W, bgc, on_ready, archive_dir="", meta=None):
+        """miniature + titre + site + description (cache local ; sinon chargement en arriere-plan)."""
+        tk = self.tk
+        pv = preview_cached(self.j, url)
+        if pv is None or (not pv.get("ok") and time.time() - float(pv.get("t") or 0) > 3600):
+            if url not in self._pv_pending():
+                self._pv_pending().add(url)
+
+                def done(_r):
+                    self._pv_pending().discard(url)
+                    try:
+                        on_ready()
+                    except Exception:
+                        pass
+                self.bg(lambda: fetch_preview(self.j, url), done, lambda msg: self._pv_pending().discard(url))
+            tk.Label(fr, text="\u23f3 Aper\u00e7u du lien\u2026", bg=bgc, fg=C["DIM"], font=("Segoe UI", 8, "italic")).pack(anchor="w")
+            return
+        if not pv.get("ok") and not pv.get("image"):
+            tk.Label(fr, text="Aper\u00e7u indisponible pour ce site (le lien marche quand m\u00eame).", bg=bgc, fg=C["DIM"],
+                     font=("Segoe UI", 8, "italic")).pack(anchor="w")
+            return
+        box = tk.Frame(fr, bg=bgc, cursor="hand2"); box.pack(fill="x", pady=(0, 4))
+        img = os.path.join(preview_dir(self.j), pv["image"]) if pv.get("image") else ""
+        if archive_dir and meta and meta.get("capture") and os.path.isfile(os.path.join(archive_dir, meta["capture"])) and not img:
+            img = os.path.join(archive_dir, meta["capture"])
+        if img and os.path.isfile(img):
+            try:
+                from PIL import Image, ImageTk
+                im = Image.open(img); im.thumbnail((self.px(200), self.px(130)))
+                ph = ImageTk.PhotoImage(im); self.imgs.append(ph)
+                il = tk.Label(box, image=ph, bg=bgc, cursor="hand2")
+                if pv.get("video"):
+                    il.configure(text=" \u25b6 ", compound="center", fg="#ffffff", font=("Segoe UI", 18, "bold"))
+                il.pack(side="left", padx=(0, 10))
+                il.bind("<Button-1>", lambda e: pc.open_url(url))
+            except Exception:
+                pass
+        col = tk.Frame(box, bg=bgc); col.pack(side="left", fill="x", expand=True)
+        site = pv.get("site") or ""
+        tk.Label(col, text=site.upper()[:40], bg=bgc, fg=C["ACC2"], font=("Segoe UI", 8, "bold")).pack(anchor="w")
+        tl = tk.Label(col, text=(pv.get("title") or url)[:140], bg=bgc, fg=C["TEXT"], font=("Segoe UI", 10, "bold"),
+                      wraplength=max(200, W - self.px(240)), justify="left", cursor="hand2")
+        tl.pack(anchor="w")
+        tl.bind("<Button-1>", lambda e: pc.open_url(url))
+        if pv.get("desc"):
+            tk.Label(col, text=pv["desc"][:260] + ("\u2026" if len(pv["desc"]) > 260 else ""), bg=bgc, fg=C["DIM"],
+                     font=("Segoe UI", 9), wraplength=max(200, W - self.px(240)), justify="left").pack(anchor="w")
+        self._tip(tl, "Ouvrir dans le navigateur")
+
+    def _pv_pending(self):
+        if not hasattr(self, "_pvp"):
+            self._pvp = set()
+        return self._pvp
+
+    def _scan_text_links(self, typing=True):
+        """les liens ecrits dans le texte recoivent un apercu (non enregistre : il ne change pas l'entree)."""
+        if not self.cur or not hasattr(self, "txt"):
+            return
+        t = self.txt
+        if not hasattr(self, "tprev"):
+            self.tprev = {}
+        carded = {m.get("url") for m in (self.j.embeds(self.cur["id"]) if self.j.exists(self.cur["id"]) else [])}
+        found = {}
+        n = int(t.index("end-1c").split(".")[0])
+        cur_ln, cur_col = (int(x) for x in t.index("insert").split("."))
+        for ln in range(1, n + 1):
+            line = t.get(f"{ln}.0", f"{ln}.end")
+            if "http" not in line:
+                continue
+            for mo in URL_RX.finditer(line):
+                u = mo.group(0)
+                if u in carded or u in found:
+                    continue
+                if typing and ln == cur_ln and mo.start() <= cur_col <= mo.end():
+                    continue                           # on est en train de l'ecrire
+                found[u] = ln
+        for u, fr in list(self.tprev.items()):          # lien efface : son apercu s'en va
+            if u not in found:
+                self._drop_preview(u)
+        for u, ln in list(found.items())[:12]:
+            if u in self.tprev:
+                continue
+            fr = self.tk.Frame(t, bg=C["CARD"], highlightthickness=1, highlightbackground=C["LINE"], padx=8, pady=6, cursor="arrow")
+            self.tprev[u] = fr
+            self._fill_tprev(fr, u)
+            mod = t.edit_modified()
+            t.window_create(f"{ln}.end", window=fr, padx=4, pady=6, align="baseline")
+            if not mod:
+                t.edit_modified(False)          # un apercu ne compte pas comme une modification
+            if typing and self.st.get("liens_auto"):
+                self.root.after(200, lambda u=u: self._promote_preview(u))
+
+    def _fill_tprev(self, fr, u):
+        tk = self.tk
+        for w in fr.winfo_children():
+            w.destroy()
+        W = self._card_width()
+        self._preview_block(fr, u, W, C["CARD"], lambda: fr.winfo_exists() and self._fill_tprev(fr, u))
+        row = tk.Frame(fr, bg=C["CARD"]); row.pack(fill="x", pady=(4, 0))
+        tk.Label(row, text="\U0001f517 " + u[:80], bg=C["CARD"], fg=C["DIM"], font=("Segoe UI", 8)).pack(side="left")
+        self.btn(row, "\U0001f4e6 Rendre permanent", lambda: self._promote_preview(u), small=True, acc=True,
+                 tip="Envoie le lien \u00e0 l'Archiveur : une copie reste sur ton PC, m\u00eame si le lien dispara\u00eet").pack(side="right")
+        self.btn(row, "Ouvrir", lambda: pc.open_url(u), small=True, tip="Ouvrir dans le navigateur").pack(side="right", padx=2)
+
+        def menu(ev):
+            mm = tk.Menu(self.root, tearoff=0)
+            mm.add_command(label="\U0001f4e6 Rendre permanent (Archiveur)", command=lambda: self._promote_preview(u))
+            mm.add_command(label="Ouvrir dans le navigateur", command=lambda: pc.open_url(u))
+            mm.add_command(label="Copier l'adresse", command=lambda: (self.root.clipboard_clear(), self.root.clipboard_append(u)))
+            mm.tk_popup(ev.x_root, ev.y_root)
+        for w in [fr] + list(fr.winfo_children()):
+            w.bind("<Button-3>", menu, add="+")
+
+    def _drop_preview(self, u):
+        fr = self.tprev.pop(u, None)
+        if fr is None:
+            return None
+        idx = None
+        try:
+            idx = self.txt.index(fr)
+            self.loading = True
+            mod = self.txt.edit_modified()
+            self.txt.delete(idx)
+            if not mod:
+                self.txt.edit_modified(False)
+        except Exception:
+            pass
+        finally:
+            self.loading = False
+        try:
+            fr.destroy()
+        except Exception:
+            pass
+        return idx
+
+    def _promote_preview(self, u):
+        """l'apercu devient une vraie carte lien (enregistree) et part a l'Archiveur."""
+        if u not in getattr(self, "tprev", {}):
+            return
+        title = (preview_cached(self.j, u) or {}).get("title", "")
+        was_loading, dirty0 = self.loading, self.dirty
+        idx = self._drop_preview(u)
+        self.dirty = True
+        self._ensure_saved()
+        m = self.j.add_link(self.cur, u, title)
+        self._insert_card(m, idx or "end-1c")
+        self._mark_dirty(); self.save_now(force=True)
+        self.make_link_permanent(m["id"])
+
+    def open_links(self):
+        tk = self.tk
+        self.save_now()
+        rows = []
+        for e in self.j.entries():
+            if e.get("sealed"):
+                continue
+            seen = set()
+            for m in self.j.embeds(e["id"]):
+                if m.get("kind") == "link":
+                    seen.add(m.get("url"))
+                    rows.append((e, m.get("url"), m))
+            for u in URL_RX.findall(EMB_RX.sub(" ", e.get("body") or "")):
+                if u not in seen:
+                    seen.add(u); rows.append((e, u, None))
+        top = tk.Toplevel(self.root); top.title("Mes liens"); top.configure(bg=C["BG"]); top.transient(self.root)
+        top.geometry(f"{self.px(760)}x{self.px(520)}+{self.root.winfo_rootx() + self.px(120)}+{self.root.winfo_rooty() + self.px(60)}")
+        tk.Label(top, text="\U0001f517 Mes liens", bg=C["BG"], fg=C["TEXT"], font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=14, pady=(12, 0))
+        nperm = sum(1 for r_ in rows if r_[2] and r_[2].get("status") == "permanent")
+        tk.Label(top, text=f"{len(rows)} lien(s) dans ton journal \u00b7 {nperm} gard\u00e9(s) en copie permanente. "
+                           "Double-clic : aller \u00e0 l'entr\u00e9e.", bg=C["BG"], fg=C["DIM"], font=("Segoe UI", 9)).pack(anchor="w", padx=14)
+        lb = tk.Listbox(top, bg=C["ENTRY"], fg=C["TEXT"], selectbackground=C["ACC"], selectforeground=C["ONACC"],
+                        relief="flat", font=("Segoe UI", 10), activestyle="none")
+        lb.pack(fill="both", expand=True, padx=14, pady=8)
+        lb.bind("<MouseWheel>", lambda ev: lb.yview_scroll(int(-ev.delta / 120), "units"))
+        lab = {"permanent": "\u2714 Permanent", "copie": "\u23f3 Copie\u2026", "erreur": "\u26a0 \u00c0 r\u00e9essayer"}
+        for e, u, m in rows:
+            st_ = lab.get((m or {}).get("status"), "\U0001f517 Lien")
+            ttl = (m or {}).get("title") or (preview_cached(self.j, u) or {}).get("title") or u
+            lb.insert("end", f"{st_:<16}  {e['created'][:10]}  {ttl[:70]}")
+        if not rows:
+            lb.insert("end", "  Aucun lien pour l'instant : colle une adresse web dans une entr\u00e9e.")
+        row = tk.Frame(top, bg=C["BG"]); row.pack(fill="x", padx=14, pady=(0, 12))
+
+        def sel():
+            s_ = lb.curselection()
+            return rows[s_[0]] if s_ and rows else None
+
+        def goto(_e=None):
+            r_ = sel()
+            if r_:
+                self.open_entry(r_[0]["id"])
+
+        def orig():
+            r_ = sel()
+            if r_:
+                pc.open_url(r_[1])
+
+        def copie():
+            r_ = sel()
+            if not r_ or not r_[2] or r_[2].get("status") != "permanent":
+                self.toast("Ce lien n'a pas encore de copie : clique \u00ab \U0001f4e6 Rendre permanent \u00bb."); return
+            mt = emeta(r_[2]); folder = self.j.abs(r_[2].get("archive"))
+            for k in ("index", "main", "lecture"):
+                if mt.get(k) and os.path.isfile(os.path.join(folder, mt[k])):
+                    pc.open_path(os.path.join(folder, mt[k])); return
+            pc.open_path(folder)
+
+        def perm():
+            r_ = sel()
+            if not r_:
+                return
+            e, u, m = r_
+            if m and m.get("status") == "permanent":
+                self.toast("\u2714 Ce lien est d\u00e9j\u00e0 permanent."); return
+            self.open_entry(e["id"])
+            if m:
+                self.make_link_permanent(m["id"])
+            else:
+                self.root.after(150, lambda: self._promote_preview(u))
+            top.destroy()
+        lb.bind("<Double-Button-1>", goto)
+        self.btn(row, "Fermer", top.destroy, small=True).pack(side="right", padx=3)
+        self.btn(row, "\U0001f4e6 Rendre permanent", perm, acc=True, tip="Envoyer \u00e0 l'Archiveur").pack(side="right", padx=3)
+        self.btn(row, "\U0001f4f0 Ouvrir la copie", copie, tip="La copie gard\u00e9e sur ton PC").pack(side="right", padx=3)
+        self.btn(row, "\U0001f310 Ouvrir l'original", orig, tip="Dans le navigateur").pack(side="right", padx=3)
+        self.btn(row, "\u2197 Aller \u00e0 l'entr\u00e9e", goto, tip="Ouvrir l'entr\u00e9e (ou double-clic)").pack(side="left", padx=3)
+
     def help(self):
         p = os.path.join(HERE, "LISEZMOI-JOURNAL.txt")
         if os.path.isfile(p):
