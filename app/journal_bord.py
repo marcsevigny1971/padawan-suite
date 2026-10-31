@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import padawan_commun as pc
 
 APP = "Journal de bord"
-VERSION = "1.4"
+VERSION = "1.4.1"
 SETTINGS = "journal.json"
 HERE = pc.HERE
 IS_WIN = pc.IS_WIN
@@ -3225,6 +3225,13 @@ class JournalApp:
             self.btn(row, "Dossier", lambda: pc.reveal(p), small=True).pack(side="right", padx=2)
             self.btn(row, "Ouvrir", lambda: pc.open_path(p), small=True).pack(side="right", padx=2)
         if not readonly:
+            xb = self.btn(fr, "\u2715 Retirer", lambda: self.remove_card(m["id"]), small=True,
+                          tip="Retirer cette pi\u00e8ce de l'entr\u00e9e (gard\u00e9e dans la corbeille du journal). Touche Suppr aussi.")
+            xb.place(relx=1.0, rely=0.0, anchor="ne")
+            fr.configure(takefocus=1)
+            fr.bind("<Delete>", lambda ev: self.remove_card(m["id"]))
+            fr.bind("<Button-1>", lambda ev: fr.focus_set(), add="+")
+
             def menu(ev):
                 mm = tk.Menu(self.root, tearoff=0)
                 if k == "link" and m.get("status") != "permanent":
@@ -3530,6 +3537,7 @@ class JournalApp:
             if new and empty:
                 return False
             self.j.save_entry(e)
+            self._purge_removed_embeds(e)
             self.dirty = False
             self.status(f"\u2714 Enregistr\u00e9 \u00e0 {time.strftime('%H:%M:%S')}", True)
             if new:
@@ -3543,6 +3551,32 @@ class JournalApp:
             self._emergency_copy()
             self.status(f"\u26a0 Enregistrement retard\u00e9 ({ex}) \u2014 une copie de secours est gard\u00e9e.")
             return False
+
+    def _purge_removed_embeds(self, e):
+        """1.4.1 : une piece (image, fichier, lien, memo) effacee du texte est retiree pour de bon a l'enregistrement
+        (fichiers deplaces dans _corbeille du journal), sinon elle revenait au rechargement."""
+        try:
+            keep = set(md_embed_ids(e.get("body") or ""))
+            gone = [m["id"] for m in self.j.embeds(e["id"]) if m["id"] not in keep and m["id"] in self.card_frames]
+            for i in gone:
+                fr = self.card_frames.pop(i, None)
+                if fr is not None:
+                    self.cards.pop(str(fr), None)
+                    try:
+                        if fr.winfo_exists():
+                            fr.destroy()
+                    except Exception:
+                        pass
+                self.j.remove_embed(i)
+            if gone:
+                try:
+                    self.toast(f"\U0001f5d1 {len(gone)} pi\u00e8ce(s) retir\u00e9e(s) (gard\u00e9e(s) dans _corbeille du journal).")
+                except Exception:
+                    pass
+            return gone
+        except Exception:
+            traceback.print_exc()
+            return []
 
     def _emergency_copy(self):
         try:
@@ -3842,7 +3876,7 @@ class JournalApp:
         def done(title):
             if title:
                 self.j.update_embed(m["id"], title=title)
-                if self.j.embed(m["id"]).get("status") != "copie":
+                if (self.j.embed(m["id"]) or {"status": "copie"}).get("status") != "copie":
                     self.refresh_card(m["id"])
         self.bg(work, done, lambda msg: None)
         if offer and self.st.get("liens_auto"):
@@ -5444,6 +5478,13 @@ def gui_selftest(app):
         md2 = app.serialize()
         app._load_into_editor(app.j.entry(app.cur["id"])); app.root.update()
         chk(app.serialize().count("\u27e6e:") == md2.count("\u27e6e:"), "rechargement : pieces conservees")
+        n0 = len(app.j.embeds(app.cur["id"]))
+        lk = next((i for i, f in app.card_frames.items() if (app.j.embed(i) or {}).get("kind") == "link"), None)
+        if lk:   # 1.4.1 : effacer la carte du texte puis consigner -> elle ne revient pas
+            t.delete(t.index(app.card_frames[lk])); app._mark_dirty(); app.save_now(force=True)
+            app._load_into_editor(app.j.entry(app.cur["id"])); app.root.update()
+            chk(app.j.embed(lk) is None and lk not in app.serialize() and len(app.j.embeds(app.cur["id"])) == n0 - 1,
+                "piece effacee du texte -> retiree pour de bon apres rechargement")
         app.consign(); app.root.update()
         for v in ("cal", "jour", "chrono"):
             app.set_view(v); app.root.update()

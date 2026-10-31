@@ -1,5 +1,9 @@
 # Journal des versions — Padawan Suite
 
+## v1.2.1 — 2026.10.31 — Correctif Journal de bord 1.4.1
+- Une pièce retirée (image, fichier, lien, mémo vocal) ne revient plus après Consigner et rechargement ; son fichier va dans _corbeille du journal.
+- Bouton « ✕ Retirer » sur chaque carte (bulle d'aide), touche Suppr sur une carte sélectionnée.
+
 ## v1.2 — 2026.10.31 — Cartes, liens permanents et curseur vivant
 - Journal de bord 1.4 : date normale dans le titre, 4 thèmes, animations, modèles, favoris, corbeille, impression/export, série de jours, démarrage intelligent (nouvelle entrée ou quart de nuit), heure ajoutée dans le texte, curseur vivant, aperçus de liens + « Rendre permanent » via l'Archiveur, panneau « Mes liens ».
 - Grimoire 1.5 : vue en cartes, carte des sujets animée (F8), aperçus de liens + liens permanents.

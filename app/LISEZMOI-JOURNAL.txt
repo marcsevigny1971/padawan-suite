@@ -2,6 +2,12 @@
 ================================
 Ton journal personnel : privé par défaut, vivant, et facile à partager quand TU le décides.
 
+NOUVEAU (version 1.4.1) : RETIRER UNE PIÈCE, POUR DE BON
+  - Chaque pièce (image, fichier, lien, mémo vocal) a un bouton « ✕ Retirer » en haut à droite.
+    Tu peux aussi cliquer la carte puis appuyer sur Suppr, ou simplement l'effacer du texte.
+  - À l'enregistrement (Consigner), la pièce enlevée ne revient plus au rechargement.
+    Son fichier est gardé dans le dossier _corbeille du journal, au cas où.
+
 NOUVEAU (version 1.4) : LIENS VIVANTS + ARCHIVEUR
   - Colle ou écris un lien (YouTube, X, Facebook, Vimeo, TikTok, page web) : un aperçu apparaît
     sous la ligne (image, titre, site, description). L'aperçu est gardé sur ton PC (dossier apercus).
