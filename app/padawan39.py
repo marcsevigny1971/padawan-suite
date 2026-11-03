@@ -97,7 +97,9 @@ UNCENSORED_MODELS = (
 )
 MODEL_DL_MARK = " (à télécharger)"
 APP_NAME = "Padawan"
-APP_FILE_VER = 39  # version fichier seulement — jamais affichée comme titre produit
+APP_FILE_VER = 39  # v39.1: 🧹 Nouvelle conversation (Ctrl+L / Ctrl+Shift+N), Historique
+APP_SUB_VER = "39.1"
+_APP_FILE_VER_OLD = 39  # version fichier seulement — jamais affichée comme titre produit
 ROLE_HIST_CAP = 80
 CACHE_TTL = 3 * 3600
 SESSION_CACHE_TTL = 10 * 60  # anti-doublon session ~10 min
@@ -783,6 +785,62 @@ def notify_toast(title: str, message: str, timeout: int = 5) -> None:
         )
     except Exception:
         pass
+
+
+# ── v39.1: archive des conversations (données, hors FTP_HOME) ────────────────
+CONV_DIR = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Padawan", "conversations")
+
+
+def conv_archive(roles: Dict[str, list], session_h: list, *, reason: str = "", role: str = "") -> Optional[str]:
+    """Écrit un JSON horodaté si quelque chose a été dit. Rien n'est effacé ailleurs."""
+    said = [x for x in (session_h or []) if x.get("who") in ("you", "ai")]
+    if not said and not any(roles.values()):
+        return None
+    os.makedirs(CONV_DIR, exist_ok=True)
+    first = next((x.get("text", "") for x in said if x.get("who") == "you"), "")
+    if not first:
+        for h in roles.values():
+            first = next((x.get("text", "") for x in h if x.get("who") == "you"), "")
+            if first: break
+    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    path = os.path.join(CONV_DIR, f"conv_{stamp}.json")
+    n = 1
+    while os.path.exists(path):
+        n += 1; path = os.path.join(CONV_DIR, f"conv_{stamp}_{n}.json")
+    data = {"date": stamp, "reason": reason, "role": role, "title": (first or "(sans titre)")[:80],
+            "session": session_h or [], "roles": roles}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    return path
+
+
+def conv_list() -> List[Dict[str, str]]:
+    out = []
+    try:
+        names = sorted((n for n in os.listdir(CONV_DIR) if n.endswith(".json")), reverse=True)
+    except Exception:
+        return out
+    for n in names[:300]:
+        p = os.path.join(CONV_DIR, n)
+        try:
+            with open(p, encoding="utf-8") as f: d = json.load(f)
+            out.append({"path": p, "title": str(d.get("title") or ""),
+                        "label": str(d.get("date") or n).replace("_", " ")})
+        except Exception:
+            continue
+    return out
+
+
+def conv_render(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8") as f: d = json.load(f)
+    except Exception as e:
+        return f"Lecture impossible: {e}"
+    who = {"you": "Toi", "ai": "Padawan", "sys": "·"}
+    rows = [x for x in (d.get("session") or []) if x.get("who") in ("you", "ai")]
+    if not rows:
+        for h in (d.get("roles") or {}).values(): rows.extend(h)
+    return "\n\n".join(f"{who.get(x.get('who'), x.get('who'))}  {x.get('t', '')}\n{x.get('text', '')}" for x in rows) or "(vide)"
 
 
 def clean(text: str) -> str:
@@ -2776,7 +2834,17 @@ class Padawan(tk.Tk):
         self.mem["sessions"].append({"start": self.session["t"], "history": self.session["h"]})
         self.bind("<Control-f>", lambda e: self.focus_hunt())
         self.bind("<Control-i>", lambda e: self.park())
-        self.bind("<Control-l>", lambda e: self.clear_chat())
+        self.bind("<Control-l>", lambda e: (self.new_conversation(), "break")[1])
+        self.bind("<Control-L>", lambda e: (self.new_conversation(), "break")[1])
+        self.bind("<Control-Shift-N>", lambda e: (self.new_conversation(), "break")[1])
+        self.bind("<Control-Shift-n>", lambda e: (self.new_conversation(), "break")[1])
+        self.bind("<Control-Shift-H>", lambda e: (self.show_conv_history(), "break")[1])
+        self.bind("<Control-Shift-h>", lambda e: (self.show_conv_history(), "break")[1])
+        # v39.1: chaque lancement = conversation neuve (l'ancienne est archivée, rien d'effacé)
+        try:
+            self._archive_role_histories(reason="lancement")
+        except Exception as e:
+            log(f"archive lancement: {e}")
         self.bind("<F11>", lambda e: self.attributes("-fullscreen", not self.attributes("-fullscreen")))
         self.bind("<Escape>", lambda e: self.cancel_job())
         self._style()
@@ -3037,7 +3105,8 @@ class Padawan(tk.Tk):
         nav("Tâches", self.show_tasks).pack(fill="x", pady=1)
         nav("Creuser", self.dig).pack(fill="x", pady=1)
         nav("Copier", self.copy_last).pack(fill="x", pady=1)
-        nav("Nouvelle page", self.clear_chat).pack(fill="x", pady=1)
+        nav("🧹 Nouvelle conversation  Ctrl+L", self.new_conversation).pack(fill="x", pady=1)
+        nav("🕘 Historique  Ctrl+Shift+H", self.show_conv_history).pack(fill="x", pady=1)
         nav("Exporter", self.export).pack(fill="x", pady=1)
 
         tk.Label(
@@ -3092,6 +3161,15 @@ class Padawan(tk.Tk):
         act = tk.Frame(bar_wrap, bg=C["bg"])
         act.pack(fill="x", pady=(0, 2))
         self.act_btns = {}
+        nb = tk.Button(
+            act, text="🧹 Nouvelle conversation", command=self.new_conversation,
+            bg=C["gold"], fg="#1a1408", relief="flat", font=("Segoe UI", 9, "bold"),
+            padx=12, pady=3, cursor="hand2", activebackground="#e4c48a", activeforeground="#1a1408",
+        )
+        nb.pack(side="right", padx=2)
+        self._tip(nb, "Repart à neuf comme une nouvelle session (Ctrl+L ou Ctrl+Shift+N).\n"
+                      "La conversation actuelle est archivée (🕘 Historique, Ctrl+Shift+H), rien n'est effacé.")
+        self.act_btns["newconv"] = nb
         for key, lab, cmd in (
             ("stop", "■ Stop", self.cancel_job),
             ("copy", "📋 Copier", self.copy_answer),
@@ -5431,7 +5509,144 @@ class Padawan(tk.Tk):
         if reason:
             log(f"hunt ctx cleared id={self.session_hunt_id} · {reason}")
 
+    # ── v39.1: Nouvelle conversation (contexte modèle propre) ───────────────
+    def _tip(self, w, text):
+        st = {"t": None}
+        def show(e):
+            try:
+                t = tk.Toplevel(w); t.wm_overrideredirect(True)
+                t.wm_geometry(f"+{e.x_root+12}+{e.y_root-48}")
+                tk.Label(t, text=text, bg="#2a2418", fg="#f3e6c8", font=("Segoe UI", 8),
+                         justify="left", padx=8, pady=4, relief="solid", bd=1).pack()
+                st["t"] = t
+            except Exception:
+                pass
+        def hide(e):
+            if st["t"] is not None:
+                try: st["t"].destroy()
+                except Exception: pass
+                st["t"] = None
+        w.bind("<Enter>", show, add="+"); w.bind("<Leave>", hide, add="+"); w.bind("<ButtonPress>", hide, add="+")
+
+    def _archive_role_histories(self, reason: str = "") -> Optional[str]:
+        """Archive session + historiques des rôles dans CONV_DIR puis vide le contexte modèle."""
+        self.router._ensure_slots()
+        roles = {rid: list(self.mem["roles"][rid].get("history") or []) for rid in RoleRouter.ROLES}
+        sess = list(self.session.get("h") or []) if hasattr(self, "session") else []
+        path = conv_archive(roles, sess, reason=reason, role=self.router.active)
+        self.router.clear_history()
+        savej(MEM_FILE, self.mem)
+        return path
+
+    def new_conversation(self, _retry: int = 0):
+        if self.busy:
+            self.cancel_job()
+            if _retry < 40:
+                self.after(150, self.new_conversation, _retry + 1)
+            return
+        try:
+            path = self._archive_role_histories(reason="nouvelle conversation")
+        except Exception as e:
+            log(f"new_conversation archive: {e}"); path = None
+        self.chat.configure(state="normal")
+        self.chat.delete("1.0", "end")
+        self.chat.configure(state="disabled")
+        self.session = {"t": now(), "h": []}
+        self.mem["sessions"].append({"start": self.session["t"], "history": self.session["h"]})
+        self.mem["sessions"] = self.mem["sessions"][-30:]
+        self.last_q = self.last_a = ""
+        try: self.mission_clear()
+        except Exception: pass
+        self.clear_hunt_context(wipe_role_hist=True, reason="nouvelle conversation")
+        try:
+            for w in self.sugg_bar.winfo_children(): w.destroy()
+        except Exception: pass
+        savej(MEM_FILE, self.mem)
+        self.say("sys", "🧹 Nouvelle conversation — l'esprit clair ! "
+                 + ("L'ancienne est dans 🕘 Historique (Ctrl+Shift+H). " if path else "")
+                 + "Tape en bas →")
+        self._conv_flash()
+        self.ent.focus_set()
+
+    def _conv_flash(self):
+        """Petite animation: balayage doré sur le chat + toast."""
+        try:
+            self._ui_status("🧹 Conversation neuve", C["ok"])
+        except Exception:
+            pass
+        cols = ["#5a4a24", "#7a6430", "#a5843c", "#d8b468", "#a5843c", "#7a6430", "#5a4a24"]
+        try:
+            orig = self.chat.cget("bg")
+        except Exception:
+            return
+        def step(i=0):
+            try:
+                if i < len(cols):
+                    self.chat.configure(bg=cols[i]); self.after(45, step, i + 1)
+                else:
+                    self.chat.configure(bg=orig)
+            except Exception:
+                pass
+        step()
+        try:
+            t = tk.Toplevel(self); t.wm_overrideredirect(True); t.attributes("-topmost", True)
+            tk.Label(t, text="🧹  Nouvelle conversation", bg=C["gold"], fg="#1a1408",
+                     font=("Segoe UI", 14, "bold"), padx=22, pady=10).pack()
+            self.update_idletasks()
+            x = self.chat.winfo_rootx() + self.chat.winfo_width() // 2 - 140
+            y0 = self.chat.winfo_rooty() + 30
+            def fly(k=0):
+                try:
+                    if k <= 12:
+                        t.wm_geometry(f"+{x}+{y0 + k * 3}")
+                        try: t.attributes("-alpha", min(1.0, 0.25 + k * 0.08))
+                        except Exception: pass
+                        self.after(25, fly, k + 1)
+                    else:
+                        self.after(1100, t.destroy)
+                except Exception:
+                    pass
+            fly()
+        except Exception:
+            pass
+
+    def show_conv_history(self):
+        items = conv_list()
+        pop = tk.Toplevel(self); pop.title("🕘 Historique des conversations")
+        pop.configure(bg=C["bg"]); pop.geometry("760x520"); pop.transient(self)
+        tk.Label(pop, text="Double-clic ou Entrée = relire · rien n'est réinjecté dans le modèle",
+                 bg=C["bg"], fg=C["dim"], font=("Segoe UI", 9)).pack(anchor="w", padx=10, pady=(8, 2))
+        body = tk.PanedWindow(pop, orient="horizontal", bg=C["bg"], sashwidth=4)
+        body.pack(fill="both", expand=True, padx=8, pady=6)
+        lb = tk.Listbox(body, bg=C["card"], fg=C["fg"], font=("Segoe UI", 9), activestyle="none",
+                        selectbackground=C["gold"], selectforeground="#1a1408", width=34)
+        txt = tk.Text(body, bg=C["input"], fg=C["fg"], wrap="word", font=("Segoe UI", 10))
+        body.add(lb); body.add(txt)
+        for it in items:
+            lb.insert("end", f"{it['label']}  ·  {it['title'][:40]}")
+        def view(e=None):
+            sel = lb.curselection()
+            if not sel: return
+            txt.configure(state="normal"); txt.delete("1.0", "end")
+            txt.insert("end", conv_render(items[sel[0]]["path"]))
+            txt.configure(state="disabled")
+        lb.bind("<<ListboxSelect>>", view); lb.bind("<Return>", view); lb.bind("<Double-1>", view)
+        bar = tk.Frame(pop, bg=C["bg"]); bar.pack(fill="x", padx=8, pady=(0, 8))
+        tk.Button(bar, text="📂 Ouvrir le dossier", relief="flat", bg=C["card"], fg=C["fg"],
+                  command=lambda: os.startfile(CONV_DIR) if hasattr(os, "startfile") else None).pack(side="left")
+        tk.Button(bar, text="Fermer (Échap)", relief="flat", bg=C["card"], fg=C["fg"],
+                  command=pop.destroy).pack(side="right")
+        pop.bind("<Escape>", lambda e: pop.destroy())
+        if items:
+            lb.selection_set(0); view()
+        else:
+            txt.insert("end", "Aucune conversation archivée pour l'instant.")
+        lb.focus_set()
+
     def clear_chat(self):
+        return self.new_conversation()
+
+    def _clear_chat_old(self):
         self.chat.configure(state="normal")
         self.chat.delete("1.0", "end")
         self.chat.configure(state="disabled")

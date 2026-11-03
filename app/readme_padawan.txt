@@ -269,3 +269,15 @@ La Padawan Suite a sa page publique sur GitHub :
   Idees, suggestions  : https://github.com/marcsevigny1971/padawan-suite/issues
   Presentation        : https://marcsevigny1971.github.io/padawan-suite/
 Raccourcis : icone Padawan > "Ressources / GitHub", Premiers pas (en bas), Arsenal > Web pratique.
+
+NOUVELLE CONVERSATION (Padawan 39.1, 2 novembre 2026)
+-----------------------------------------------------
+  🧹 Nouvelle conversation (bouton doré sous le chat, ou Ctrl+L / Ctrl+Shift+N)
+     Repart l'esprit clair, comme une nouvelle session Grok : le chat est vidé
+     et le modèle ne reçoit plus que ses consignes de base.
+     Rien n'est effacé : l'ancienne conversation est archivée dans
+     %APPDATA%\Padawan\conversations\ (un fichier .json par conversation).
+  🕘 Historique (menu de gauche, ou Ctrl+Shift+H) : relire les anciennes.
+  Chaque lancement de Padawan commence aussi une conversation neuve
+  (la précédente est archivée automatiquement).
+  Les lignes d'événement (ex. « Journal de bord lancé ») ne vont jamais au modèle.
