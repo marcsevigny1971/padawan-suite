@@ -143,8 +143,8 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 
 | Fichier (version 1.2.2) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `f0158a4d026b4548ff0e3cf09303cb27a807b8892b328f0b8efa0c3982b0d726` |
-| `Padawan-Projet.zip` | `29127630920eab5eacfe696d1a0f044860ac08a96664510d8ba45a04f6303df8` |
+| `Padawan-Setup.exe` | `593fdc1aa672156131c6f63b8a346aa3d495cef56bc30cbc1ad7a08714e76410` |
+| `Padawan-Projet.zip` | `6e072f2e857b83b466ec3557a5cce9a2171e16d292f520d06bdaa25fd58bb0e1` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
 

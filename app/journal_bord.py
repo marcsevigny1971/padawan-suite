@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import padawan_commun as pc
 
 APP = "Journal de bord"
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 SETTINGS = "journal.json"
 HERE = pc.HERE
 IS_WIN = pc.IS_WIN
@@ -40,16 +40,11 @@ WEATHER = [("\u2600", "Soleil"), ("\u26c5", "Nuageux"), ("\u2601", "Couvert"), (
 MOIS = ["janvier", "f\u00e9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\u00fbt", "septembre", "octobre",
         "novembre", "d\u00e9cembre"]
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
-FLAVOR = ["Journal de bord du capitaine, date stellaire {sd}.",
-          "Journal personnel du capitaine, date stellaire {sd}. Rapport compl\u00e9mentaire.",
-          "Date stellaire {sd}. Le vaisseau file en silence ; je consigne ceci.",
-          "Journal de bord, date stellaire {sd}. Nous explorons de nouveaux mondes.",
-          "Date stellaire {sd}. Note pour moi-m\u00eame, \u00e0 garder pr\u00e8s du c\u0153ur."]
 DEFAULT_SETTINGS = {"animations": True, "mode_avance": False, "liens_auto": False, "wayback": False,
                     "verrou": {"actif": False, "sel": "", "hash": ""}, "verrou_propose": False,
                     "derniere": "", "jalons": [], "geometrie": "",
                     "fenetre": "agrandie",   # agrandie (par defaut) | plein | normale
-                    "theme": "cosmos", "date_stellaire": False,
+                    "theme": "cosmos",
                     "debut_journee": 5, "quart_heures": 8, "horodatage": True}
 STAMP_RX = re.compile(r"^(\*\*)?\d{1,2} h \d{2} \u2014")
 STAMP_LINE = re.compile(r"^\s*(\*\*)?\s*(\w+ \d{1,2} \w+ \d{4} \u2014 )?\d{1,2} h \d{2}( \u2014)?\s*(\*\*)?\s*$")
@@ -62,7 +57,6 @@ def body_sans_stamps(md):
 def stamp_text(d=None):
     d = d or dt.datetime.now()
     return f"{date_fr(d, False).capitalize()} \u2014 {d.hour} h {d.minute:02d}"
-OPTS = {"stellaire": False}   # date stellaire : seulement si on la demande (Apparence)
 TEMPLATES = [
     ("\u2600 Ma journ\u00e9e", "Ma journ\u00e9e",
      "# Ce qui s'est pass\u00e9 aujourd'hui\n\n# Ce qui m'a fait du bien\n\n# Ce que je retiens\n"),
@@ -147,12 +141,6 @@ def parse_iso(s):
             return dt.datetime.now()
 
 
-def stardate(d=None):
-    d = d or dt.datetime.now()
-    doy = d.timetuple().tm_yday - 1
-    days = 366 if (d.year % 4 == 0 and (d.year % 100 or d.year % 400 == 0)) else 365
-    frac = (doy + d.hour / 24 + d.minute / 1440) / days
-    return f"{(d.year - 1946) * 1000 + frac * 1000:.1f}"
 
 
 def date_fr(d, heure=True):
@@ -550,7 +538,7 @@ def entry_plain(e, embeds, header=True):
     head = []
     if header:
         head.append(e.get("title") or "Entr\u00e9e sans titre")
-        bits = [date_fr(d)] + ([f"date stellaire {stardate(d)}"] if OPTS["stellaire"] else [])
+        bits = [date_fr(d)]
         if e.get("lieu"):
             bits.append(e["lieu"])
         if e.get("mood") or e.get("weather"):
@@ -1375,17 +1363,16 @@ def entry_html(j, e, embeds, rel_files=None, compact=False):
     x = html.escape
     ttl = e.get("title") or "Entr\u00e9e sans titre"
     return (f'<article><h2>{x(ttl)}</h2>'
-            f'<div class="meta">{x(date_fr(d))}' + (f' \u00b7 date stellaire {stardate(d)}' if OPTS["stellaire"] else '') + '<br>'
+            f'<div class="meta">{x(date_fr(d))}' + '<br>'
             + "".join(f'<span class="chip">{x(c)}</span>' for c in chips) + "</div>"
             f'<div class="body">{md_to_html(j, e.get("body"), embeds, rel_files, compact)}</div></article>')
 
 
 def page_html(title, articles_html, sub=""):
     x = html.escape
-    sd = stardate()
     return (f'<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" '
             f'content="width=device-width,initial-scale=1"><title>{x(title)}</title><style>{EXPORT_CSS}</style></head>'
-            f'<body><div class="wrap"><header class="top"><div class="sd">\u2726 JOURNAL DE BORD \u00b7 DATE STELLAIRE {sd} \u2726</div>'
+            f'<body><div class="wrap"><header class="top"><div class="sd">\u2726 JOURNAL DE BORD \u2726</div>'
             f'<h1>{x(title)}</h1><div style="color:#9fb0d0">{x(sub)}</div></header>{articles_html}'
             f'<footer>Partag\u00e9 depuis le Journal de bord \u00b7 Padawan Suite \u00b7 {x(date_fr(dt.datetime.now()))}</footer>'
             f'</div></body></html>')
@@ -1766,118 +1753,6 @@ class Anim:
     def on(self):
         return bool(self.app.st.get("animations", True))
 
-    # ---- ouverture : saut en distorsion dans un champ d'etoiles
-    def warp(self, root, done, seconds=2.1, full=False):
-        import tkinter as tk
-        if not self.on:
-            done(); return
-        top = tk.Toplevel(root); top.overrideredirect(True); top.configure(bg=C["DEEP"])
-        sw, sh = top.winfo_screenwidth(), top.winfo_screenheight()
-        q = self.k
-        w, h = (sw, sh) if full else (int(640 * q), int(360 * q))
-        top.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
-        try:
-            top.attributes("-topmost", True)
-        except Exception:
-            pass
-        cv = tk.Canvas(top, width=w, height=h, bg=C["DEEP"], highlightthickness=0 if full else 1,
-                       highlightbackground=C["ACC"])
-        cv.pack(fill="both", expand=True)
-        z = max(1.0, min(3.0, w / (640.0 * q)))           # plein ecran : etoiles plus loin, plus nombreuses
-        zf, z = z, z * q                                    # zf : polices (deja en points) ; z : distances en pixels
-        cx, cy = w / 2, h / 2 - 20 * z
-        rmax = math.hypot(w, h) / 2 + 20
-        stars = []
-        for _ in range(int(90 * min(2.4, zf))):
-            a = random.uniform(0, 2 * math.pi)
-            stars.append([a, random.uniform(2, 40 * z), random.uniform(0.6, 1.6), cv.create_line(0, 0, 0, 0, fill="#ffffff"),
-                          None])
-        shades = [_mix(C["DEEP"], "#ffffff", i / 12.0) for i in range(13)]   # 13 teintes pre-calculees (leger pour le CPU)
-        f1, f2 = int(20 * min(zf, 1.9)), int(11 * min(zf, 1.6))
-        now = dt.datetime.now()
-        hr = now.hour
-        greet = ("Bonne nuit" if hr < 5 else "Bon matin" if hr < 12 else "Bon apr\u00e8s-midi" if hr < 18 else "Bonne soir\u00e9e")
-        fd = int(f1 * 1.7)
-        hello = cv.create_text(cx, cy - fd * 1.5 * q, text=f"{greet} !", fill=C["DEEP"], font=("Segoe UI", f2 + 2))
-        bigd = cv.create_text(cx, cy, text=date_fr(now, False).capitalize(), fill=C["DEEP"], font=("Segoe UI", fd, "bold"))
-        bigh = cv.create_text(cx, cy + fd * 1.25 * q, text=f"{now.hour} h {now.minute:02d}", fill=C["DEEP"], font=("Segoe UI", f2 + 4))
-        title = cv.create_text(cx, h * 0.80, text="", fill=C["TEXT"], font=("Segoe UI", f1, "bold"))
-        sub = cv.create_text(cx, h * 0.80 + f1 * 1.9 * q, text="", fill=C["ACC"], font=("Consolas", f2))
-        cv.create_text(cx, h - 18 * z, text="clic ou \u00c9chap pour passer", fill="#3d4d6e", font=("Segoe UI", 8 + int(zf > 1.5)))
-        t0 = time.time()
-        state = {"done": False, "shown": False}
-        full_t = "\U0001f4d3 Journal de bord"
-        full_s = (f"date stellaire {stardate()} \u00b7 tout reste \u00e0 bord" if OPTS["stellaire"]
-                  else "tout reste sur ce PC")
-        fade = 0.45
-
-        def reveal():
-            if not state["shown"]:
-                state["shown"] = True
-                done()                                     # la fenetre se prepare SOUS le champ d'etoiles
-                try:
-                    top.lift(); top.attributes("-topmost", True)
-                except Exception:
-                    pass
-
-        def stop(_e=None):
-            if state["done"]:
-                return
-            state["done"] = True
-            reveal()
-            try:
-                top.destroy()
-            except Exception:
-                pass
-            try:
-                root.lift(); root.focus_force()
-            except Exception:
-                pass
-        for wdg in (top, cv):
-            wdg.bind("<Button-1>", stop)
-        top.bind("<Escape>", stop); top.bind("<Key>", stop)
-        top.focus_force()
-
-        def tick():
-            if state["done"]:
-                return
-            t = time.time() - t0
-            if t > seconds:
-                stop(); return
-            if t > seconds - fade:
-                reveal()
-                try:
-                    top.attributes("-alpha", max(0.0, (seconds - t) / fade))
-                except Exception:
-                    pass
-            # 0-0.7 s : la date apparait (etoiles calmes) ; ensuite : le saut, la date s'envole
-            kd = min(1.0, t / 0.35) if t < 0.9 else max(0.0, 1 - (t - 0.9) / 0.45)
-            cv.itemconfigure(bigd, fill=_mix(C["DEEP"], "#ffffff", kd))
-            cv.itemconfigure(hello, fill=_mix(C["DEEP"], C["ACC2"], kd))
-            cv.itemconfigure(bigh, fill=_mix(C["DEEP"], C["ACC"], kd))
-            tt = max(0.0, t - 0.7)
-            speed = 0.4 + 14 * min(1.0, tt / 0.6) * (1 - max(0, tt - 0.8) / 0.6 * 0.85)
-            for s in stars:
-                s[1] += s[2] * speed * 2.2 * z
-                if s[1] > rmax:
-                    s[1] = random.uniform(2, 20 * z)
-                r1, r2 = s[1], s[1] + s[2] * speed * 3.2 * z
-                x1, y1 = cx + math.cos(s[0]) * r1, cy + math.sin(s[0]) * r1
-                x2, y2 = cx + math.cos(s[0]) * r2, cy + math.sin(s[0]) * r2
-                cv.coords(s[3], x1, y1, x2, y2)
-                look = (int(12 * min(1, s[1] / (120 * z))), (1 + (speed > 8)) * (2 if z > 2 else 1))
-                if look != s[4]:
-                    s[4] = look
-                    cv.itemconfigure(s[3], fill=shades[look[0]], width=look[1])
-            if t > 1.0:
-                k = min(1.0, (t - 1.0) / 0.4)
-                cv.itemconfigure(title, text=full_t[:max(1, int(len(full_t) * k))])
-            if t > 1.3:
-                k = min(1.0, (t - 1.3) / 0.4)
-                cv.itemconfigure(sub, text=full_s[:int(len(full_s) * k)])
-            top.after(33, tick)
-        top.after(10, tick)
-
     # ---- sceau de cire « Journal enregistre »
     def seal(self, parent, text="JOURNAL ENREGISTR\u00c9"):
         import tkinter as tk
@@ -2067,7 +1942,6 @@ class JournalApp:
         self.tk, self.ttk = tk, ttk
         self.args = args
         self.st = settings()
-        OPTS["stellaire"] = bool(self.st.get("date_stellaire"))
         if self.st.get("theme") not in THEMES:
             self.st["theme"] = "cosmos"
         C.update(theme_colors(self.st.get("theme")))
@@ -2134,12 +2008,9 @@ class JournalApp:
         if self.st["verrou"].get("actif") and self.st["verrou"].get("hash"):
             r.withdraw()
             r.after(50, self._lock_screen)
-        elif "--selftest" in args or "--screenshot" in args or "--sans-anim" in args:
+        else:                                   # 1.4.3 : ouverture immediate (plus d'animation d'etoiles)
             self._show_window()
             self._build()
-        else:
-            r.withdraw()
-            r.after(30, lambda: self.anim.warp(r, self._after_intro, full=self._window_mode() != "normale"))
 
     def px(self, n):
         return int(round(n * getattr(self, "ui_scale", 1.0)))
@@ -2455,7 +2326,6 @@ class JournalApp:
         mb.add_cascade(label="Avanc\u00e9", menu=self.adv_menu)
         h = tk.Menu(mb, tearoff=0)
         h.add_command(label="Guide du journal (F1)", command=self.help)
-        h.add_command(label="Revoir l'animation d'ouverture", command=lambda: self.anim.warp(self.root, lambda: None) if self.anim.on else None)
         mb.add_cascade(label="Aide", menu=h)
         self.menubar = mb
         self.root.configure(menu=mb)
@@ -3461,11 +3331,7 @@ class JournalApp:
         t.edit_reset(); t.edit_modified(False)
         self.dirty = False
         self.loading = False
-        if OPTS["stellaire"]:
-            fl = random.Random(e["id"]).choice(FLAVOR).format(sd=stardate(d))
-        else:
-            fl = "\u270e " + date_fr(d).capitalize()
-        self.anim.typewrite(self.flavor, fl)
+        self.flavor.configure(text="\u270e " + date_fr(d).capitalize())
         self._paint_fav(); self._update_wc()
         self.root.after(30, lambda: self._scan_text_links(False))
 
@@ -3644,8 +3510,7 @@ class JournalApp:
         ok = self.save_now(force=True)
         if ok or self.j.exists(self.cur["id"]):
             self.anim.seal(self.holder)
-            self.status(f"\u2726 Consign\u00e9 au journal \u00b7 {time.strftime('%H:%M')}"
-                        + (f" \u00b7 date stellaire {stardate()}" if OPTS["stellaire"] else ""), True)
+            self.status(f"\u2726 Consign\u00e9 au journal \u00b7 {time.strftime('%H:%M')}", True)
             self.toast("\u2714 Consign\u00e9 ! Ton entr\u00e9e est bien gard\u00e9e sur ce PC.", seconds=2.6)
             self._paint_streak()
         else:
@@ -4284,7 +4149,7 @@ class JournalApp:
         top = tk.Toplevel(self.root); top.title("\U0001f512 Entr\u00e9e scell\u00e9e (lecture)"); top.configure(bg=C["BG"]); top.transient(self.root)
         top.geometry(f"{self.px(760)}x{self.px(620)}+{self.root.winfo_rootx() + self.px(120)}+{self.root.winfo_rooty() + self.px(40)}")
         d = parse_iso(e["created"])
-        tk.Label(top, text=(f"Date stellaire {stardate(d)} \u00b7 " if OPTS["stellaire"] else "") + date_fr(d), bg=C["BG"], fg=C["ACC"], font=("Consolas", 10)).pack(anchor="w", padx=16, pady=(10, 0))
+        tk.Label(top, text=date_fr(d), bg=C["BG"], fg=C["ACC"], font=("Consolas", 10)).pack(anchor="w", padx=16, pady=(10, 0))
         tk.Label(top, text=(e.get("mood") or "") + " " + (e.get("title") or "Entr\u00e9e"), bg=C["BG"], fg=C["TEXT"],
                  font=("Segoe UI", 16, "bold")).pack(anchor="w", padx=16)
         txt = tk.Text(top, wrap="word", bg=C["ENTRY"], fg=C["TEXT"], relief="flat", font=("Segoe UI", 12), padx=14, pady=10)
@@ -4380,12 +4245,9 @@ class JournalApp:
         m = tk.Menu(parent, tearoff=0)
         if not hasattr(self, "v_theme"):
             self.v_theme = tk.StringVar(value=self.st.get("theme", "cosmos"))
-            self.v_stel = tk.BooleanVar(value=bool(self.st.get("date_stellaire")))
         for key, (lab, _p) in THEMES.items():
             m.add_radiobutton(label=lab, variable=self.v_theme, value=key, command=lambda k=key: self.set_theme(k))
         m.add_separator()
-        m.add_checkbutton(label="Afficher la date stellaire (pour les fans de Star Trek)", variable=self.v_stel,
-                          command=self._toggle_stellaire)
         m.add_cascade(label="\U0001f552 Journ\u00e9e et quart de travail", menu=self._shift_menu(m))
         return m
 
@@ -4439,14 +4301,6 @@ class JournalApp:
             for c in w.winfo_children():
                 walk(c)
         walk(self.root)
-
-    def _toggle_stellaire(self):
-        OPTS["stellaire"] = bool(self.v_stel.get())
-        self._set("date_stellaire", OPTS["stellaire"])
-        if self.cur:
-            d = parse_iso(self.cur["created"])
-            self.flavor.configure(text=random.Random(self.cur["id"]).choice(FLAVOR).format(sd=stardate(d))
-                                  if OPTS["stellaire"] else "\u270e " + date_fr(d).capitalize())
 
     def _template_menu(self, parent):
         m = self.tk.Menu(parent, tearoff=0)
@@ -5582,7 +5436,7 @@ def main():
             return 0
         release_instance()        # l'autre fenetre ne repond pas (fermeture en cours ?) : on ouvre quand meme
     app = JournalApp(a)
-    if "--capture-intro" in a:            # test : capture du saut en distorsion + mesure du processeur
+    if "--capture-intro" in a:            # test : capture de l'ouverture + mesure du processeur
         out = a[a.index("--capture-intro") + 1]
         c0, w0 = time.process_time(), time.time()
         mes = {}
