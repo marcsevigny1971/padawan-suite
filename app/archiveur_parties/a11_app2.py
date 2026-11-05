@@ -1061,8 +1061,8 @@ class _ArchiveurAppPartie2:
         self.pl_vol = tk.Label(row, text="", bg=NC_PANEL, fg=NC_FG, font=FONT_SM, width=4, anchor="w")
         row.add(self.pl_vol)
         self.pl_big = row.add(self._btn(row, "⛶ Grande fenêtre", self.player_bigwin, font=FONT_SM),
-                              "Ouvrir la vidéo dans une fenêtre séparée, redimensionnable, à la position actuelle\n"
-                              "(ffplay : F = plein écran, Espace = pause, ←/→ = ±10 s, Échap = fermer).\n"
+                              "Ouvrir la vidéo dans une grande fenêtre avec ses propres boutons, à la position actuelle\n"
+                              "(Espace = pause, F = plein écran, ←/→ = ±5 s, ↑/↓ = volume, M = muet, Échap = fermer).\n"
                               "Double-clic sur l'image = pareil.")
         self.pl_note = tk.Label(self.pbar, text="", bg=NC_PANEL, fg=NC_DIM, font=FONT_SM, anchor="w", justify="left")
         self._seek_drag = False
@@ -1269,11 +1269,32 @@ class _ArchiveurAppPartie2:
         main = self._player_media or (find_main_media(self._preview_path) if self._preview_path else None)
         if not main or not main.lower().endswith(VIDEO_EXTS):
             return
+        pos = self.player.current() if self.player.state == "play" else float(self.pos_var.get() or 0)
+        bw = getattr(self, "_bigwin", None)
+        if bw is not None:
+            try:
+                if bw.winfo_exists():
+                    bw.deiconify(); bw.lift(); bw.focus_force()
+                    return
+            except Exception:
+                pass
+        if HAS_PIL and find_ffmpeg() and bool(self.cfg.get("integrated_player", True)):
+            # grande fenêtre Tk avec ses propres contrôles (play/pause, position, volume, plein écran)
+            if self.player.state == "play":
+                self.player.pause()
+            title = f"{APP_NAME} — {str(self._preview_info.get('title') or os.path.basename(main))[:80]}"
+            try:
+                self._bigwin = BigPlayerWindow(self, main, self._preview_info or {}, pos, title)
+                self.status.set("⛶ Grande fenêtre : Espace = pause, F = plein écran, ←/→ = ±5 s, ↑/↓ = volume, "
+                                "M = muet, Échap = fermer.")
+                return
+            except Exception:
+                logger.exception("grande fenêtre Tk")
+                self._bigwin = None
         fpl = find_ffplay()
         if not fpl:
             self.open_selected_media()
             return
-        pos = self.player.current() if self.player.state == "play" else float(self.pos_var.get() or 0)
         if self.player.state == "play":
             self.player.pause()
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
@@ -1295,6 +1316,17 @@ class _ArchiveurAppPartie2:
         except Exception as ex:
             logger.exception("ffplay fenêtre")
             messagebox.showerror(APP_NAME, f"Impossible d'ouvrir la fenêtre vidéo :\n{ex}", parent=self)
+
+    def _bigwin_closed(self, pos: float):
+        """Retour de la grande fenêtre : la petite reprend à la même position (en pause)."""
+        self._bigwin = None
+        try:
+            if self._player_media and self._integrated_ok() and pos > 0 and self._ensure_loaded():
+                w, h = self._thumb_box()
+                self.player.seek(pos, w, h)
+            self.status.set(f"⛶ Grande fenêtre fermée à {fmt_ts(pos)}.")
+        except Exception:
+            logger.exception("retour position")
 
     def _on_thumb_click(self):
         if not self._preview_entry:

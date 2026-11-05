@@ -1,5 +1,13 @@
 # Journal des versions — Padawan Suite
 
+## v1.2.5 — 2026.11.05 — Archiveur : contrôles dans la Grande fenêtre
+- « ⛶ Grande fenêtre » s'ouvre maintenant avec sa propre barre de contrôles, toujours visible : ▶/⏸ Lecture-Pause, ⏪ 10 s / 10 s ⏩, barre de position (clic ou glisser), temps, 🔊/🔇 et volume, ⛶ Plein écran, ✖ Fermer. Bulle d'aide sur chaque bouton.
+- En plein écran, la barre se replie après 3 s sans bouger la souris et revient au moindre mouvement (ou en pause).
+- Souris : clic sur l'image = pause/lecture, double-clic = plein écran, molette = volume.
+- Clavier : Espace/K = pause, F/F11 = plein écran, Échap = sortir du plein écran puis fermer, ←/→ = ±5 s, Maj+←/→ ou J/L = ±10 s, ↑/↓ = volume, M = muet, Début = retour au début.
+- À la fermeture, le petit lecteur reprend à la même position (en pause). Si le lecteur intégré n'est pas disponible, l'ancienne fenêtre ffplay sert de secours.
+- Tableau de bord 1.2.5. Aucune donnée touchée.
+
 ## v1.2.4 — 2026.11.05 — Archiveur : barre Collections plus compacte
 - La barre « Collections » à gauche de l'Archiveur n'a plus de largeur fixe : elle s'ajuste toute seule à ses noms (entre 120 et 280 px, au plus 22 % de la fenêtre), et l'Historique récupère l'espace perdu.
 - Une poignée (séparateur) entre Collections et Historique permet de choisir la largeur à la souris ; la largeur choisie est mémorisée (réglage `coll_side_w`).

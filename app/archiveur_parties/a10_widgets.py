@@ -303,6 +303,7 @@ class LightPlayer:
     déplacement = relance des deux processus à la position voulue (seek précis via atrim)."""
 
     FPS_MAX = 25.0
+    MAX_PIX = 960 * 540
 
     def __init__(self, app, surface, on_update: Callable[[float, float, str], None]):
         self.app = app
@@ -367,8 +368,9 @@ class LightPlayer:
         scale = min(max_w / sw, max_h / sh, 2.0)
         w = max(160, int(sw * scale)) // 2 * 2
         h = max(90, int(sh * scale)) // 2 * 2
-        if w * h > 960 * 540:  # limite CPU : ~qHD
-            f = (960 * 540 / float(w * h)) ** 0.5
+        mp = self.MAX_PIX
+        if w * h > mp:  # limite CPU : ~qHD (plus grand dans la grande fenêtre)
+            f = (mp / float(w * h)) ** 0.5
             w, h = int(w * f) // 2 * 2, int(h * f) // 2 * 2
         return w, h
 
@@ -614,6 +616,223 @@ class LightPlayer:
                     pass
         self._pv = self._pa = None
         self._aclock = None
+
+
+class BigPlayerWindow(tk.Toplevel if tk is not None else object):  # type: ignore[misc]
+    """« Grande fenêtre » avec ses propres contrôles (lecture/pause, ±10 s, barre de
+    position, volume, plein écran, fermer). Souris ET clavier ; la barre reste toujours visible
+    (en plein écran elle se replie et réapparaît dès que la souris bouge)."""
+
+    def __init__(self, app, path: str, info: Dict[str, Any], at: float, title: str):
+        super().__init__(app)
+        self.app = app
+        self.title(title)
+        self.configure(bg="#000000")
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        w = min(1280, int(sw * 0.7))
+        h = int(w * 9 / 16) + 90
+        self.geometry(f"{w}x{h}+{max(0, (sw - w) // 2)}+{max(0, (sh - h) // 3)}")
+        self.minsize(480, 320)
+        self._full = False
+        self._drag = False
+        self._hide_job = None
+        self._resize_job = None
+        self._last_size = (0, 0)
+        self.video = tk.Label(self, bg="#000000", fg=NC_DIM, text="Chargement…", font=FONT_UI, cursor="hand2")
+        self.video.pack(fill="both", expand=True)
+        self.bar = tk.Frame(self, bg=NC_PANEL, bd=0)
+        self.bar.pack(fill="x", side="bottom")
+        self.pos_var = tk.DoubleVar(value=float(at or 0))
+        self.pos_scale = ttk.Scale(self.bar, from_=0, to=1, variable=self.pos_var, orient="horizontal",
+                                   style="Arch.Horizontal.TScale", command=lambda v: self._on_drag(), takefocus=0)
+        self.pos_scale.pack(fill="x", padx=10, pady=(6, 2))
+        self.pos_scale.bind("<ButtonPress-1>", self._seek_press)
+        self.pos_scale.bind("<ButtonRelease-1>", self._seek_release)
+        Tooltip(self.pos_scale, "Clique ou glisse pour te déplacer dans la vidéo (← / → = ±5 s)")
+        row = tk.Frame(self.bar, bg=NC_PANEL)
+        row.pack(fill="x", padx=8, pady=(0, 6))
+        B = lambda t, c, tip, hi=False, side="left": self._b(row, t, c, tip, hi, side)
+        self.b_play = B("▶ Lecture", self.toggle, "Lecture / pause (Espace ou K, ou clic sur l'image)", True)
+        B("⏪ 10 s", lambda: self.skip(-10), "Reculer de 10 secondes (J, ou Maj+←)")
+        B("10 s ⏩", lambda: self.skip(10), "Avancer de 10 secondes (L, ou Maj+→)")
+        self.lbl_time = tk.Label(row, text="0:00 / 0:00", bg=NC_PANEL, fg=NC_HI, font=FONT_MONO, padx=8)
+        self.lbl_time.pack(side="left")
+        B("✖ Fermer", self.close, "Fermer la grande fenêtre (Échap ; en plein écran, Échap sort d'abord du plein écran)",
+          side="right")
+        self.b_full = B("⛶ Plein écran", self.toggle_full, "Plein écran (F ou F11, ou double-clic sur l'image)",
+                        side="right")
+        self.lbl_vol = tk.Label(row, text="", bg=NC_PANEL, fg=NC_FG, font=FONT_SM, width=4, anchor="w")
+        self.lbl_vol.pack(side="right")
+        self.vol_var = tk.DoubleVar(value=float(app.vol_var.get() or 0))
+        self.vol_scale = ttk.Scale(row, from_=0, to=100, variable=self.vol_var, orient="horizontal", length=120,
+                                   style="Arch.Horizontal.TScale", command=lambda v: self._vol_label(), takefocus=0)
+        self.vol_scale.pack(side="right", padx=4)
+        self.vol_scale.bind("<ButtonRelease-1>", lambda e: self._apply_volume())
+        Tooltip(self.vol_scale, "Volume (↑ / ↓)")
+        self.b_mute = B("🔊", self.mute, "Couper / remettre le son (M)", side="right")
+        self.player = LightPlayer(self, self.video, self._on_update)
+        self.player.MAX_PIX = 1600 * 900   # grande fenêtre : plus d'images, plus nettes
+        self.player.muted = bool(getattr(app, "_muted", False))
+        self.player.volume = int(self.vol_var.get())
+        self.player.load(path, info)
+        if self.player.duration:
+            self.pos_scale.configure(to=max(1.0, self.player.duration))
+        self._vol_label()
+        for seq, fn in (("<space>", self.toggle), ("k", self.toggle), ("K", self.toggle),
+                        ("f", self.toggle_full), ("F", self.toggle_full), ("<F11>", self.toggle_full),
+                        ("<Escape>", self._escape), ("m", self.mute), ("M", self.mute),
+                        ("<Left>", lambda: self.skip(-5)), ("<Right>", lambda: self.skip(5)),
+                        ("<Shift-Left>", lambda: self.skip(-10)), ("<Shift-Right>", lambda: self.skip(10)),
+                        ("j", lambda: self.skip(-10)), ("l", lambda: self.skip(10)),
+                        ("<Up>", lambda: self.nudge_vol(5)), ("<Down>", lambda: self.nudge_vol(-5)),
+                        ("<Home>", lambda: self.seek(0))):
+            self.bind(seq, lambda e, f=fn: (f(), "break")[1])
+        self.video.bind("<Button-1>", lambda e: self.toggle())
+        self.video.bind("<Double-Button-1>", lambda e: self.toggle_full())
+        self.bind("<MouseWheel>", lambda e: self.nudge_vol(5 if e.delta > 0 else -5))
+        self.bind("<Motion>", self._show_bar)
+        self.bind("<Configure>", self._on_resize)
+        self.protocol("WM_DELETE_WINDOW", self.close)
+        self.after(120, lambda: (self.focus_force(), self.play(at)))
+
+    def _b(self, row, text, cmd, tip, hi, side):
+        b = self.app._btn(row, text, cmd, hi=hi, font=FONT_UI)
+        b.configure(takefocus=0)  # Espace / flèches vont toujours à la fenêtre (pas de double action)
+        b.pack(side=side, padx=3)
+        Tooltip(b, tip)
+        return b
+
+    def _box(self) -> Tuple[int, int]:
+        self.update_idletasks()
+        return max(160, self.video.winfo_width()), max(90, self.video.winfo_height())
+
+    # ------------------------------------------------------------ commandes
+    def play(self, at: Optional[float] = None):
+        w, h = self._box()
+        self._last_size = (w, h)
+        if self.player.state == "end":
+            at = 0.0
+        self.player.play(w, h, at=at)
+
+    def toggle(self):
+        if self.player.state == "play":
+            self.player.pause()
+        else:
+            self.play(float(self.pos_var.get() or 0))
+
+    def skip(self, d: float):
+        cur = self.player.current() if self.player.state == "play" else float(self.pos_var.get() or 0)
+        self.seek(cur + d)
+
+    def seek(self, t: float):
+        t = max(0.0, min(float(t), self.player.duration or float(t)))
+        self.pos_var.set(t)
+        w, h = self._box()
+        self.player.seek(t, w, h)
+        self._show_time(t)
+
+    def mute(self):
+        self.player.set_volume(int(float(self.vol_var.get())), not self.player.muted)
+        self._vol_label()
+
+    def nudge_vol(self, d: int):
+        self.vol_var.set(max(0, min(100, int(float(self.vol_var.get())) + d)))
+        self._apply_volume()
+
+    def _apply_volume(self):
+        v = int(float(self.vol_var.get()))
+        self.player.set_volume(v, False if v > 0 else self.player.muted)
+        self._vol_label()
+
+    def _vol_label(self):
+        v = int(float(self.vol_var.get()))
+        self.lbl_vol.configure(text=f"{v}%")
+        self.b_mute.configure(text="🔇" if (self.player.muted or v == 0) else "🔊")
+
+    def toggle_full(self):
+        self._full = not self._full
+        self.attributes("-fullscreen", self._full)
+        self.b_full.configure(text="🗗 Quitter plein écran" if self._full else "⛶ Plein écran")
+        self._show_bar()
+
+    def _escape(self):
+        if self._full:
+            self.toggle_full()
+        else:
+            self.close()
+
+    # ------------------------------------------------------------ barre / position
+    def _show_bar(self, e=None):
+        if not self.bar.winfo_ismapped():
+            self.bar.pack(fill="x", side="bottom", before=self.video)
+        if self._hide_job:
+            self.after_cancel(self._hide_job)
+            self._hide_job = None
+        if self._full:  # en plein écran : se replie après 3 s sans bouger la souris
+            self._hide_job = self.after(3000, self._auto_hide)
+
+    def _auto_hide(self):
+        self._hide_job = None
+        if self._full and self.player.state == "play" and not self._drag:
+            self.bar.pack_forget()
+
+    def _on_resize(self, e):
+        if e.widget is not self:
+            return
+        if self._resize_job:
+            self.after_cancel(self._resize_job)
+        self._resize_job = self.after(350, self._refit)
+
+    def _refit(self):
+        self._resize_job = None
+        w, h = self._box()
+        if abs(w - self._last_size[0]) < 24 and abs(h - self._last_size[1]) < 24:
+            return
+        self._last_size = (w, h)
+        if self.player.state == "play":
+            self.player.play(w, h, at=self.player.current())
+        elif self.player.path:
+            self.player.show_still(w, h, float(self.pos_var.get() or 0))
+
+    def _on_drag(self):
+        if self._drag:
+            self._show_time(float(self.pos_var.get()))
+
+    def _seek_press(self, e):
+        self._drag = True
+        try:  # clic direct = aller à cet endroit
+            wd = max(1, self.pos_scale.winfo_width())
+            self.pos_var.set(max(0.0, min(1.0, e.x / wd)) * float(self.pos_scale.cget("to")))
+        except Exception:
+            pass
+
+    def _seek_release(self, e):
+        self._drag = False
+        self.seek(float(self.pos_var.get()))
+
+    def _show_time(self, pos: float):
+        dur = self.player.duration
+        self.lbl_time.configure(text=f"{fmt_ts(pos)} / {fmt_ts(dur) if dur else '—'}")
+
+    def _on_update(self, pos: float, dur: float, state: str):
+        if not self._drag:
+            self.pos_var.set(pos)
+            self._show_time(pos)
+        self.b_play.configure(text="⏸ Pause" if state == "play" else "▶ Lecture")
+        if state != "play":
+            self._show_bar()
+
+    def close(self):
+        pos = self.player.current() if self.player.state == "play" else float(self.pos_var.get() or 0)
+        try:
+            self.player.stop()
+        except Exception:
+            pass
+        try:
+            self.app._bigwin_closed(pos)
+        except Exception:
+            logger.exception("retour grande fenêtre")
+        self.destroy()
 
 
 COLL_ALL_LABEL = "Toutes collections"
