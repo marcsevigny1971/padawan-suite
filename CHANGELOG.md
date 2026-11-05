@@ -1,5 +1,11 @@
 # Journal des versions — Padawan Suite
 
+## v1.2.4 — 2026.11.05 — Archiveur : barre Collections plus compacte
+- La barre « Collections » à gauche de l'Archiveur n'a plus de largeur fixe : elle s'ajuste toute seule à ses noms (entre 120 et 280 px, au plus 22 % de la fenêtre), et l'Historique récupère l'espace perdu.
+- Une poignée (séparateur) entre Collections et Historique permet de choisir la largeur à la souris ; la largeur choisie est mémorisée (réglage `coll_side_w`).
+- Double-clic sur la poignée : retour à la largeur automatique. Le bouton ◀ cache/affiche toujours la barre.
+- Tableau de bord 1.2.4. Aucune donnée touchée.
+
 ## v1.2.3 — 2026.11.05 — Les thèmes du Journal partout dans la suite
 - Nouveau module commun `padawan_themes.py` : les 4 thèmes du Journal de bord (🌌 Cosmos, 📜 Papier, 🌙 Nuit douce, 🌲 Forêt), mêmes noms et mêmes couleurs, plus ✨ Original (le look propre de chaque programme, par défaut : rien ne change tant que tu ne choisis rien).
 - Dans Grimoire, Archiveur, Arsenal, Facteur, Messager, Padawan, Gestionnaire, Chantier, Rétro, Coffre, Recherche et Premiers pas : menu « 🎨 Thème » (bulle d'aide) et raccourci Ctrl+Maj+T (thème suivant). Le changement se fait en direct ; les rares détails qui ne suivent pas changent au prochain lancement (un message le dit).

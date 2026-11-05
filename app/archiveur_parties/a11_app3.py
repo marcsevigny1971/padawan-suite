@@ -36,6 +36,38 @@ class _ArchiveurAppPartie3:
         finally:
             self._coll_side_lock = False
         self._sync_coll_side()
+        self._side_autofit()
+
+    def _side_autofit(self, force: bool = False):
+        """Largeur juste assez pour les noms des collections (sauf si Marc a choisi une largeur)."""
+        try:
+            if getattr(self, "_side_w_saved", 0) and not force:
+                return
+            if not self._coll_side.winfo_manager():
+                return
+            f = tkfont.nametofont(FONT_UI, root=self)
+            t = self.coll_tree
+            texts = [t.item(i, "text") for i in t.get_children()] + ["📚 Collections"]
+            w = max(f.measure(x) for x in texts) + 34
+            w = max(120, min(w, int(self.winfo_width() * 0.22) or 260, 280))
+            self._side_pane.paneconfigure(self._coll_side, width=w)
+            if force:
+                self._side_w_saved = 0
+                self.cfg["coll_side_w"] = 0
+                save_cfg(self.cfg)
+        except Exception:
+            logger.debug("largeur collections", exc_info=True)
+
+    def _side_sash_saved(self, _e=None):
+        try:
+            if self._coll_side.winfo_manager():
+                w = int(self._coll_side.winfo_width())
+                if w > 50 and abs(w - (self._side_w_saved or 0)) > 3:
+                    self._side_w_saved = w
+                    self.cfg["coll_side_w"] = w
+                    save_cfg(self.cfg)
+        except Exception:
+            pass
 
     def _sync_coll_side(self):
         t = getattr(self, "coll_tree", None)
@@ -92,11 +124,13 @@ class _ArchiveurAppPartie3:
 
     def _toggle_coll_side(self):
         if self._coll_side.winfo_manager():
-            self._coll_side.pack_forget()
+            self._side_pane.forget(self._coll_side)
             self._side_toggle.configure(text="▶ 📚")
         else:
-            self._coll_side.pack(side="left", fill="y", padx=(0, 6), pady=(2, 4), before=self._hist_main)
+            self._side_pane.add(self._coll_side, before=self._hist_main, minsize=100,
+                                width=self._side_w_saved or 150, stretch="never")
             self._side_toggle.configure(text="◀")
+            self.after(50, self._side_autofit)
 
     def rename_collection(self, name: str):
         new = self._ask_string(f"Nouveau nom pour la collection « {name} » :", initial=name, parent=self)

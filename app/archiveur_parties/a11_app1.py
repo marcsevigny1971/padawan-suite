@@ -443,22 +443,31 @@ class _ArchiveurAppPartie1:
     # ------------------------------------------------------------ historique
     def _build_history(self, left):
         # barre des collections (à gauche) : clic = n'afficher que cette collection
-        side = tk.Frame(left, bg=NC_PANEL, highlightbackground=NC_LINE, highlightthickness=1)
+        # v1.2.4 : barre redimensionnable (glisser la séparation ; double-clic = largeur auto), largeur mémorisée
+        self._side_pane = tk.PanedWindow(left, orient="horizontal", bg=NC_SASH, sashwidth=6, sashrelief="raised",
+                                         bd=0, opaqueresize=True)
+        self._side_pane.pack(fill="both", expand=True)
+        side = tk.Frame(self._side_pane, bg=NC_PANEL, highlightbackground=NC_LINE, highlightthickness=1)
         self._coll_side = side
-        main = tk.Frame(left, bg=NC_BG)
+        main = tk.Frame(self._side_pane, bg=NC_BG)
         self._hist_main = main
-        side.pack(side="left", fill="y", padx=(0, 6), pady=(2, 4))
-        main.pack(side="left", fill="both", expand=True)
+        self._side_w_saved = int(self.cfg.get("coll_side_w") or 0)
+        self._side_pane.add(side, minsize=100, width=self._side_w_saved or 150, stretch="never")
+        self._side_pane.add(main, minsize=260, stretch="always")
+        self._side_pane.bind("<ButtonRelease-1>", self._side_sash_saved, add="+")
+        self._side_pane.bind("<Double-Button-1>", lambda _e: self._side_autofit(force=True), add="+")
+        Tooltip(self._side_pane, "Glisse la séparation pour élargir / rétrécir les collections.\n"
+                                 "Double-clic sur la séparation = largeur automatique.")
         tk.Label(side, text="📚 Collections", bg=NC_PANEL, fg=NC_HI, font=FONT_UI, anchor="w").pack(
-            fill="x", padx=6, pady=(6, 2))
+            fill="x", padx=4, pady=(4, 1))
         self.coll_tree = ttk.Treeview(side, style="Coll.Treeview", show="tree", selectmode="browse", height=10)
         try:
             cw = max(150, tkfont.nametofont(FONT_UI, root=self).measure("Santé & Nutrition (99)") + 12)
         except Exception:
             cw = 180
-        self.coll_tree.column("#0", width=min(cw, 210), stretch=True)
+        self.coll_tree.column("#0", width=80, minwidth=60, stretch=True)   # suit la largeur de la barre
         self.coll_tree.tag_configure("dim", foreground=NC_DIM)
-        self.coll_tree.pack(fill="both", expand=True, padx=4)
+        self.coll_tree.pack(fill="both", expand=True, padx=2)
         self.coll_tree.bind("<<TreeviewSelect>>", self._on_coll_side)
         self.coll_tree.bind("<Button-3>", self._coll_side_menu)
         Tooltip(self.coll_tree, "Clic = afficher seulement cette collection.\n"
@@ -466,11 +475,11 @@ class _ArchiveurAppPartie1:
                                 "(Ctrl+clic / Maj+clic pour en choisir plusieurs)")
         b = self._btn(side, "✨ Ranger tout\nautomatiquement", self.auto_classify, hi=True, font=FONT_SM,
                       justify="center")
-        b.pack(fill="x", padx=4, pady=(6, 2))
+        b.pack(fill="x", padx=2, pady=(4, 2))
         Tooltip(b, "Propose une collection pour chaque archive NON classée (même série, santé, musique…).\n"
                    "Tu vois la liste avant, et tu peux tout annuler après.")
-        b = self._btn(side, "➕ Nouvelle collection", self.new_collection)
-        b.pack(fill="x", padx=4, pady=(0, 2))
+        b = self._btn(side, "➕ Nouvelle", self.new_collection)
+        b.pack(fill="x", padx=2, pady=(0, 2))
         Tooltip(b, "Créer une collection (les archives sélectionnées y sont ajoutées)")
         self.undo_btn = self._btn(side, "↩ Annuler le rangement", self.undo_auto_classify)
         Tooltip(self.undo_btn, "Remet les archives rangées automatiquement dans « Non classées »")

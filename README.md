@@ -141,12 +141,16 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.2.3) | SHA256 |
+| Fichier (version 1.2.4) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `9b652e272ed765cb568ef290cc43c83175bf25cb936530e45527837e44ecc2c3` |
-| `Padawan-Projet.zip` | `d02e6dbd9a76814d876923d9b406c519b6190530403263ca82b2fc8158effa35` |
+| `Padawan-Setup.exe` | `26e91b201835bab1d661a42573506429e2fd16d72a5554a8ed2bbef94f5eceee` |
+| `Padawan-Projet.zip` | `a09e592a653bbb7770c890a2c1f117697563e9804b67f76a4bd463a487283c44` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.2.4 : Archiveur, Collections plus compactes (5 novembre 2026)
+- 📚 La barre **Collections** de l'Archiveur s'ajuste à ses noms : plus d'espace perdu, l'Historique est plus large.
+- ↔️ Glisse la **poignée** entre Collections et Historique pour choisir la largeur ; elle est mémorisée. **Double-clic** sur la poignée = largeur automatique. ◀ cache la barre.
 
 ## ✨ Nouveautés v1.2.3 : les thèmes partout (5 novembre 2026)
 - 🎨 Les 4 thèmes du Journal de bord (Cosmos, Papier, Nuit douce, Forêt) sont maintenant dans **tous** les programmes, en plus du look original de chacun.

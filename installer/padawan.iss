@@ -1,5 +1,5 @@
 ﻿; Projet Padawan - installateur Inno Setup (par utilisateur, sans admin)
-#define MyVer "2026.11.05"
+#define MyVer "2026.11.05.1"
 [Setup]
 AppId={{6F4C2A71-9B3E-4D8A-A5C1-50DA0A7A2310}
 AppName=Projet Padawan
@@ -10,7 +10,7 @@ AppPublisherURL=https://marcsevigny.ca
 AppSupportURL=https://github.com/marcsevigny1971/padawan-suite/issues
 AppUpdatesURL=https://github.com/marcsevigny1971/padawan-suite/releases/latest
 AppCopyright=© 2026 Marc Sévigny
-VersionInfoVersion={#MyVer}.0
+VersionInfoVersion={#MyVer}
 VersionInfoCompany=Marc Sévigny
 VersionInfoDescription=Installation du Projet Padawan
 VersionInfoProductName=Projet Padawan
