@@ -457,6 +457,11 @@ def run_gui(initial=""):
         root.focus_force()
     except Exception:
         pass
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(root, "recherche", pc.C)
+    except Exception:
+        pass
     if "--selftest" in sys.argv:
         root.after(2500, root.destroy)
     root.mainloop()

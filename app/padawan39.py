@@ -5802,6 +5802,11 @@ if __name__ == "__main__":
         pass
     app = Padawan()
     app.protocol("WM_DELETE_WINDOW", app.on_close)
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "padawan", C, roles={"fg": "TEXT"})
+    except Exception:
+        pass
     try:
         app.mainloop()
     except Exception as e:

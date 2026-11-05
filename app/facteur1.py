@@ -4366,6 +4366,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     except Exception:
         jlog("ERREUR", "ui", traceback.format_exc())
         raise
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "facteur", C)
+    except Exception:
+        pass
     if args.smoke:
         code = run_smoke(app)
         app.quit_app(); return code

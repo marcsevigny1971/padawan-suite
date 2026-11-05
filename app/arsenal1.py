@@ -6636,6 +6636,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.shot:
         run_shot(app, args.shot, args.shot_view)
 
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "arsenal", C)
+    except Exception:
+        pass
     def report(*a):
         logger.error("erreur Tk : %s", "".join(traceback.format_exception(*a)))
     app.report_callback_exception = report

@@ -256,6 +256,11 @@ def run_gui():
     btn(bot, "Fermer", lambda: (save_flag(), root.destroy()), accent=True).pack(side="right", padx=6, pady=8)
     root.protocol("WM_DELETE_WINDOW", lambda: (save_flag(), root.destroy()))
     root.bind("<Escape>", lambda e: (save_flag(), root.destroy()))
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(root, "premiers_pas", pc.C)
+    except Exception:
+        pass
     if "--selftest" in sys.argv:
         root.after(1500, root.destroy)
     root.mainloop()

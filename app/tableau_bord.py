@@ -10,8 +10,8 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.2.2"
-SUITE_VERSION = "2026.11.04"
+VERSION = "1.2.3"
+SUITE_VERSION = "2026.11.05"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
@@ -132,6 +132,9 @@ def run_gui():
     import tkinter as tk
     from tkinter import messagebox
     BG, PANEL, FG, DIM, ACC, OK, BAD = "#0f172a", "#1e293b", "#e2e8f0", "#94a3b8", "#facc15", "#4ade80", "#f87171"
+    # v1.2.3 : couleurs vivantes (le theme commun les remplace en direct)
+    TH = {"BG": BG, "PANEL": PANEL, "TEXT": FG, "DIM": DIM, "ACC2": ACC, "OK": OK, "REC": BAD, "BTN": "#334155",
+          "DEEP": "#0b1220"}
     root = tk.Tk(); root.title(f"{APP} {VERSION} - suite Padawan {SUITE_VERSION}"); root.configure(bg=BG)
     root.geometry("900x640"); root.minsize(760, 380)
     # Ouvre agrandi (maximise) comme le Gestionnaire de fichiers
@@ -198,6 +201,13 @@ def run_gui():
         threading.Thread(target=work, daemon=True).start()
     btn("🧰 Rapport de problème", report)
     btn("⬆ Vérifier les mises à jour", lambda: threading.Thread(target=lambda: UIQ.put(lambda v=check_update(): upd_var.set("Mises à jour : " + v)), daemon=True).start())
+    try:  # v1.2.3 : un theme choisi ici s'applique a toute la suite (Journal de bord compris)
+        import padawan_themes as _pt
+        _th = _pt.install(root, "tableau", TH, button_parent=bar, on_change=lambda k: _pt.set_suite(k))
+        if _th is not None and getattr(_th, "button", None) is not None:
+            _th.button.configure(text="🎨 Thème de toute la suite")
+    except Exception:
+        pass
     fk = tk.Frame(root, bg="#000"); fk.pack(fill="x", side="bottom")
     def about():
         messagebox.showinfo(APP, f"Suite Padawan {SUITE_VERSION}\n{APP} {VERSION}\n\n" +
@@ -220,7 +230,7 @@ def run_gui():
             try:
                 run = running_scripts()
                 vers = {f: file_version(os.path.join(HERE, f)) for f, _, _ in PROGS}
-                UIQ.put(lambda: [(rows[f][0].configure(fg=OK if f.lower() in run else DIM), rows[f][1].configure(text=(vers[f] if vers[f].startswith("build") else "v" + vers[f]) if vers[f] != "-" else ""))
+                UIQ.put(lambda: [(rows[f][0].configure(fg=TH["OK"] if f.lower() in run else TH["DIM"]), rows[f][1].configure(text=(vers[f] if vers[f].startswith("build") else "v" + vers[f]) if vers[f] != "-" else ""))
                                  for f in rows])
                 if full or srv_var.get().endswith("détection…"):
                     _, summ = servers()

@@ -1,5 +1,12 @@
 # Journal des versions — Padawan Suite
 
+## v1.2.3 — 2026.11.05 — Les thèmes du Journal partout dans la suite
+- Nouveau module commun `padawan_themes.py` : les 4 thèmes du Journal de bord (🌌 Cosmos, 📜 Papier, 🌙 Nuit douce, 🌲 Forêt), mêmes noms et mêmes couleurs, plus ✨ Original (le look propre de chaque programme, par défaut : rien ne change tant que tu ne choisis rien).
+- Dans Grimoire, Archiveur, Arsenal, Facteur, Messager, Padawan, Gestionnaire, Chantier, Rétro, Coffre, Recherche et Premiers pas : menu « 🎨 Thème » (bulle d'aide) et raccourci Ctrl+Maj+T (thème suivant). Le changement se fait en direct ; les rares détails qui ne suivent pas changent au prochain lancement (un message le dit).
+- Tableau de bord : bouton « 🎨 Thème de toute la suite » ; le choix vaut pour tous les programmes, Journal de bord compris.
+- Le choix est gardé dans %APPDATA%\Padawan\themes.json (un choix par programme passe avant celui de toute la suite). Aucune donnée touchée.
+- Les textes trop pâles sur le thème Papier (ex. couleurs de sujets) sont foncés automatiquement pour rester lisibles.
+
 ## v1.2.2 — 2026.11.04 — Archiveur et Grimoire plus robustes (code découpé)
 - Archiveur 5 et Grimoire : le code (11 700 et 11 000 lignes dans un seul fichier) est découpé en parties de moins de 2 000 lignes, dans `archiveur_parties\` et `grimoire_parties\`. Plus facile à lire, à corriger et à ouvrir dans un éditeur.
 - Aucun changement de fonctionnement : mêmes raccourcis, même icône, mêmes données (grimoire.db, archives, réglages). `archiveur5.py` et `grimoire1.py` restent les fichiers à lancer.

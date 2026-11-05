@@ -141,12 +141,17 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.2.2) | SHA256 |
+| Fichier (version 1.2.3) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `593fdc1aa672156131c6f63b8a346aa3d495cef56bc30cbc1ad7a08714e76410` |
-| `Padawan-Projet.zip` | `6e072f2e857b83b466ec3557a5cce9a2171e16d292f520d06bdaa25fd58bb0e1` |
+| `Padawan-Setup.exe` | `9b652e272ed765cb568ef290cc43c83175bf25cb936530e45527837e44ecc2c3` |
+| `Padawan-Projet.zip` | `d02e6dbd9a76814d876923d9b406c519b6190530403263ca82b2fc8158effa35` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.2.3 : les thèmes partout (5 novembre 2026)
+- 🎨 Les 4 thèmes du Journal de bord (Cosmos, Papier, Nuit douce, Forêt) sont maintenant dans **tous** les programmes, en plus du look original de chacun.
+- Menu **🎨 Thème** dans chaque programme, ou **Ctrl+Maj+T** pour passer au thème suivant : ça change en direct.
+- Dans le **Tableau de bord**, « 🎨 Thème de toute la suite » applique ton choix à tous les programmes d'un coup.
 
 ## ✨ Nouveautés v1.2 : cartes, liens permanents et curseur vivant (31 octobre 2026)
 

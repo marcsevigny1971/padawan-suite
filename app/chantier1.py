@@ -1398,6 +1398,11 @@ def run_gui(test_ms=0):
     if busy_ports:
         log("chantier", "Ports déjà utilisés par d'autres serveurs (on n'y touche pas) : " + ", ".join(busy_ports))
     paint(); select(webvar.get()); draw_header(); anim_leds(); pump_logs(); auto_refresh()
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(root, "chantier", T, roles={"fg": "TEXT", "acc": "ACC2", "btnfg": "TEXT", "logfg": "OK"}, on_change=lambda k: paint())
+    except Exception:
+        pass
     if test_ms:
         root.after(test_ms, root.destroy)
     root.mainloop()

@@ -2390,6 +2390,11 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"screenshot: {e}")
             app.quit_app()
         app.after(7000, snap)
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "messager", C)
+    except Exception:
+        pass
     app.mainloop()
     return 0
 

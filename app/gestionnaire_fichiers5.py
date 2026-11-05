@@ -1260,6 +1260,11 @@ class FileManagerApp(tk.Tk):
 def main() -> None:
     try:
         app = FileManagerApp()
+        try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+            import padawan_themes as _pt
+            _pt.install(app, "gestionnaire", C)
+        except Exception:
+            pass
         app.mainloop()
     except Exception:
         traceback.print_exc()

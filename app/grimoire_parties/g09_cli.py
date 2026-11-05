@@ -622,6 +622,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         return code
     if args.shot:
         run_shot(app, args.shot, args.shot_view)
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "grimoire", C)
+    except Exception:
+        pass
     app.mainloop()
     _ = mutex
     return 0

@@ -3040,6 +3040,11 @@ PROBLÈME ? Journaux dans {P['logs']} (emu_c64.log, emu_dos.log, emu_win98.log).
             pass
     if cfg.get("intro", True):
         play_intro(lambda: render())
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(root, "retro", T, roles={"fg": "TEXT", "acc": "ACC2"}, on_change=lambda k: paint())
+    except Exception:
+        pass
     if test_ms:
         root.after(test_ms, root.destroy)
     root.mainloop()

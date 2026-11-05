@@ -382,6 +382,11 @@ def run_gui():
             pass
         root.after(150, poll)
     root.after(150, poll); size_async()
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(root, "coffre", pc.C)
+    except Exception:
+        pass
     if "--selftest" in sys.argv:
         root.after(2500, root.destroy)
     root.mainloop()

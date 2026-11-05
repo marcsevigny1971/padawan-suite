@@ -276,6 +276,11 @@ def main():
             pass
     app = ArchiveurApp(smoke=args.smoke, geometry=args.geometry, shot=args.shot, force_scaling=scaling,
                        root_override=args.root or "", font_delta=args.font_delta, shot_action=args.shot_action)
+    try:  # v1.2.3 : themes communs de la suite (menu/bouton « 🎨 Thème », Ctrl+Maj+T)
+        import padawan_themes as _pt
+        _pt.install(app, "archiveur", {_k: globals()["NC_" + _k] for _k in THEMES["norton"] if ("NC_" + _k) in globals()}, store=lambda d: globals().update({"NC_" + k: v for k, v in d.items()}))
+    except Exception:
+        pass
     app.mainloop()
     if args.smoke or args.shot:
         raise SystemExit(getattr(app, "_smoke_code", 1))
