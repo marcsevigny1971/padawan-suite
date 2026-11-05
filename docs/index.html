@@ -78,10 +78,24 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
 </header>
 
 <nav class="toc"><div class="wrap">
- <a href="#apercu">Aperçu</a><a href="#captures">Captures</a><a href="#premiers-pas">Premiers pas</a><a href="#nouveautes">Nouveautés</a><a href="#padawan">Padawan IA</a><a href="#tableau">Tableau de bord</a><a href="#archiveur">Archiveur</a><a href="#grimoire">Grimoire</a><a href="#journal">Journal</a><a href="#arsenal">Arsenal</a><a href="#gestionnaire">Fichiers</a><a href="#messager">Messager</a><a href="#facteur">Facteur</a><a href="#chantier">Chantier</a><a href="#retro">Rétro</a><a href="#ensemble">Ensemble</a><a href="#pourquoi">Pourquoi</a><a href="#installer">Installer</a><a href="#faq">FAQ</a><a href="#telecharger">Télécharger</a><a href="#ressources">GitHub</a>
+ <a href="#pourqui">Pour qui ?</a><a href="#apercu">Aperçu</a><a href="#captures">Captures</a><a href="#premiers-pas">Premiers pas</a><a href="#nouveautes">Nouveautés</a><a href="#padawan">Padawan IA</a><a href="#tableau">Tableau de bord</a><a href="#archiveur">Archiveur</a><a href="#grimoire">Grimoire</a><a href="#journal">Journal</a><a href="#arsenal">Arsenal</a><a href="#gestionnaire">Fichiers</a><a href="#messager">Messager</a><a href="#facteur">Facteur</a><a href="#chantier">Chantier</a><a href="#retro">Rétro</a><a href="#ensemble">Ensemble</a><a href="#pourquoi">Pourquoi</a><a href="#installer">Installer</a><a href="#faq">FAQ</a><a href="#telecharger">Télécharger</a><a href="#ressources">GitHub</a>
 </div></nav>
 
 <main class="wrap">
+
+<section id="pourqui">
+ <h2><small>Pour qui ?</small>Tes outils, ton PC, tes données</h2>
+ <p class="sub"><b>Gratuit, en français, sans compte et sans abonnement, pour toujours.</b> Padawan est fait pour toi si :</p>
+ <div class="grid">
+  <div class="mini"><span class="ico">🔒</span><h3>Ta vie privée compte</h3><p>Tu ne veux pas que tes questions, tes notes ou ton journal partent sur les serveurs de quelqu'un d'autre. L'IA tourne sur ton PC (Ollama).</p></div>
+  <div class="mini"><span class="ico">🎞️</span><h3>Tu veux garder ce que tu aimes</h3><p>Une vidéo ou une page web risque de disparaître ? L'Archiveur en garde une copie chez toi, avec un simple Ctrl+V.</p></div>
+  <div class="mini"><span class="ico">📓</span><h3>Tu veux un carnet à toi</h3><p>Le Journal de bord et le Grimoire sont privés par défaut, dans des fichiers sur ton disque.</p></div>
+  <div class="mini"><span class="ico">🧰</span><h3>Tu aimes les bons outils Windows</h3><p>Gestionnaire à la Norton Commander, Arsenal d'outils Windows, Facteur qui range tes téléchargements.</p></div>
+  <div class="mini"><span class="ico">🕹️</span><h3>Tu as la nostalgie du rétro</h3><p>Commodore 64, MS-DOS et Windows 98, avec des jeux gratuits et légaux seulement.</p></div>
+  <div class="mini"><span class="ico">🇨🇦</span><h3>Tu veux du français</h3><p>Interface, aide F1 et guides en français, faits au Québec. Pas besoin d'être programmeur ni d'avoir un compte GitHub.</p></div>
+ </div>
+ <p class="sub" style="margin-top:14px">Padawan est un projet <b>bénévole</b> et encore jeune : tes premiers essais et tes commentaires sont précieux (<a href="https://github.com/marcsevigny1971/padawan-suite/issues">dis-moi ce que tu en penses</a>).</p>
+</section>
 
 <section id="apercu">
  <h2><small>Vue d'ensemble</small>C'est quoi, au juste ?</h2>
@@ -425,11 +439,17 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
  <h2><small>Installation</small>Prêt en deux minutes, sans droits d'administrateur</h2>
  <div class="steps">
   <div><b>Télécharge</b> (liens dans la section <a href="#telecharger">Téléchargement</a>) <code>Padawan-Setup.exe</code> (installateur un fichier, recommandé) ou <code>Padawan-Projet.zip</code> (version de secours : décompresser puis lancer <code>INSTALLER.bat</code>).</div>
-  <div><b>Double-clique.</b> Si Windows SmartScreen s'affiche : « Informations complémentaires » → « Exécuter quand même » (l'installateur n'est pas signé numériquement, c'est normal pour un projet maison).</div>
+  <div><b>Double-clique.</b> Si Windows affiche « Windows a protégé votre ordinateur » : clique « Informations complémentaires » → « Exécuter quand même ». Ça ne veut pas dire que le fichier est dangereux : Windows affiche ce message pour tout programme récent et non signé (un certificat coûte cher pour un projet gratuit). <a href="#verifier">Comment vérifier le fichier</a>.</div>
   <div><b>Réponds aux questions</b> : Python et les dépendances s'installent, ffmpeg est vérifié, les raccourcis Bureau sont créés. Options : Ollama + modèle IA, transcription locale (faster-whisper), lecteur VLC.</div>
   <div><b>C'est fait !</b> L'icône Padawan apparaît près de l'horloge. Clic → choisis ton outil. Chantier et Rétro n'installent rien tant que tu ne le demandes pas.</div>
  </div>
  <p class="sub" style="margin-top:18px">Désinstallation : <code>Desinstaller.bat</code> retire raccourcis et démarrage automatique sans toucher à tes données. Configuration conseillée : Windows 10/11, 8 Go de RAM (16 Go pour l'IA locale confortable).</p>
+ <div id="verifier" class="sub" style="margin-top:14px"><b>🛡️ Vérifier le fichier avant de l'ouvrir (bon réflexe !)</b><br>
+ 🔍 Dépose-le sur <a href="https://www.virustotal.com/">VirusTotal</a> pour le faire analyser par des dizaines d'antivirus.<br>
+ 🔑 Dans PowerShell : <code>Get-FileHash .\Padawan-Setup.exe</code>, puis compare l'empreinte SHA256 (version 1.2.1) :<br>
+ <code>Padawan-Setup.exe</code> : <code style="word-break:break-all">1092ba94fa379b20211dd87f00b40d7d1d972438f8a2231624068b6df4d52c03</code><br>
+ <code>Padawan-Projet.zip</code> : <code style="word-break:break-all">722645759a40ab05e289945f80d40b84f15f2960569d525f4ed5f50a3cb138b8</code><br>
+ 📖 Le code de l'installateur est ouvert et lisible <a href="https://github.com/marcsevigny1971/padawan-suite">sur GitHub</a>.</div>
 </section>
 
 <section id="faq">
@@ -437,7 +457,8 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
  <details><summary>Est-ce que ça ralentit mon PC ?</summary><p>Non. Seuls l'icône et Facteur (en pause d'un clic) tournent en arrière-plan. Les serveurs de Chantier ne démarrent jamais tout seuls.</p></details>
  <details><summary>Mes données sont-elles envoyées quelque part ?</summary><p>Non. L'IA, l'Archiveur, le Grimoire et Rétro travaillent localement. Seul le Messager communique avec un serveur, et tu peux héberger le tien.</p></details>
  <details><summary>Dois-je créer un compte ou retenir un mot de passe ?</summary><p>Non. Le Messager utilise une clé générée et protégée par Windows ; tu choisis seulement un pseudo.</p></details>
- <details><summary>Windows Defender va-t-il bloquer l'installation ?</summary><p>L'installateur a été analysé et est propre. Comme il n'est pas signé, SmartScreen peut demander une confirmation la première fois.</p></details>
+ <details><summary>Windows Defender va-t-il bloquer l'installation ?</summary><p>Comme l'installateur n'est pas signé, SmartScreen peut demander une confirmation la première fois (« Informations complémentaires » → « Exécuter quand même »). Tu peux le <a href="#verifier">vérifier toi-même</a> avec VirusTotal et son empreinte SHA256.</p></details>
+ <details><summary>Je ne suis pas très techno. Est-ce pour moi ?</summary><p>Oui. Un installateur, une icône près de l'horloge, un guide « Premiers pas » de 5 minutes et l'aide F1 partout. L'IA est optionnelle : tout le reste marche sans.</p></details>
  <details><summary>Il me faut l'IA pour utiliser le reste ?</summary><p>Non. Ollama est optionnel ; tous les autres outils fonctionnent sans.</p></details>
  <details><summary>Les jeux et logiciels de Rétro, c'est légal ?</summary><p>Oui : uniquement des logiciels libres, du code publié par Microsoft sous licence MIT (GW-BASIC) et des jeux gratuits/shareware autorisés. Aucun ROM commercial n'est inclus ; tu fournis les tiens si tu en possèdes.</p></details>
  <details><summary>Je fais comment pour sauvegarder ?</summary><p>Ouvre <b>Coffre Padawan</b> (icône Padawan → Coffre) → « Exporter » : tout tient dans un seul .zip daté, que tu copies où tu veux. Pour revenir en arrière ou changer de PC : « Restaurer ». Grimoire, Archiveur et Arsenal gardent en plus leurs propres sauvegardes automatiques.</p></details>

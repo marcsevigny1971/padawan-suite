@@ -25,6 +25,25 @@ Une IA qui tourne sur ton PC, un archiveur de vidéos et de pages web, un journa
 
 ---
 
+> **Tes outils, ton PC, tes données. Gratuit, en français, sans compte et sans abonnement, pour toujours.**
+
+## 🙋 Pour qui ?
+
+Padawan est fait pour toi si tu te reconnais dans une de ces phrases :
+
+- 🔒 **« Je ne veux pas que mes questions, mes notes ou mon journal partent sur les serveurs de quelqu'un d'autre. »** L'IA tourne sur ton PC avec [Ollama](https://ollama.com/), et tout reste dans des fichiers sur ton disque.
+- 🎞️ **« J'ai peur qu'une vidéo ou une page que j'aime disparaisse. »** L'Archiveur en garde une copie MP4 ou HTML chez toi, avec un simple `Ctrl+V`.
+- 📓 **« Je veux un carnet ou un journal à moi, pas une appli dans le nuage. »** Le Journal de bord et le Grimoire sont privés par défaut.
+- 🧰 **« J'aime les bons vieux outils Windows, rapides, au clavier. »** Gestionnaire de fichiers à la Norton Commander, Arsenal d'outils Windows, Facteur qui range tes téléchargements.
+- 🕹️ **« Le Commodore 64, MS-DOS et Windows 98 me rappellent de bons souvenirs. »** Le coin Rétro, avec des jeux gratuits et légaux seulement.
+- 🇫🇷🇨🇦 **« Je veux que ce soit en français, du début à la fin. »** Interface, aide `F1` et guides sont en français, faits au Québec.
+
+Pas besoin d'être programmeur ni d'avoir un compte GitHub : tu télécharges un fichier, tu double-cliques, et c'est parti.
+
+Padawan est un projet **bénévole** fait par un passionné. Il est jeune : **tes premiers essais et tes commentaires sont précieux** ([dis-moi ce que tu en penses](https://github.com/marcsevigny1971/padawan-suite/issues)).
+
+---
+
 ## 🤔 Pourquoi Padawan ?
 
 Parce qu'on n'a pas besoin d'un abonnement et d'un compte en ligne pour avoir de bons outils.
@@ -95,8 +114,7 @@ Padawan ne remplace pas tout. Voici où il se situe face à des outils connus.
 ## ⬇️ Installer en 3 gestes
 
 1. Va sur la page **[Releases](https://github.com/marcsevigny1971/padawan-suite/releases/latest)** et télécharge **`Padawan-Setup.exe`**.
-2. Double-clique dessus.
-   Windows peut afficher « Windows a protégé votre ordinateur ». C'est normal pour un petit logiciel fait maison qui n'est pas signé : clique **« Informations complémentaires »**, puis **« Exécuter quand même »**.
+2. Double-clique dessus. Si Windows affiche « Windows a protégé votre ordinateur », c'est normal : voir [l'avertissement de Windows](#smartscreen) juste en dessous.
 3. Laisse-toi guider. Python et ses modules s'installent tout seuls si besoin (quelques minutes sur un PC neuf). À la fin, l'icône Padawan apparaît près de l'horloge : **clic droit**, et tout est là.
 
 - ✅ Aucun droit d'administrateur, aucun compte, aucun mot de passe.
@@ -104,6 +122,31 @@ Padawan ne remplace pas tout. Voici où il se situe face à des outils connus.
 - 🗜️ Plan B : **`Padawan-Projet.zip`** (même contenu). Clic droit > « Extraire tout », puis double-clic sur `INSTALLER.bat`.
 - 🔁 Mise à jour : réinstalle simplement la nouvelle version par-dessus. Tes données restent là.
 - 🧹 Désinstaller : Paramètres > Applications > « Projet Padawan ». Tes données sont gardées.
+
+
+<a id="smartscreen"></a>
+
+### 🛡️ L'avertissement de Windows (SmartScreen)
+
+Au premier lancement, Windows peut afficher un écran bleu « **Windows a protégé votre ordinateur** ». Ça ne veut **pas** dire que le fichier est dangereux : Windows affiche ce message pour tout programme **récent et non signé** qu'il n'a pas encore vu souvent. Un certificat de signature coûte des centaines de dollars par année, ce qui est beaucoup pour un projet gratuit et bénévole.
+
+**Pour continuer :**
+1. Clique sur **« Informations complémentaires »** (le petit lien sous le texte).
+2. Vérifie que l'éditeur indique « Éditeur inconnu » et que le nom est bien `Padawan-Setup.exe`.
+3. Clique sur **« Exécuter quand même »**.
+
+**Tu veux vérifier par toi-même avant ? Excellent réflexe :**
+- 🔍 **VirusTotal** : dépose le fichier sur [virustotal.com](https://www.virustotal.com/) pour le faire analyser par des dizaines d'antivirus.
+- 🔑 **Empreinte SHA256** : dans PowerShell, tape `Get-FileHash .\Padawan-Setup.exe` et compare avec la valeur ci-dessous. Si c'est identique, le fichier est exactement celui publié ici.
+- 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
+- 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
+
+| Fichier (version 1.2.1) | SHA256 |
+|---|---|
+| `Padawan-Setup.exe` | `1092ba94fa379b20211dd87f00b40d7d1d972438f8a2231624068b6df4d52c03` |
+| `Padawan-Projet.zip` | `722645759a40ab05e289945f80d40b84f15f2960569d525f4ed5f50a3cb138b8` |
+
+<sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
 
 ## ✨ Nouveautés v1.2 : cartes, liens permanents et curseur vivant (31 octobre 2026)
 
@@ -155,7 +198,16 @@ Non. Si Ollama est absent, Padawan te demande la permission de l'installer, puis
 Non : le modèle tourne sur ton PC. Seule la recherche web (quand tu es en ligne) envoie tes mots-clés aux moteurs de recherche, comme une recherche normale. Le Messager passe par un serveur, puisque c'est une messagerie.
 
 **Pourquoi Windows affiche un avertissement à l'installation ?**
-Parce que l'installateur n'est pas signé (un certificat coûte cher pour un projet gratuit). Le code est entièrement ici, tu peux le lire. Clique « Informations complémentaires », puis « Exécuter quand même ».
+Parce que l'installateur n'est pas signé (un certificat coûte cher pour un projet gratuit) et que Windows ne le connaît pas encore. Clique « Informations complémentaires », puis « Exécuter quand même ». Pour vérifier le fichier (VirusTotal, SHA256), voir [l'avertissement de Windows](#smartscreen).
+
+**Est-ce que je dois créer un compte quelque part ?**
+Non. Aucun compte, aucun courriel, aucun mot de passe. Le Messager te demande seulement un pseudo.
+
+**Je ne suis pas très techno. Est-ce pour moi ?**
+Oui. Un installateur, une icône près de l'horloge, un guide « Premiers pas » de 5 minutes et l'aide `F1` partout. Si tu bloques, le Tableau de bord a un bouton « Rapport de problème ».
+
+**Il me faut un gros ordinateur ?**
+Non pour la suite : Windows 10 ou 11 et 8 Go de mémoire suffisent. Pour l'IA locale, 16 Go est plus confortable. L'IA est optionnelle : tout le reste marche sans.
 
 **Et sur Mac ou Linux ?**
 Pas pour l'instant : la suite est pensée pour Windows 10 et 11.
