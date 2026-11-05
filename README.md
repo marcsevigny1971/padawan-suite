@@ -141,10 +141,10 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.2.1) | SHA256 |
+| Fichier (version 1.2.2) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `1092ba94fa379b20211dd87f00b40d7d1d972438f8a2231624068b6df4d52c03` |
-| `Padawan-Projet.zip` | `722645759a40ab05e289945f80d40b84f15f2960569d525f4ed5f50a3cb138b8` |
+| `Padawan-Setup.exe` | `f0158a4d026b4548ff0e3cf09303cb27a807b8892b328f0b8efa0c3982b0d726` |
+| `Padawan-Projet.zip` | `29127630920eab5eacfe696d1a0f044860ac08a96664510d8ba45a04f6303df8` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
 

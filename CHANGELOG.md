@@ -1,5 +1,12 @@
 # Journal des versions — Padawan Suite
 
+## v1.2.2 — 2026.11.04 — Archiveur et Grimoire plus robustes (code découpé)
+- Archiveur 5 et Grimoire : le code (11 700 et 11 000 lignes dans un seul fichier) est découpé en parties de moins de 2 000 lignes, dans `archiveur_parties\` et `grimoire_parties\`. Plus facile à lire, à corriger et à ouvrir dans un éditeur.
+- Aucun changement de fonctionnement : mêmes raccourcis, même icône, mêmes données (grimoire.db, archives, réglages). `archiveur5.py` et `grimoire1.py` restent les fichiers à lancer.
+- Vérifié : le code découpé est identique, ligne pour ligne, à l'ancien fichier ; tests automatiques (--smoke, --check, --verify, --stats) identiques avant et après.
+- Journal de bord 1.4.2 : correctif du calendrier.
+- Installateur : une mise à jour par `INSTALLER.bat` fusionne maintenant les dossiers au lieu de les imbriquer.
+
 ## v1.2.1 — 2026.11.02 — Correctifs Journal et Nouvelle conversation
 - Padawan 39.1 : bouton « 🧹 Nouvelle conversation » (Ctrl+L ou Ctrl+Shift+N) qui repart l'esprit clair : chat vidé, contexte du modèle remis à zéro (seulement ses consignes de base), ancienne conversation archivée dans %APPDATA%\Padawan\conversations (rien n'est effacé).
 - Padawan 39.1 : « 🕘 Historique » (Ctrl+Shift+H) pour relire les anciennes conversations ; chaque lancement repart aussi sur une conversation neuve.

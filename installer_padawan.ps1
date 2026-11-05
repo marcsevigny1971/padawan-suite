@@ -56,7 +56,9 @@ if ($env:PADAWAN_NOCOPY -eq "1") { Write-Host "  (fichiers deja places par Padaw
 Get-ChildItem -LiteralPath $Src -Force | ForEach-Object {
   $dst = Join-Path $InstallDir $_.Name
   if ($keep -contains $_.Name -and (Test-Path $dst)) { Write-Host "  garde $($_.Name) (deja present)"; return }
-  Copy-Item -LiteralPath $_.FullName -Destination $dst -Recurse -Force
+  # v1.2.2 : un dossier (ex. archiveur_parties) est fusionne dans l'existant, pas imbrique dedans
+  if ($_.PSIsContainer) { New-Item -ItemType Directory -Force $dst | Out-Null; Copy-Item -Path (Join-Path $_.FullName '*') -Destination $dst -Recurse -Force }
+  else { Copy-Item -LiteralPath $_.FullName -Destination $dst -Force }
 }
 }
 Write-Host "  OK"

@@ -10,8 +10,8 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.2"
-SUITE_VERSION = "2026.10.31"
+VERSION = "1.2.2"
+SUITE_VERSION = "2026.11.04"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0

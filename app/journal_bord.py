@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import padawan_commun as pc
 
 APP = "Journal de bord"
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 SETTINGS = "journal.json"
 HERE = pc.HERE
 IS_WIN = pc.IS_WIN
@@ -2671,8 +2671,44 @@ class JournalApp:
             b.grid(row=1 + pos // 7, column=pos % 7, sticky="nsew", padx=1, pady=1)
 
     def _pick_day(self, d):
-        self.day_filter = None if self.day_filter == d else d
+        if self.day_filter == d:
+            self.day_filter = None
+            self._draw_calendar(); self.refresh_list()
+            return
+        self.day_filter = d
+        try:
+            self._open_day(d)
+        except Exception:
+            traceback.print_exc()
         self._draw_calendar(); self.refresh_list()
+
+    def _open_day(self, d):
+        """1.4.2 : choisir une date au calendrier enregistre l'entree en cours puis ouvre celle de ce jour
+        (ou une entree vide datee de ce jour). Aujourd'hui = demarrage intelligent (quart de nuit, horodatage)."""
+        self.save_now()
+        now = dt.datetime.now()
+        if d == now.date() or d == self._logical_day(now):
+            self._smart_start()
+            return
+        ds = d.isoformat()
+        es = [e for e in self.j.entries() if e["created"][:10] == ds and not e.get("jour")]
+        open_ = [e for e in es if not e.get("sealed")]
+        if open_:
+            e = self.j.entry(max(open_, key=lambda x: x.get("updated") or x["created"])["id"]) or open_[0]
+            self.cur = e
+            self._load_into_editor(e)
+            self.st["derniere"] = e["id"]; save_settings(self.st)
+            self.txt.mark_set("insert", "end-1c"); self.txt.see("insert")
+            self._highlight_list(); self._focus_editor()
+            self.status(f"\U0001f4c5 Entr\u00e9e du {date_fr(dt.datetime.combine(d, dt.time()), False)}")
+            return
+        if es:
+            self.status("\U0001f512 Ce jour-l\u00e0 n'a qu'une entr\u00e9e scell\u00e9e : clique-la dans la liste pour l'ouvrir.")
+        self.cur = self.j.new_entry(created=f"{ds}T12:00:00")
+        self._load_into_editor(self.cur)
+        self._highlight_list(); self._focus_editor()
+        if not es:
+            self.status(f"\u2795 Nouvelle entr\u00e9e pour le {date_fr(dt.datetime.combine(d, dt.time()), False)} (enregistr\u00e9e d\u00e8s que tu \u00e9cris).")
 
     def _filtered(self):
         es = self.j.entries()
