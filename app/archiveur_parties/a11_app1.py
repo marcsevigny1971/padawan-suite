@@ -269,6 +269,7 @@ class _ArchiveurAppPartie1:
         self.bind("<Control-V>", self._global_paste)
         self.bind("<Escape>", lambda e: self._collapse_bottom() if self._bottom_open else None)
         self._bind_v5_keys()
+        self.after(1500, self._cs_start_polling)  # vidéos CaptureScreen → fiches
         self.after(300, self._init_sashes)
         self.after(600, self._init_sashes)
 
@@ -592,6 +593,13 @@ class _ArchiveurAppPartie1:
              "Lire ici, dans l'aperçu (lecteur intégré) — Ctrl+Espace = lecture/pause.\n"
              "Désactivable dans ⚙ Réglages : ▶ ouvre alors le lecteur externe."),
             ("ext", "↗ Externe", self.open_selected_media, False, "Ouvrir le média dans le lecteur externe (Windows, VLC ou mpv)"),
+            ("online", "▶ Lecteur en ligne", self.embed_play, False,
+             "Lecteur OFFICIEL de la plateforme (YouTube, Vimeo, TikTok, Spotify, SoundCloud, Twitch…) dans une\n"
+             "petite fenêtre propre — Ctrl+L. Contenu protégé (Tubi, Netflix…) : ouvre le site officiel."),
+            ("rec", "🎥 Enregistrer", self.record_screen, True,
+             "Enregistrer l'écran (CaptureScreen) — Ctrl+Maj+E.\n"
+             "Tout l'écran, une fenêtre ou une zone, avec le son, le micro, la webcam, le dessin à l'écran…\n"
+             "Quand tu arrêtes, la vidéo est ajoutée toute seule à cette fiche (ou à une nouvelle)."),
             ("fav", "☆ Favori", self.toggle_favorite, False, "Ajouter aux favoris / retirer (Ctrl+D)"),
             ("coll", "📚 Collections ▾", lambda: self._post_menu(self._act_btns["coll"], self._build_coll_menu()), False,
              "Classer l'archive dans une ou plusieurs collections"),
@@ -606,6 +614,11 @@ class _ArchiveurAppPartie1:
              "Copier le lien / le résumé, vérifier en ligne, exporter en ZIP, convertir en MP4, transcrire…"),
         ):
             self._act_btns[key] = act.add(self._btn(act, txt, cmd, hi=hi), tip)
+        try:  # 🎥 Enregistrer bien visible (rouge « REC »), meme taille que les autres boutons
+            self._act_btns["rec"].configure(bg="#D7263D", fg="#FFFFFF", activebackground="#FF4D6D",
+                                            activeforeground="#FFFFFF")
+        except Exception:
+            pass
         self._act_flow = act
 
         # bandeau « Ranger dans X ? » (suggestion, rien n'est forcé)
@@ -888,11 +901,13 @@ class _ArchiveurAppPartie1:
             can_play = bool(main) or bool(has and list_images(self._preview_path))
             for key, b in self._act_btns.items():
                 ok = has
-                if key == "play":
+                if key == "rec":
+                    ok = True
+                elif key == "play":
                     ok = can_play
                 elif key == "ext":
                     ok = bool(main)
-                elif key in ("orig", "copy"):
+                elif key in ("orig", "copy", "online"):
                     ok = has and bool(self._entry_url())
                 elif key == "conv":
                     ok = is_vid and bool(find_ffmpeg())
@@ -1374,6 +1389,14 @@ class _ArchiveurAppPartie1:
                        ("path", main) if main else None)
         self._set_card("online", self._online_text(info), ("action", "online"))
         self._set_card("collections", self._collections_text(info), ("action", "collections"))
+        try:  # embeds : bouton « ▶ Lecteur en ligne » / contenu protégé
+            self._embed_preview_update(info)
+        except Exception:
+            logger.exception("aperçu embed")
+        try:  # 🔖 repères des enregistrements CaptureScreen
+            self._cs_markers_update(info)
+        except Exception:
+            logger.exception("repères capture")
 
         # tags / notes
         tags = parse_tags(info.get("tags") or [])

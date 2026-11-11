@@ -894,6 +894,9 @@ class _ArchiveurAppPartie3:
 
     def _build_tools_menu(self):
         m = self._menu()
+        m.add_command(label="🎥 Enregistrer l'écran (CaptureScreen)…  (Ctrl+Maj+E)", command=self.record_screen)
+        m.add_command(label="📥 Importer une vidéo (fichier sur l'ordi)…", command=self.import_video_dialog)
+        m.add_separator()
         m.add_command(label="✔ Vérifier les archives (intégrité)…", command=self.verify_dialog)
         m.add_command(label="📡 Vérifier si les originaux sont encore en ligne (liste affichée)",
                       command=lambda: self.check_online_selected(True))
@@ -1618,7 +1621,11 @@ class _ArchiveurAppPartie3:
             self.bind(seq, lambda e: (self.toggle_favorite(), "break")[1])
         for seq in ("<Control-e>", "<Control-E>"):
             self.bind(seq, lambda e: (self.export_zip_dialog("selection"), "break")[1])
+        for seq in ("<Control-Shift-E>", "<Control-Shift-e>"):  # 🎥 enregistrer l'écran (CaptureScreen)
+            self.bind(seq, lambda e: (self.record_screen(), "break")[1])
         self.bind("<Control-space>", lambda e: (self.player_toggle(), "break")[1])
+        for seq in ("<Control-l>", "<Control-L>"):  # lecteur officiel en ligne (embeds)
+            self.bind(seq, lambda e: (self.embed_play(), "break")[1])
         self.bind("<Control-Left>", lambda e: None if self._in_text_field(e) else (self.player_skip(-10), "break")[1])
         self.bind("<Control-Right>", lambda e: None if self._in_text_field(e) else (self.player_skip(10), "break")[1])
         for seq in ("<Control-plus>", "<Control-equal>", "<Control-KP_Add>"):

@@ -58,6 +58,12 @@ SCENARIOS = [
      ["Ouvre Padawan IA (Ollama local) : tes questions restent sur ton PC.",
       "Dans Recherche Padawan, le bouton \u00ab Demander \u00e0 Padawan \u00bb r\u00e9sume ce que tu as trouv\u00e9 dans tes donn\u00e9es."],
      [("Ouvrir Padawan IA", "padawan"), ("Recherche Padawan", "recherche")]),
+    ("\U0001f3a5 Enregistrer ton \u00e9cran pour enseigner",
+     ["Ouvre CaptureScreen (ic\u00f4ne du Bureau, menu D\u00e9marrer ou ic\u00f4ne Padawan > CaptureScreen).",
+      "Choisis \u00c9cran complet, une Fen\u00eatre, une Zone ou le Son seulement, puis le gros bouton \u23fa (ou Ctrl+Maj+R).",
+      "Pendant l'enregistrement : Ctrl+Maj+K pose un rep\u00e8re (chapitre), Ctrl+Maj+D pour dessiner \u00e0 l'\u00e9cran.",
+      "\u00c0 la fin, l'\u00e9cran \u00ab Bravo ! \u00bb propose Regarder, Couper, Outils (version \u00e0 partager, GIF\u2026) ou l'Archiveur."],
+     [("Ouvrir CaptureScreen", "capture")]),
     ("\U0001f4d3 Tenir ton journal de bord (et partager un passage)",
      ["Ctrl+Alt+J (ou ic\u00f4ne Padawan > Journal de bord) : une nouvelle entr\u00e9e s'ouvre, avec la date stellaire.",
       "Colle n'importe quoi (Ctrl+V) : texte, capture d'\u00e9cran, image, fichier ou lien. Un lien devient une carte : "
@@ -101,7 +107,7 @@ def run_splash(seconds=4.5):
     sub = cv.create_text(cx, 228, text="", fill=C["DIM"], font=("Segoe UI", 10))
     cv.create_text(cx, 280, text="clic pour passer", fill="#4a5b7a", font=("Segoe UI", 8))
     msgs = ["Padawan \u00b7 ton assistant IA local", "Grimoire \u00b7 tes notes et recherches", "Archiveur \u00b7 tes vid\u00e9os et pages web",
-            "Facteur \u00b7 range tes fichiers tout seul", "Journal de bord \u00b7 ton r\u00e9cit de capitaine", "Arsenal \u00b7 ta bo\u00eete \u00e0 outils", "Recherche \u00b7 Ctrl+Alt+R partout",
+            "Facteur \u00b7 range tes fichiers tout seul", "Journal de bord \u00b7 ton r\u00e9cit de capitaine", "Arsenal \u00b7 ta bo\u00eete \u00e0 outils", "CaptureScreen \u00b7 enregistre ton \u00e9cran pour enseigner", "Recherche \u00b7 Ctrl+Alt+R partout",
             "Tout reste sur ton PC. On y va !"]
     t0 = _t.time()
     done = [False]

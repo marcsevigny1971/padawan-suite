@@ -22,3 +22,4 @@ watchdog>=4.0
 pywin32>=306; sys_platform == 'win32'
 pymysql>=1.1
 
+soundcard>=0.4.3   # CaptureScreen : son de l'ordinateur (WASAPI) + micro

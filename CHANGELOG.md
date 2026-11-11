@@ -1,5 +1,14 @@
 # Journal des versions — Padawan Suite
 
+## v1.3.0 — 2026.11.11 — CaptureScreen : enregistrer l'écran pour enseigner
+- Nouveau : CaptureScreen 1.3.0 (`capturescreen1.py` + `capturescreen_parties\`). Écran entier, moniteur, fenêtre ou zone, en MP4 (H.264 + AAC), son de l'ordinateur et/ou micro (module `soundcard`), 15/30/60 i/s. Clics en halo, bulle des touches, caméra en vignette, compte à rebours, pause, barre flottante. Dessin à l'écran, loupe, projecteur, tableau blanc, minuteur, repères. Bibliothèque, coupe rapide, sous-titres (faster-whisper si installé), capture PNG.
+- CaptureScreen 1.3.0 : arrêt pile à l'heure (statistiques ffmpeg toutes les 0,25 s), chien de garde qui relance un enregistrement planté ou figé (25 s), réparation d'un morceau abîmé, écran de fin « Bravo ! », test `--test-robustesse`.
+- Archiveur : bouton rouge « 🎥 Enregistrer » (la vidéo arrive dans une fiche) ; fiches et aperçus pour 52 sites via le module commun `padawan_embeds.py` (oEmbed/OpenGraph, cache 7 jours, lecteur officiel dans une petite fenêtre). Aucun contournement : contenu protégé = aperçu + lien.
+- Padawan : cartes Sources dépliables (`padawan_cartes.py`) ; errors.log tourne au-delà de 2 Mo (errors.log.1).
+- Tableau de bord 1.3.0 (suite 1.3.0, 2026.11.11) ; Premiers pas : scénario CaptureScreen ; menu de l'icône : CaptureScreen.
+- Installateur : raccourcis CaptureScreen (Bureau + menu Démarrer comme les autres) ; correctif de l'installation silencieuse (`/VERYSILENT`), où `-NoLaunch` en double faisait échouer la configuration.
+- Aucune donnée touchée.
+
 ## v1.2.5 — 2026.11.05 — Archiveur : contrôles dans la Grande fenêtre
 - « ⛶ Grande fenêtre » s'ouvre maintenant avec sa propre barre de contrôles, toujours visible : ▶/⏸ Lecture-Pause, ⏪ 10 s / 10 s ⏩, barre de position (clic ou glisser), temps, 🔊/🔇 et volume, ⛶ Plein écran, ✖ Fermer. Bulle d'aide sur chaque bouton.
 - En plein écran, la barre se replie après 3 s sans bouger la souris et revient au moindre mouvement (ou en pause).

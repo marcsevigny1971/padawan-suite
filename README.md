@@ -141,12 +141,18 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.2.5) | SHA256 |
+| Fichier (version 1.3.0) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `baf99a9885317cdd3cc150f7775c41bbc1632e8fa8757ccb28ff169b8b33b295` |
-| `Padawan-Projet.zip` | `f0beb61cc13e9bd340173fcc0971ccadb942401a0daf388f8db008286bf155a0` |
+| `Padawan-Setup.exe` | `CD64A6231E22FE628F09136A30F62ABF1C5D5C480A7793F280BCE48B76AA8DBD` |
+| `Padawan-Projet.zip` | `B17A01C288C9A7F7A7D198741336ED1D825229871F42EE73CABE5295C5501954` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.3.0 : CaptureScreen, enregistrer ton écran pour enseigner (11 novembre 2026)
+- 🎥 **CaptureScreen 1.3.0**, nouveau dans la suite : enregistre l'écran entier, un moniteur, une fenêtre ou une zone en MP4, avec le son de l'ordinateur et/ou le micro. Dessin à l'écran, loupe, projecteur, tableau blanc, repères (chapitres), coupe rapide, sous-titres. `Ctrl+Maj+R` pour démarrer/arrêter.
+- 🛡️ Plus robuste : le chrono s'arrête pile au bon moment, un enregistrement figé ou planté redémarre tout seul et tes morceaux sont gardés et réparés.
+- 🎞️ **Archiveur** : bouton rouge **🎥 Enregistrer**, la vidéo arrive directement dans une fiche. **Fiches et aperçus pour 50+ sites** (YouTube, Vimeo, TikTok, Twitch, SoundCloud, Spotify…) : titre, miniature, auteur, et le lecteur officiel du site dans une petite fenêtre. Aucun contournement : les contenus protégés gardent l'aperçu et le lien.
+- 🧭 Revue de toute la suite : Padawan (cartes Sources dépliables, journal d'erreurs qui ne grossit plus sans fin), Tableau de bord 1.3.0, Premiers pas avec un scénario CaptureScreen, raccourcis CaptureScreen au Bureau et au menu Démarrer.
 
 ## ✨ Nouveautés v1.2.5 : Archiveur, contrôles dans la Grande fenêtre (5 novembre 2026)
 - ⛶ La **Grande fenêtre** a maintenant ses boutons : lecture/pause, ±10 s, barre de position, volume, plein écran, fermer.
@@ -185,6 +191,7 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 | 🔎 **Recherche Padawan** | `Ctrl+Alt+R` : cherche partout à la fois (Grimoire, archives, Arsenal, dossiers). |
 | 🗄️ **Coffre Padawan** | Toutes tes données dans un seul .zip daté, et la remise en place sur un autre PC. |
 | 🎞️ **Archiveur** | Garde une copie des vidéos et pages web (YouTube, X, Facebook…) en MP4 lisible partout. |
+| 🎥 **CaptureScreen** | Enregistre ton écran (écran, fenêtre ou zone) avec le son, pour enseigner : dessin, loupe, repères, coupe rapide. `Ctrl+Maj+R` |
 | 📓 **Journal de bord** | Ton journal de capitaine : texte, liens permanents, images, mémos vocaux, recherche éclair, « Ce jour-là », entrées scellées et partage d'un seul passage. `Ctrl+Alt+J` |
 | 📚 **Grimoire** | Ton deuxième cerveau : notes, liens, PDF, images et mémos vocaux classés par sujets. |
 | 🧰 **Arsenal** | Des centaines d'outils, commandes et raccourcis Windows, à un clic. |

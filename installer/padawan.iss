@@ -1,10 +1,11 @@
 ﻿; Projet Padawan - installateur Inno Setup (par utilisateur, sans admin)
-#define MyVer "2026.11.05.2"
+#define MyVer "2026.11.11"
+#define MyLabel "1.3.0"
 [Setup]
 AppId={{6F4C2A71-9B3E-4D8A-A5C1-50DA0A7A2310}
 AppName=Projet Padawan
 AppVersion={#MyVer}
-AppVerName=Projet Padawan {#MyVer}
+AppVerName=Projet Padawan {#MyLabel} ({#MyVer})
 AppPublisher=Marc Sévigny
 AppPublisherURL=https://marcsevigny.ca
 AppSupportURL=https://github.com/marcsevigny1971/padawan-suite/issues
@@ -40,7 +41,7 @@ CloseApplications=no
 Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
 [Messages]
 fr.WelcomeLabel1=Bienvenue dans la Padawan Suite !
-fr.WelcomeLabel2=Tu vas installer [name/ver] : une dizaine d'outils gratuits qui travaillent ensemble (IA locale, archives, notes, rangement automatique, boîte à outils, rétro…).%n%nAucun droit d'administrateur, aucun compte, aucun mot de passe. Compte quelques minutes : Python et les modules se téléchargent si besoin.%n%nSi Windows affiche « Windows a protégé votre ordinateur », c'est normal pour un petit logiciel gratuit : « Informations complémentaires » puis « Exécuter quand même ».%n%nClique Suivant pour commencer.
+fr.WelcomeLabel2=Tu vas installer [name/ver] : une dizaine d'outils gratuits qui travaillent ensemble (IA locale, archives, capture d'écran, notes, rangement automatique, boîte à outils, rétro…).%n%nAucun droit d'administrateur, aucun compte, aucun mot de passe. Compte quelques minutes : Python et les modules se téléchargent si besoin.%n%nSi Windows affiche « Windows a protégé votre ordinateur », c'est normal pour un petit logiciel gratuit : « Informations complémentaires » puis « Exécuter quand même ».%n%nClique Suivant pour commencer.
 fr.FinishedHeadingLabel=C'est prêt, bienvenue !
 fr.FinishedLabel=La Padawan Suite est installée. Son icône turquoise apparaîtra près de l'horloge : clic droit pour tous les outils.%n%nAstuce : Ctrl+Alt+R cherche dans toute la suite.%n%nNouvelles versions et suggestions : icône Padawan > « Ressources / GitHub ».
 fr.StatusRunProgram=Préparation de la suite (Python, modules, raccourcis)… une fenêtre affiche la progression.
@@ -70,5 +71,5 @@ begin
   Result := '';
   if WizardIsTaskSelected('ollama') then Result := Result + ' -Ollama';
   if ExpandConstant('{param:TEST|0}') = '1' then Result := Result + ' -Test';
-  if WizardSilent then Result := Result + ' -NoLaunch';
+  { -NoLaunch est deja dans [Run] : le repeter faisait echouer installer_padawan.ps1 en mode silencieux (v1.3.0) }
 end;

@@ -10,8 +10,10 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.2.5"
-SUITE_VERSION = "2026.11.05.2"
+VERSION = "1.3.0"
+SUITE_VERSION = "2026.11.11"   # comparaison texte avec padawan_version.json (toujours AAAA.MM.JJ)
+SUITE_LABEL = "1.3.0"
+SUITE_AFFICHE = f"{SUITE_LABEL} ({SUITE_VERSION})"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
 NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0) if IS_WIN else 0
@@ -19,17 +21,18 @@ UPDATE_URL = "https://marcsevigny.ca/padawan_version.json"   # {"suite": "2026.1
 
 PROGS = [  # (fichier, nom, description)
     ("journal_bord.py", "Journal de bord", "Le journal du capitaine (Ctrl+Alt+J)"),
-    ("archiveur5.py", "Archiveur", "Archives et copies"),
-    ("grimoire1.py", "Grimoire", "Base de connaissances"),
-    ("messager2.py", "Messager", "Messages"),
-    ("arsenal1.py", "Arsenal", "Boîte à outils"),
+    ("archiveur5.py", "Archiveur", "Archive vidéos, posts et pages web ; 🎥 enregistre l'écran dans une fiche"),
+    ("capturescreen1.py", "CaptureScreen", "Enregistrer l'écran pour enseigner (Ctrl+Maj+R)"),
+    ("grimoire1.py", "Grimoire", "Tes notes, liens, PDF et mémos, rangés par sujets"),
+    ("messager2.py", "Messager", "Messagerie style MSN : salon, messages privés, images, vocal"),
+    ("arsenal1.py", "Arsenal", "Des centaines d'outils Windows et tes favoris, en un clic"),
     ("padawan39.py", "Padawan", "Assistant IA local (Ollama) + icône du tray"),
     ("recherche_padawan.py", "Recherche Padawan", "Une recherche pour toute la suite (Ctrl+Alt+R)"),
     ("retro1.py", "Rétro", "C64 · DOS · Win98, jeux et atelier BASIC"),
-    ("facteur1.py", "Facteur", "Courrier / boîte"),
+    ("facteur1.py", "Facteur", "Range Téléchargements tout seul (règles) + commandes à distance signées"),
     ("coffre_padawan.py", "Coffre Padawan", "Sauvegarde / restauration de toutes tes donn\u00e9es"),
-    ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers", "Fichiers"),
-    ("premiers_pas.py", "Premiers pas", "Guide de d\u00e9marrage en 5 minutes"),
+    ("gestionnaire_fichiers5.py", "Gestionnaire de fichiers", "Fichiers à deux panneaux, style Norton Commander (clavier + souris)"),
+    ("premiers_pas.py", "Premiers pas", "Guide de d\u00e9marrage en 5 minutes (sc\u00e9narios pas \u00e0 pas)"),
     ("chantier1.py", "Chantier", "Serveurs Web / SQL / FTP / MQTT à la demande"),
 ]
 
@@ -66,10 +69,10 @@ def check_update():
         if not pub:
             return "Aucune version publiée en ligne pour l'instant."
         if pub > SUITE_VERSION:
-            return f"⬆ Nouvelle version {pub} disponible (tu as {SUITE_VERSION}). {d.get('notes', '')}".strip()
-        return f"✔ À jour (version {SUITE_VERSION})."
+            return f"⬆ Nouvelle version {pub} disponible (tu as {SUITE_AFFICHE}). {d.get('notes', '')}".strip()
+        return f"✔ À jour (version {SUITE_AFFICHE})."
     except Exception:
-        return f"Vérification impossible (hors ligne ou aucune version publiée). Version installée : {SUITE_VERSION}."
+        return f"Vérification impossible (hors ligne ou aucune version publiée). Version installée : {SUITE_AFFICHE}."
 
 SECRET_RX = re.compile(r'(?i)(pass(word|wd)?|mot[ _-]?de[ _-]?passe|pwd|secret|token|api[_-]?key|cl[eé])(["\']?\s*[:=]\s*)(["\']?)[^\s"\',;]+')
 
@@ -94,7 +97,7 @@ def make_report():
     os.makedirs(dest_dir, exist_ok=True)
     zp = os.path.join(dest_dir, "rapport_padawan_" + time.strftime("%Y%m%d_%H%M%S") + ".zip")
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
-        info = [f"Rapport de problème - suite Padawan {SUITE_VERSION}", time.strftime("%Y-%m-%d %H:%M:%S"),
+        info = [f"Rapport de problème - suite Padawan {SUITE_AFFICHE}", time.strftime("%Y-%m-%d %H:%M:%S"),
                 f"Python {sys.version.split()[0]} - {sys.platform}", ""]
         for f, n, _ in PROGS:
             p = os.path.join(HERE, f)
@@ -135,7 +138,7 @@ def run_gui():
     # v1.2.3 : couleurs vivantes (le theme commun les remplace en direct)
     TH = {"BG": BG, "PANEL": PANEL, "TEXT": FG, "DIM": DIM, "ACC2": ACC, "OK": OK, "REC": BAD, "BTN": "#334155",
           "DEEP": "#0b1220"}
-    root = tk.Tk(); root.title(f"{APP} {VERSION} - suite Padawan {SUITE_VERSION}"); root.configure(bg=BG)
+    root = tk.Tk(); root.title(f"{APP} {VERSION} - suite Padawan {SUITE_AFFICHE}"); root.configure(bg=BG)
     root.geometry("900x640"); root.minsize(760, 380)
     # Ouvre agrandi (maximise) comme le Gestionnaire de fichiers
     try:
@@ -196,8 +199,8 @@ def run_gui():
                 zp = make_report()
                 UIQ.put(lambda: (messagebox.showinfo(APP, f"Rapport créé (mots de passe masqués) :\n{zp}\n\nEnvoie ce fichier à qui t'aide.", parent=root),
                                  os.startfile(os.path.dirname(zp)) if IS_WIN else None))
-            except Exception as e:
-                UIQ.put(lambda: messagebox.showerror(APP, f"Rapport impossible : {e}", parent=root))
+            except Exception as e:  # (correctif : e n'existe plus quand la file UI execute la fonction)
+                UIQ.put(lambda m=str(e): messagebox.showerror(APP, f"Rapport impossible : {m}", parent=root))
         threading.Thread(target=work, daemon=True).start()
     btn("🧰 Rapport de problème", report)
     btn("⬆ Vérifier les mises à jour", lambda: threading.Thread(target=lambda: UIQ.put(lambda v=check_update(): upd_var.set("Mises à jour : " + v)), daemon=True).start())
@@ -210,7 +213,7 @@ def run_gui():
         pass
     fk = tk.Frame(root, bg="#000"); fk.pack(fill="x", side="bottom")
     def about():
-        messagebox.showinfo(APP, f"Suite Padawan {SUITE_VERSION}\n{APP} {VERSION}\n\n" +
+        messagebox.showinfo(APP, f"Suite Padawan {SUITE_AFFICHE}\n{APP} {VERSION}\n\n" +
                             "\n".join(f"{n:<26} {file_version(os.path.join(HERE, f))}" for f, n, _ in PROGS) +
                             "\n\nF1 Aide · F5 Rafraîchir · F10 Quitter\nProjet Padawan - Marc Sévigny", parent=root)
     for k, t, c in (("F1", "Aide / À propos", about), ("F5", "Rafraîchir", lambda: refresh(True)), ("F10", "Quitter", root.destroy)):

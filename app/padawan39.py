@@ -757,6 +757,11 @@ def ensure_model(name: str, cancel: Optional[threading.Event] = None) -> Tuple[b
 
 
 def log(msg: str) -> None:
+    try:  # rotation : errors.log garde au plus ~2 Mo (+ errors.log.1), il ne grossit plus sans fin
+        if os.path.getsize(LOG_FILE) > 2 * 1024 * 1024:
+            os.replace(LOG_FILE, LOG_FILE + ".1")
+    except OSError:
+        pass
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}\n")
@@ -3429,7 +3434,8 @@ class Padawan(tk.Tk):
             "1.0",
             "Rien encore.\n\n"
             "1. Lance une chasse (barre CHASSE ou Entrée).\n"
-            "2. Clique une carte Sources → le texte s'affiche ici.\n"
+            "2. Clique une carte Sources → les détails se déplient sur place ;\n"
+            "   « Lire » → le texte complet s'affiche ici.\n"
             "3. Clic droit sur un lien = navigateur.\n\n"
             "Astuce: « Lire top 3 » enchaîne les 3 premières sources.",
         )
@@ -3667,6 +3673,15 @@ class Padawan(tk.Tk):
         self.draw_watch()
 
     def draw_sources(self):
+        """Cartes Sources dépliables (padawan_cartes.py) ; l'ancien affichage sert de secours."""
+        try:
+            import padawan_cartes as _pc
+            return _pc.draw_sources(self, globals())
+        except Exception as e:
+            log(f"cartes dépliables : {e}")
+            return self._draw_sources_classic()
+
+    def _draw_sources_classic(self):
         for w in self.src_in.winfo_children():
             w.destroy()
         if not self.hits:

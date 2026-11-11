@@ -345,6 +345,15 @@ def archive_fallback_html(
     return info_out
 
 
+def _embed_attach_safe(root: str, info: Dict[str, Any], url: str, log: Callable[[str], None]) -> Dict[str, Any]:
+    """Aperçu oEmbed/OpenGraph + lecteur officiel (padawan_embeds) ; n'empêche jamais l'archivage."""
+    try:
+        return embed_attach(root, info, url, log)
+    except Exception:
+        logger.exception("embed_attach")
+        return info
+
+
 def archive_url(
     url: str,
     root: str,
@@ -371,8 +380,25 @@ def archive_url(
     os.makedirs(root, exist_ok=True)
     platform = detect_platform(url)
     log(f"> Archivage ({platform}): {url}")
+    emb = embed_detect(url)
     if page_mode:
         info = archive_webpage(url, root, log, cancel_event=cancel_event, capture=web_capture)
+        info = _embed_attach_safe(root, info, url, log)
+        if tags or notes:
+            info = update_tags_notes(root, str(info["folder"]), tags or [], notes or "")
+        return info
+    if emb.get("protected"):
+        # site protégé (DRM) : aucun téléchargement de la vidéo, on garde la page, l'aperçu et le lien
+        log(f"🔒 {emb.get('label') or 'Site protégé'} : contenu protégé (DRM). "
+            "L'Archiveur garde l'aperçu + le lien ; regarde-le sur le site officiel.")
+        try:
+            info = archive_webpage(url, root, log, cancel_event=cancel_event, capture=web_capture)
+        except ArchiveCancelled:
+            raise
+        except Exception as ex:
+            log(f"Page web complète impossible ({friendly_error(ex)}) — repli métadonnées.")
+            info = archive_fallback_html(url, root, log, cancel_event=cancel_event)
+        info = _embed_attach_safe(root, info, url, log)
         if tags or notes:
             info = update_tags_notes(root, str(info["folder"]), tags or [], notes or "")
         return info
@@ -421,6 +447,7 @@ def archive_url(
         if platform == "x" and use_fx:
             enrich_x_thread(os.path.join(root, str(info.get("folder"))), url, log)
             info = load_info(os.path.join(root, str(info.get("folder")))) or info
+    info = _embed_attach_safe(root, info, url, log)
     if tags or notes:
         info = update_tags_notes(root, str(info["folder"]), tags or [], notes or "")
     return info

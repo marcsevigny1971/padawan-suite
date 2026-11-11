@@ -38,6 +38,7 @@ New-AppShortcut "Gestionnaire de fichiers" "gestionnaire_fichiers5.py" "gestionn
 $arch = "archiveur5.py"
 foreach ($cand in "archiveur5.py","archiveur4.py","archiveur3.py","archiveur2.py","archiveur1.py") { if (Test-Path (Join-Path $Root $cand)) { $arch = $cand; break } }
 New-AppShortcut "Archiveur" $arch "archiveur.ico"
+New-AppShortcut "CaptureScreen" "capturescreen1.py" "capturescreen1.ico"
 New-AppShortcut "Arsenal" "arsenal1.py" "arsenal1.ico"
 New-AppShortcut "Grimoire" "grimoire1.py" "grimoire1.ico"
 New-AppShortcut "Facteur" "facteur1.py" "facteur1.ico"

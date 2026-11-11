@@ -138,6 +138,7 @@ PROGRAMMES = {  # cle : (fichier, nom)
     "padawan": ("padawan39.py", "Padawan IA"),
     "tableau": ("tableau_bord.py", "Tableau de bord"),
     "archiveur": ("archiveur5.py", "Archiveur"),
+    "capture": ("capturescreen1.py", "CaptureScreen"),
     "grimoire": ("grimoire1.py", "Grimoire"),
     "journal": ("journal_bord.py", "Journal de bord"),
     "arsenal": ("arsenal1.py", "Arsenal"),

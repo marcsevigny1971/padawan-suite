@@ -188,10 +188,23 @@ def main():
     parser.add_argument("--stats", action="store_true", help="statistiques des archives")
     parser.add_argument("--folders", action="append", help="dossier(s) d'archive pour --check-online / --export-zip")
     parser.add_argument("--wait-lock", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--attacher-captures", action="store_true",
+                        help="ranger dans leurs fiches les vidéos CaptureScreen en attente (sans fenêtre)")
+    parser.add_argument("--importer-video", metavar="FICHIER", action="append",
+                        help="importer une vidéo dans une nouvelle fiche (ou --folder X)")
     parser.add_argument("--font-delta", type=int, default=None, help="test UI : taille du texte (-3 à 8)")
     parser.add_argument("--shot-action", default="", help="test UI : play|settings|help|stats|verify|media|multi|transcript[@dossier]")
     args = parser.parse_args()
     root = args.root or load_cfg().get("archive_root") or DEFAULT_ROOT
+    if args.attacher_captures or args.importer_video:
+        for f in args.importer_video or []:
+            r = cs_attach_file(root, (args.folders or [""])[0], f, os.path.splitext(os.path.basename(f))[0], from_capture=False)
+            _cli_log(f"📥 Importé : {r['file']} → {r['folder']} ({r['how']})")
+        if args.attacher_captures:
+            cs_ensure_collection(root)
+            res = cs_process_results(root, _cli_log)
+            _cli_log(f"🎥 {len(res)} vidéo(s) CaptureScreen rangée(s) dans leurs fiches.")
+        raise SystemExit(0)
     rc = _run_v5_cli(args, root)
     if rc is not None:
         raise SystemExit(rc)

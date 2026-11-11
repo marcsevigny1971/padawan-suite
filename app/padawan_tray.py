@@ -1023,6 +1023,7 @@ def setup_tray(
         on_recherche = _suite_app("recherche_padawan.py", "Recherche Padawan")
         on_coffre = _suite_app("coffre_padawan.py", "Coffre Padawan")
         on_journal = _suite_app("journal_bord.py", "Journal de bord")
+        on_capture = _suite_app("capturescreen1.py", "CaptureScreen")
 
         def on_journal_coller(icon=None, item=None):  # presse-papiers -> entree du jour, sans grande fenetre
             def _go():
@@ -1073,6 +1074,7 @@ def setup_tray(
             TrayMenuItem("\U0001f4d3 Journal de bord (Ctrl+Alt+J)\u2026", on_journal),
             TrayMenuItem("\U0001f4cb Coller dans le journal (Ctrl+Alt+K)", on_journal_coller),
             TrayMenuItem("Archiveur…", on_archiveur),
+            TrayMenuItem("\U0001f3a5 CaptureScreen (enregistrer l'écran)\u2026", on_capture),
             TrayMenuItem("Grimoire…", on_grimoire),
             TrayMenuItem("Messager…", on_messager),
             TrayMenuItem("Arsenal…", on_arsenal),

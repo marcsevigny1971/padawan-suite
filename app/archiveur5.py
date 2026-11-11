@@ -44,7 +44,7 @@ from __future__ import annotations
 # Version lue par le Tableau de bord : APP_FILE_VER = 5
 import os as _os_parties
 
-_PARTIES = ["a01_config.py", "a02_pont_grimoire.py", "a03_index_recherche.py", "a04_medias_ffmpeg.py", "a05_telechargement.py", "a06_codecs_lecteurs.py", "a07_collections.py", "a08_transcription_web.py", "a09_x_verif_export.py", "a10_widgets.py", "a11_app1.py", "a11_app2.py", "a11_app3.py", "a11_app4_assemblage.py", "a12_cli.py"]
+_PARTIES = ["a01_config.py", "a02_pont_grimoire.py", "a03_index_recherche.py", "a04_medias_ffmpeg.py", "a05_telechargement.py", "a06_codecs_lecteurs.py", "a07_collections.py", "a08_transcription_web.py", "a09_x_verif_export.py", "a10_widgets.py", "a10b_embeds.py", "a10c_capture.py", "a11_app1.py", "a11_app2.py", "a11_app3.py", "a11_app4_assemblage.py", "a12_cli.py"]
 
 
 def _charger_parties(ns) -> None:
