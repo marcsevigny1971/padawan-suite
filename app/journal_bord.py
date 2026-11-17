@@ -1471,7 +1471,7 @@ def send_to_grimoire(j, e, embeds):
 
 # ------------------------------------------------------------------ IA locale (Ollama, facultatif)
 def ollama_model():
-    cfg = pc.read_json(os.path.join(HERE, "config.json"), {}) or {}
+    cfg = pc.read_json(pc.padawan_file("config.json") if hasattr(pc, "padawan_file") else os.path.join(HERE, "config.json"), {}) or {}
     return cfg.get("model") or cfg.get("modele") or "dolphin3:8b"
 
 

@@ -209,7 +209,7 @@ def search_all(q, st=None, log=None):
 def ollama_model(st):
     if st.get("modele"):
         return st["modele"]
-    cfg = pc.read_json(os.path.join(pc.HERE, "config.json"), {}) or {}
+    cfg = pc.read_json(pc.padawan_file("config.json") if hasattr(pc, "padawan_file") else os.path.join(pc.HERE, "config.json"), {}) or {}
     return cfg.get("model") or ""
 
 

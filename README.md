@@ -141,12 +141,19 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.3.0) | SHA256 |
+| Fichier (version 1.4.0) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `CD64A6231E22FE628F09136A30F62ABF1C5D5C480A7793F280BCE48B76AA8DBD` |
-| `Padawan-Projet.zip` | `B17A01C288C9A7F7A7D198741336ED1D825229871F42EE73CABE5295C5501954` |
+| `Padawan-Setup.exe` | `266C0500AE41ED0235BBA2CF82EF65E004F5B562DAFEEF252AEC33359ED55EDE` |
+| `Padawan-Projet.zip` | `2CF165D83F742B71429F4FCD5A20F3541AB713D3CBCE536D152FE9FD26EB059B` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.4.0 : prompts, jeux et briefings sourcés (17 novembre 2026)
+- 📜 **Panneau Prompts** (`Ctrl+P`) : tes prompts favoris, modifiables, avec un prompt actif par rôle.
+- 🎮 **Jouer** : aventures textuelles **Fallout**, **Polar**, **Donjon**, et **Créer un jeu**. Pip-Boy avec PV, radiations, faim, soif, quêtes et un **inventaire qui se met vraiment à jour** ; les dés d20 influencent tes barres.
+- 📰 **Nouvelles** : deux briefings faits à partir d'une recherche web, avec des sources **datées et citées**. **🌍 Géopoliticologue du futur** (régions, acteurs, scénarios, signaux faibles, niveau de confiance) et **🔭 Découvertes & avancées** (science, IA, médecine, espace, énergie…, avec une échelle « wow »). Note honnête : avec un petit modèle local, la qualité varie d'un jour à l'autre. Vérifie les sources avant de citer.
+- 🔎 Padawan s'ouvre de nouveau sur le **Chercheur**.
+- 🔒 Réglages privés rangés dans `%APPDATA%\Padawan`, avec **migration automatique** (l'ancien fichier est gardé en copie). Désinstaller ne fait plus disparaître tes réglages.
 
 ## ✨ Nouveautés v1.3.0 : CaptureScreen, enregistrer ton écran pour enseigner (11 novembre 2026)
 - 🎥 **CaptureScreen 1.3.0**, nouveau dans la suite : enregistre l'écran entier, un moniteur, une fenêtre ou une zone en MP4, avec le son de l'ordinateur et/ou le micro. Dessin à l'écran, loupe, projecteur, tableau blanc, repères (chapitres), coupe rapide, sous-titres. `Ctrl+Maj+R` pour démarrer/arrêter.

@@ -36,8 +36,20 @@ except Exception:  # CLI sans Tk
 APP_NAME = "Archiveur"
 APP_FILE_VER = 5
 BASE = os.path.dirname(os.path.abspath(__file__))
-CFG_FILE = os.path.join(BASE, "archiveur_config.json")
-LOG_FILE = os.path.join(BASE, "archiveur.log")
+# 2026-11-17 : réglages et journal privés hors de FTP_HOME -> C:\web_private\Archiveur (PC de Marc),
+# sinon %APPDATA%\Padawan\Archiveur. Les archives restent dans DEFAULT_ROOT (C:\web\FTP_HOME\ARCHIVEUR).
+# Migration auto : l'ancien fichier est copié puis rangé dans C:\web_private\bak\config_move_<date>\Archiveur\.
+try:
+    if BASE not in sys.path:
+        sys.path.insert(0, BASE)
+    import padawan_commun as _pc
+    PRIV_DIR = _pc.private_dir("Archiveur")
+    _pc.migrate_private("Archiveur", BASE, ("archiveur_config.json", "archiveur.log", "archiveur.log.1",
+                                            "archiveur.log.2", "archiveur.log.3"), PRIV_DIR)
+except Exception:   # padawan_commun absent : ancien comportement
+    PRIV_DIR = BASE
+CFG_FILE = os.path.join(PRIV_DIR, "archiveur_config.json")
+LOG_FILE = os.path.join(PRIV_DIR, "archiveur.log")
 _MARC_ROOT = r"C:\web\FTP_HOME\ARCHIVEUR"
 
 

@@ -27,10 +27,19 @@ def here():
     return os.environ.get("PADAWAN_COFFRE_HERE") or pc.HERE
 
 
+def priv(app):
+    """reglages prives (2026-11-17) : C:\\web_private\\<App> ou %APPDATA%\\Padawan ; tests : PADAWAN_COFFRE_HERE."""
+    if os.environ.get("PADAWAN_COFFRE_HERE"):
+        return here()
+    if hasattr(pc, "private_dir"):
+        return pc.private_dir(app)
+    return here()
+
+
 def arch_root():
     if os.environ.get("ARCHIVEUR_DATA") or os.environ.get("PADAWAN_DATA"):
         return pc.data_dir("Archiveur", "ARCHIVEUR")
-    cfg = pc.read_json(os.path.join(here(), "archiveur_config.json"), {}) or {}
+    cfg = pc.read_json(os.path.join(priv("Archiveur"), "archiveur_config.json"), {}) or {}
     return cfg.get("archive_root") or pc.data_dir("Archiveur", "ARCHIVEUR")
 
 
@@ -64,12 +73,15 @@ def sources(videos=False):
         ("grimoire/medias", os.path.join(g, "medias"), "tree"),
         ("grimoire/_inbox", os.path.join(g, "_inbox"), "tree"),
         ("archiveur", arch_root(), "archiveur" if not videos else "archiveur+"),
-        ("reglages_modules/archiveur_config.json", os.path.join(h, "archiveur_config.json"), "file"),
-        ("arsenal/arsenal.json", os.path.join(h, "arsenal.json"), "file"),
-        ("padawan/config.json", os.path.join(h, "config.json"), "file"),
-        ("padawan/memory.json", os.path.join(h, "memory.json"), "file"),
-        ("padawan/tasks.json", os.path.join(h, "tasks.json"), "file"),
-        ("facteur/facteur_config.json", os.path.join(pc.facteur_dir(), "facteur_config.json"), "facteur"),
+        ("reglages_modules/archiveur_config.json", os.path.join(priv("Archiveur"), "archiveur_config.json"), "file"),
+        ("arsenal/arsenal.json", os.path.join(priv("Arsenal"), "arsenal.json"), "file"),
+        ("padawan/config.json", os.path.join(priv("Padawan"), "config.json"), "file"),
+        ("padawan/memory.json", os.path.join(priv("Padawan"), "memory.json"), "file"),
+        ("padawan/tasks.json", os.path.join(priv("Padawan"), "tasks.json"), "file"),
+        ("padawan/prompts.json", os.path.join(priv("Padawan"), "prompts.json"), "file"),
+        ("facteur/facteur_config.json", os.path.join(priv("facteur") if os.environ.get("PADAWAN_COFFRE_HERE") is None
+                                                     and hasattr(pc, "private_dir") else pc.facteur_dir(),
+                                                     "facteur_config.json"), "facteur"),
         ("retro/retro_config.json", os.path.join(retro(), "retro_config.json"), "file"),
         ("retro/bibliotheque.json", os.path.join(retro(), "bibliotheque.json"), "file"),
         ("retro/pochettes", os.path.join(retro(), "pochettes"), "tree"),

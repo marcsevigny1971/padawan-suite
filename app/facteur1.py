@@ -105,14 +105,38 @@ class Paths:
     @classmethod
     def set(cls, d: str) -> None:
         cls.data = os.path.abspath(d)
+        cls._priv = ""
+
+    @classmethod
+    def priv(cls) -> str:
+        """2026-11-17 : réglages, journal et état privés hors de FTP_HOME -> C:\\web_private\\facteur
+        (PC de Marc), sinon %APPDATA%\\Padawan\\facteur. Le dossier de données (commandes, _Traités,
+        _Quarantaine, scripts) reste où il est. Avec --data (tests) : tout reste dans ce dossier."""
+        if os.path.abspath(cls.data) != os.path.abspath(DEFAULT_DATA_DIR):
+            return cls.data
+        d = getattr(cls, "_priv", "")
+        if d:
+            return d
+        try:
+            if BASE not in sys.path:
+                sys.path.insert(0, BASE)
+            import padawan_commun as _pc
+            d = _pc.private_dir("facteur")
+            _pc.migrate_private("facteur", cls.data, (
+                "facteur_config.json", "facteur_config.json.bak", "seen_ids.json", "facteur_etat.json",
+                "facteur.log", "facteur.log.1", "facteur.log.2", "facteur.log.3", "facteur.log.4", "facteur.log.5"), d)
+        except Exception:
+            d = cls.data
+        cls._priv = d
+        return d
 
     @classmethod
     def config(cls) -> str:
-        return os.path.join(cls.data, "facteur_config.json")
+        return os.path.join(cls.priv(), "facteur_config.json")
 
     @classmethod
     def log(cls) -> str:
-        return os.path.join(cls.data, "facteur.log")
+        return os.path.join(cls.priv(), "facteur.log")
 
     @classmethod
     def traites(cls) -> str:
@@ -124,7 +148,7 @@ class Paths:
 
     @classmethod
     def seen(cls) -> str:
-        return os.path.join(cls.data, "seen_ids.json")
+        return os.path.join(cls.priv(), "seen_ids.json")
 
     @classmethod
     def keyfile(cls) -> str:
@@ -136,11 +160,11 @@ class Paths:
 
     @classmethod
     def state(cls) -> str:
-        return os.path.join(cls.data, "facteur_etat.json")
+        return os.path.join(cls.priv(), "facteur_etat.json")
 
     @classmethod
     def signal(cls) -> str:
-        return os.path.join(cls.data, "_signal")
+        return os.path.join(cls.priv(), "_signal")
 
     @classmethod
     def creds_boites(cls) -> str:
@@ -4117,8 +4141,9 @@ MODE AVANCÉ (facultatif - la plupart des gens n'en ont pas besoin)
  La clé de connexion n'est créée que si tu cliques « Créer ma clé ».
 
 OÙ SONT MES DONNÉES ?
- C:\\web\\FTP_HOME\\FACTEUR\\ (ou Documents\\Padawan\\Facteur) :
- facteur_config.json (réglages), facteur.log (journal), _Traités.
+ C:\\web\\FTP_HOME\\FACTEUR\\ (ou Documents\\Padawan\\Facteur) : _Traités, _Quarantaine.
+ Réglages et journal (privés) : C:\\web_private\\facteur\\ (ou %APPDATA%\\Padawan\\facteur) :
+ facteur_config.json (réglages), facteur.log (journal).
 
 RACCOURCIS
  F1 : cette aide. Fichier > Masquer : Facteur continue en arrière-plan.

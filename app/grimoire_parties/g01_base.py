@@ -112,7 +112,22 @@ class Paths:
 
     @classmethod
     def log(cls) -> str:
-        return os.path.join(cls.data, "grimoire.log")
+        """2026-11-17 : le journal (privé) quitte FTP_HOME -> C:\\web_private\\Grimoire (ou %APPDATA%\\Padawan\\Grimoire).
+        grimoire.db, medias et _sauvegardes restent dans le dossier de données. --data (tests) : tout reste ensemble."""
+        if os.path.abspath(cls.data) != os.path.abspath(DEFAULT_DATA_DIR):
+            return os.path.join(cls.data, "grimoire.log")
+        try:
+            if BASE not in sys.path:
+                sys.path.insert(0, BASE)
+            import padawan_commun as _pc
+            d = _pc.private_dir("Grimoire")
+            if not getattr(cls, "_log_moved", False):
+                cls._log_moved = True
+                _pc.migrate_private("Grimoire", cls.data, ("grimoire.log", "grimoire.log.1", "grimoire.log.2",
+                                                           "grimoire.log.3"), d)
+            return os.path.join(d, "grimoire.log")
+        except Exception:
+            return os.path.join(cls.data, "grimoire.log")
 
     @classmethod
     def exports(cls) -> str:

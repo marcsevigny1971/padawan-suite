@@ -10,9 +10,9 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.3.0"
-SUITE_VERSION = "2026.11.11"   # comparaison texte avec padawan_version.json (toujours AAAA.MM.JJ)
-SUITE_LABEL = "1.3.0"
+VERSION = "1.4.0"
+SUITE_VERSION = "2026.11.17"   # comparaison texte avec padawan_version.json (toujours AAAA.MM.JJ)
+SUITE_LABEL = "1.4.0"
 SUITE_AFFICHE = f"{SUITE_LABEL} ({SUITE_VERSION})"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
@@ -78,6 +78,13 @@ SECRET_RX = re.compile(r'(?i)(pass(word|wd)?|mot[ _-]?de[ _-]?passe|pwd|secret|t
 
 def log_files():
     roots = [HERE, r"C:\web_private\chantier\logs", os.path.join(os.environ.get("LOCALAPPDATA", ""), "Padawan")]
+    try:   # 2026-11-17 : journaux prives de la suite (C:\web_private\<App> ou %APPDATA%\Padawan)
+        import padawan_commun as _pc
+        roots += [_pc.private_dir(a, create=False) for a in ("Padawan", "Arsenal", "Archiveur", "facteur", "Grimoire", "CaptureScreen")]
+    except Exception:
+        pass
+    seen = set()
+    roots = [r for r in roots if r and not (os.path.normcase(os.path.abspath(r)) in seen or seen.add(os.path.normcase(os.path.abspath(r))))]
     out = []
     for r in roots:
         if not r or not os.path.isdir(r):
@@ -273,7 +280,12 @@ if __name__ == "__main__":
         run_gui()
     except Exception:
         try:
-            open(os.path.join(HERE, "errors.log"), "a", encoding="utf-8").write(time.ctime() + " tableau_bord\n" + traceback.format_exc())
+            try:
+                import padawan_commun as _pc
+                _lp = _pc.padawan_file("errors.log")
+            except Exception:
+                _lp = os.path.join(HERE, "errors.log")
+            open(_lp, "a", encoding="utf-8").write(time.ctime() + " tableau_bord\n" + traceback.format_exc())
         except Exception:
             pass
         raise

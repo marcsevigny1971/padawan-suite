@@ -3,7 +3,8 @@
 Padawan commun 1.0 - chemins des donnees de la suite et lancement des programmes.
 Utilise par Premiers pas, Recherche Padawan et Coffre Padawan.
 Meme logique que les modules : variable <APP>_DATA / PADAWAN_DATA, sinon C:\\web\\FTP_HOME\\<SOUS>
-(PC de Marc), sinon Documents\\Padawan\\<App>. Reglages perso : %APPDATA%\\Padawan (jamais FTP_HOME).
+(PC de Marc), sinon Documents\\Padawan\\<App>. Reglages perso : C:\\web_private\\<App> (PC de Marc)
+ou %APPDATA%\\Padawan (jamais FTP_HOME) : private_dir(), migrate_private().
 """
 import os, sys, json, subprocess, unicodedata
 
@@ -64,12 +65,20 @@ def grimoire_db():
 
 
 def archiveur_root():
-    cfg = read_json(os.path.join(HERE, "archiveur_config.json"), {}) or {}
+    cfg = read_json(archiveur_config(), {}) or {}
     return cfg.get("archive_root") or data_dir("Archiveur", "ARCHIVEUR")
 
 
+def archiveur_config():
+    p = private_file("Archiveur", "archiveur_config.json")
+    old = os.path.join(HERE, "archiveur_config.json")
+    return p if os.path.isfile(p) or not os.path.isfile(old) else old
+
+
 def arsenal_json():
-    return os.path.join(HERE, "arsenal.json")
+    p = private_file("Arsenal", "arsenal.json")
+    old = os.path.join(HERE, "arsenal.json")
+    return p if os.path.isfile(p) or not os.path.isfile(old) else old
 
 
 def facteur_dir():
@@ -95,6 +104,130 @@ def retro_dir():
     if os.path.isdir(p):
         return p
     return os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Padawan", "Retro")
+
+
+# ── Réglages et état privés (2026-11-17) ─────────────────────────────────────
+# PC de Marc : C:\web_private\<App>  (jamais sous FTP_HOME, qui est publié sur le web)
+# Autre PC   : %APPDATA%\Padawan (Padawan lui-même) ou %APPDATA%\Padawan\<App>
+# Tests      : <APP>_PRIVATE (dossier d'une app) ou PADAWAN_PRIVATE_ROOT\<App> (toute la suite, bak compris).
+WEB_PRIVATE = r"C:\web_private"
+
+
+def _appdata_padawan():
+    return os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Padawan")
+
+
+def has_web_private():
+    return IS_WIN and os.path.isdir(WEB_PRIVATE)
+
+
+def private_dir(app="Padawan", create=True):
+    """Dossier privé d'une application de la suite (réglages, état, journaux, sauvegardes)."""
+    env = os.environ.get(app.upper() + "_PRIVATE", "").strip()
+    root = os.environ.get("PADAWAN_PRIVATE_ROOT", "").strip()
+    if env:
+        d = env
+    elif root:
+        d = os.path.join(root, app)
+    elif has_web_private():
+        d = os.path.join(WEB_PRIVATE, app)
+    else:
+        d = _appdata_padawan() if app.lower() == "padawan" else os.path.join(_appdata_padawan(), app)
+    if create:
+        try:
+            os.makedirs(d, exist_ok=True)
+        except OSError:
+            pass
+    return d
+
+
+def private_file(app, name):
+    return os.path.join(private_dir(app), name)
+
+
+def bak_dir():
+    """Racine des .bak : C:\\web_private\\bak (PC de Marc), sinon <privé>\\bak."""
+    root = os.environ.get("PADAWAN_PRIVATE_ROOT", "").strip()
+    if root:
+        return os.path.join(root, "bak")
+    if has_web_private():
+        return os.path.join(WEB_PRIVATE, "bak")
+    return os.path.join(_appdata_padawan(), "bak")
+
+
+def _same(a, b):
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+def migrate_private(app, old_dir, names, new_dir=None, log=None):
+    """Déménage old_dir\\<nom> vers le dossier privé de l'app (fichiers ou dossiers).
+    - ancien présent et nouveau absent : copie (avec date) vers le nouveau ;
+    - ensuite l'ancien est rangé dans bak\\config_move_<date>\\<App>\\ (jamais effacé, jamais laissé en place) ;
+    - le nouveau n'est jamais écrasé. Retourne [(nom, action)]. Ne lève jamais d'exception."""
+    import shutil, time
+    out = []
+    try:
+        new_dir = new_dir or private_dir(app)
+        if not old_dir or not os.path.isdir(old_dir) or _same(old_dir, new_dir):
+            return out
+        stamp = time.strftime("%Y%m%d")
+        dest_bak = os.path.join(bak_dir(), "config_move_" + stamp, app)
+        for name in names:
+            old = os.path.join(old_dir, name)
+            if not os.path.exists(old):
+                continue
+            new = os.path.join(new_dir, name)
+            try:
+                os.makedirs(new_dir, exist_ok=True)
+                if os.path.isdir(old):
+                    os.makedirs(new, exist_ok=True)
+                    for r, _ds, fs in os.walk(old):
+                        rel = os.path.relpath(r, old)
+                        for f in fs:
+                            t = os.path.normpath(os.path.join(new, rel, f))
+                            if not os.path.exists(t):
+                                os.makedirs(os.path.dirname(t), exist_ok=True)
+                                shutil.copy2(os.path.join(r, f), t)
+                    action = "copié"
+                elif not os.path.exists(new):
+                    tmp = new + ".migr_tmp"
+                    shutil.copy2(old, tmp)
+                    if os.path.getsize(tmp) != os.path.getsize(old):
+                        raise OSError("copie incomplète")
+                    os.replace(tmp, new)
+                    action = "copié"
+                else:
+                    action = "déjà présent (ancien rangé)"
+                os.makedirs(dest_bak, exist_ok=True)
+                b = os.path.join(dest_bak, name)
+                if os.path.exists(b):
+                    b = os.path.join(dest_bak, name + "." + time.strftime("%H%M%S"))
+                shutil.move(old, b)
+                out.append((name, action + " → bak"))
+            except Exception as ex:   # fichier verrouillé, etc. : on réessaiera au prochain démarrage
+                out.append((name, "erreur : %s" % ex))
+        if out:
+            try:
+                with open(os.path.join(dest_bak, "_migration.log"), "a", encoding="utf-8") as f:
+                    for n, a in out:
+                        f.write("%s  %s  %s -> %s : %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S"), app,
+                                                           os.path.join(old_dir, n), os.path.join(new_dir, n), a))
+            except Exception:
+                pass
+        if log:
+            for n, a in out:
+                try:
+                    log("migration %s : %s %s" % (app, n, a))
+                except Exception:
+                    pass
+    except Exception as ex:
+        out.append(("*", "erreur : %s" % ex))
+    return out
+
+
+def padawan_file(name):
+    """Fichier privé de Padawan (config.json, memory.json, tasks.json...)."""
+    return private_file("Padawan", name)
 
 
 def norm(s):

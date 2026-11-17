@@ -11,7 +11,7 @@ Un tiroir a outils plein ecran (theme Norton bleu/cyan/jaune, Consolas) :
   multi-selection, annuler/retablir, entrees masquees, import/export (JSON, Favoris.php,
   signets Chrome/Edge, HTML), sauvegardes automatiques avec rotation, journal arsenal.log.
 
-Donnees : arsenal.json a cote de ce fichier (dans Projet Padawan, donc pris par backup.bat).
+Donnees : arsenal.json dans C:\\web_private\\Arsenal (PC de Marc, pris par backup.bat), sinon %APPDATA%\\Padawan\\Arsenal.
 Sauvegardes : _sauvegardes_arsenal\\ (rotation 25). Icones extraites : _icones_arsenal\\.
 Tests : --smoke, --shot fichier.png --geometry 1280x720 --shot-view main|editeur|securite|aide|palette|ip,
         --list (commandes calculees), --run-capture ID (entree non dangereuse, sortie console).
@@ -60,10 +60,21 @@ SEED_VERSION = 2               # contenu initial : les nouvelles entrees futures
 IS_WIN = sys.platform.startswith("win")
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE, "arsenal.json")
-LOG_FILE = os.path.join(BASE, "arsenal.log")
-BACKUP_DIR = os.path.join(BASE, "_sauvegardes_arsenal")
-ICON_DIR = os.path.join(BASE, "_icones_arsenal")
+# 2026-11-17 : données privées hors de FTP_HOME -> C:\web_private\Arsenal (PC de Marc), sinon
+# %APPDATA%\Padawan\Arsenal. Migration auto : l'ancien fichier à côté du programme est copié puis
+# rangé dans C:\web_private\bak\config_move_<date>\Arsenal\.
+try:
+    sys.path.insert(0, BASE)
+    import padawan_commun as _pc
+    DATA_DIR = _pc.private_dir("Arsenal")
+    _pc.migrate_private("Arsenal", BASE, ("arsenal.json", "arsenal.log", "arsenal.log.1", "arsenal.log.2",
+                                          "arsenal.log.3", "_sauvegardes_arsenal", "_icones_arsenal"), DATA_DIR)
+except Exception:   # padawan_commun absent : ancien comportement
+    DATA_DIR = BASE
+DATA_FILE = os.path.join(DATA_DIR, "arsenal.json")
+LOG_FILE = os.path.join(DATA_DIR, "arsenal.log")
+BACKUP_DIR = os.path.join(DATA_DIR, "_sauvegardes_arsenal")
+ICON_DIR = os.path.join(DATA_DIR, "_icones_arsenal")
 BACKUP_KEEP = 25
 BACKUP_MIN_INTERVAL = 1800.0
 PADAWAN_DIR_DEFAULT = r"C:\web\FTP_HOME\SECTION PYTHON\Projet Padawan"
@@ -280,6 +291,7 @@ def builtin_vars() -> Dict[str, str]:
             "MPCMDRUN": find_mpcmdrun(),
             "PROJET": padawan_dir(),
             "ARSENAL": BASE,
+            "ARSENAL_DATA": DATA_DIR,
             "PYTHONW": find_pythonw(),
             "PYTHON": find_python(),
             "WEB": r"C:\web" if os.path.isdir(r"C:\web") else os.path.expanduser("~"),
@@ -833,6 +845,11 @@ class Store:
         d.setdefault("seed_deleted", [])
         d.setdefault("seed_version", 0)
         d["entries"] = [fix_entry(e) for e in d["entries"] if isinstance(e, dict)]
+        for e in d["entries"]:   # 2026-11-17 : arsenal.json / arsenal.log ont déménagé dans le dossier privé
+            t = e.get("target")
+            if isinstance(t, str) and t in ("{ARSENAL}\\arsenal.json", "{ARSENAL}\\arsenal.log"):
+                e["target"] = t.replace("{ARSENAL}", "{ARSENAL_DATA}")
+                self.dirty = True
         cats = []
         for c in d["categories"]:
             if isinstance(c, dict) and c.get("id"):
@@ -1400,9 +1417,9 @@ def seed_content() -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         "(erreurs PHP, 404...).", "📜", g, requires=r"C:\xampp\apache\logs\error.log")
     g = "Arsenal"
     add(c, "monip", "Mon IP", "builtin", "myip", "Affiche ton IP publique et tes IP locales, copiables en un clic.", "🌍", g)
-    add(c, "arsenal_json", "arsenal.json (données)", "file", "{ARSENAL}\\arsenal.json", "Le fichier de données "
+    add(c, "arsenal_json", "arsenal.json (données)", "file", "{ARSENAL_DATA}\\arsenal.json", "Le fichier de données "
         "d'Arsenal (lisible). Sauvegardes auto dans _sauvegardes_arsenal.", "🗄", g)
-    add(c, "arsenal_log", "Journal Arsenal", "file", "{ARSENAL}\\arsenal.log", "Tout ce qui a été lancé et les erreurs.", "📒", g)
+    add(c, "arsenal_log", "Journal Arsenal", "file", "{ARSENAL_DATA}\\arsenal.log", "Tout ce qui a été lancé et les erreurs.", "📒", g)
 
     # ============================================================ Mes favoris web (import Favoris.php)
     c = "favoris_web"
@@ -6288,7 +6305,7 @@ Les commandes marquées « Résultat dans Arsenal » s'exécutent sans console :
 
 ## Variables dans les commandes
   {DOSSIER} {FICHIER} {HOTE} {NOM}… : demandées au lancement (avec « Parcourir… » pour les dossiers et fichiers)
-  {PROJET} : le dossier du Projet Padawan · {ARSENAL} : le dossier d'Arsenal · {WEB} : C:\\web
+  {PROJET} : le dossier du Projet Padawan · {ARSENAL} : le dossier d'Arsenal · {ARSENAL_DATA} : ses données · {WEB} : C:\\web
   {PYTHON} / {PYTHONW} : Python 3.14 · {POWERSHELL} : Windows PowerShell
   {MPCMDRUN} : Microsoft Defender, chemin le plus récent trouvé automatiquement
   %APPDATA%, %USERPROFILE%… : variables Windows acceptées dans les chemins
@@ -6309,7 +6326,7 @@ Les commandes marquées « Résultat dans Arsenal » s'exécutent sans console :
   Affichage → Thème : Norton (bleu), Sombre, Clair · F5 : rafraîchir · F1 : cette aide
 
 ## Fichiers
-  arsenal1.py : le programme · arsenal.json : tes données · arsenal.log : le journal
+  arsenal1.py : le programme · arsenal.json : tes données · arsenal.log : le journal (dans C:\\web_private\\Arsenal ou %APPDATA%\\Padawan\\Arsenal)
   _sauvegardes_arsenal\\ : copies datées (25 dernières) · _icones_arsenal\\ : icônes extraites des programmes
 """
 

@@ -1,5 +1,15 @@
 # Journal des versions — Padawan Suite
 
+## v1.4.0 — 2026.11.17 — Padawan : prompts, jeux et briefings
+- Padawan v39.3 → v39.5.
+- 📜 Panneau Prompts (`Ctrl+P`) : favoris modifiables, un prompt actif par rôle, en mode « remplacer » ou « ajouter » ; copie de sécurité avant chaque écriture.
+- 🎮 Jouer : Fallout, Polar, Donjon et « Créer un jeu ». Pip-Boy (PV, RAD, faim, soif, quêtes, inventaire). L'inventaire et les barres se mettent à jour même si le modèle formate mal son bloc de statut (lecteur tolérant et indices tirés du récit), les dés d20 pèsent sur les barres, le récit est au « tu ». Parties sauvegardées ; option « Rouvrir la dernière partie au démarrage » (désactivée par défaut).
+- 📰 Nouvelles : briefings « 🌍 Géopoliticologue du futur » et « 🔭 Découvertes & avancées ». Recherche web, sources datées et citées, faits séparés de l'interprétation, passages douteux marqués « ⚠ à vérifier ». Modes Hier / Cette semaine / « Ce qui a changé », Régénérer, export HTML. Avec un petit modèle local, la qualité varie.
+- Démarrage : Padawan s'ouvre de nouveau sur le Chercheur, avec le prompt par défaut.
+- Réglages et état privés hors du dossier des programmes : `%APPDATA%\Padawan` (Padawan) et `%APPDATA%\Padawan\<App>` (Arsenal, Archiveur, Facteur, journal du Grimoire), ou `C:\web_private\<App>` s'il existe. Migration automatique au démarrage : copie, puis l'ancien fichier est rangé dans `bak\config_move_<date>` (jamais effacé, jamais écrasé). Outil commun `padawan_commun.private_dir()` / `migrate_private()`.
+- Tableau de bord 1.4.0 (suite 1.4.0, 2026.11.17). La construction du setup refuse maintenant les réglages et l'état privés.
+- Archives, Grimoire et vidéos : inchangés.
+
 ## v1.3.0 — 2026.11.11 — CaptureScreen : enregistrer l'écran pour enseigner
 - Nouveau : CaptureScreen 1.3.0 (`capturescreen1.py` + `capturescreen_parties\`). Écran entier, moniteur, fenêtre ou zone, en MP4 (H.264 + AAC), son de l'ordinateur et/ou micro (module `soundcard`), 15/30/60 i/s. Clics en halo, bulle des touches, caméra en vignette, compte à rebours, pause, barre flottante. Dessin à l'écran, loupe, projecteur, tableau blanc, minuteur, repères. Bibliothèque, coupe rapide, sous-titres (faster-whisper si installé), capture PNG.
 - CaptureScreen 1.3.0 : arrêt pile à l'heure (statistiques ffmpeg toutes les 0,25 s), chien de garde qui relance un enregistrement planté ou figé (25 s), réparation d'un morceau abîmé, écran de fin « Bravo ! », test `--test-robustesse`.

@@ -29,6 +29,8 @@ from __future__ import annotations
 import html
 import json
 import os
+import random
+import unicodedata
 import re
 import shutil
 import subprocess
@@ -78,9 +80,20 @@ from padawan_tray import (
 )
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-MEM_FILE, CFG_FILE = os.path.join(BASE, "memory.json"), os.path.join(BASE, "config.json")
-CACHE_FILE, LOG_FILE = os.path.join(BASE, "search_cache.json"), os.path.join(BASE, "errors.log")
-TASKS_FILE = os.path.join(BASE, "tasks.json")
+# v39.5 : réglages et état privés hors de FTP_HOME -> C:\web_private\Padawan (PC de Marc),
+# sinon %APPDATA%\Padawan. Migration auto au démarrage : l'ancien fichier du dossier du
+# programme est copié puis rangé dans C:\web_private\bak\config_move_<date>\Padawan\.
+try:
+    import padawan_commun as _pc
+    PRIVATE_DIR = _pc.private_dir("Padawan")
+    _PRIVATE_MOVED = _pc.migrate_private("Padawan", BASE, (
+        "config.json", "memory.json", "tasks.json", "search_cache.json",
+        "errors.log", "errors.log.1"), PRIVATE_DIR)
+except Exception:   # padawan_commun absent : ancien comportement
+    _pc, PRIVATE_DIR, _PRIVATE_MOVED = None, BASE, []
+MEM_FILE, CFG_FILE = os.path.join(PRIVATE_DIR, "memory.json"), os.path.join(PRIVATE_DIR, "config.json")
+CACHE_FILE, LOG_FILE = os.path.join(PRIVATE_DIR, "search_cache.json"), os.path.join(PRIVATE_DIR, "errors.log")
+TASKS_FILE = os.path.join(PRIVATE_DIR, "tasks.json")
 OLLAMA, MODEL, TIMEOUT = "http://127.0.0.1:11434", "dolphin3:8b", 240
 MODEL_FALLBACK = "huihui_ai/qwen2.5-abliterate:7b"
 # Catalogue Ollama NON CENSURÉS (famille Dolphin / uncensored explicites).
@@ -98,7 +111,7 @@ UNCENSORED_MODELS = (
 MODEL_DL_MARK = " (à télécharger)"
 APP_NAME = "Padawan"
 APP_FILE_VER = 39  # v39.1: 🧹 Nouvelle conversation (Ctrl+L / Ctrl+Shift+N), Historique
-APP_SUB_VER = "39.1"
+APP_SUB_VER = "39.5"  # v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
 _APP_FILE_VER_OLD = 39  # version fichier seulement — jamais affichée comme titre produit
 ROLE_HIST_CAP = 80
 CACHE_TTL = 3 * 3600
@@ -2426,6 +2439,349 @@ def read_page(url: str, limit: int = 8000) -> str:
         return ""
 
 
+# ── v39.2: 📜 Bibliothèque de prompts (favoris éditables, actif par rôle) ────────
+# Données privées: C:\web_private\Padawan\prompts.json (jamais sous FTP_HOME).
+# .bak: C:\web_private\bak\ (copie avant chaque écriture + instantané du jour).
+# Sur un autre PC (installé par le setup) sans C:\web_private : %APPDATA%\Padawan.
+_WEB_PRIVATE = r"C:\web_private"
+_HAS_WEB_PRIVATE = os.name == "nt" and os.path.isdir(_WEB_PRIVATE)
+PROMPTS_DIR = os.environ.get("PADAWAN_PROMPTS_DIR") or (
+    PRIVATE_DIR if _pc is not None else
+    os.path.join(_WEB_PRIVATE, "Padawan") if _HAS_WEB_PRIVATE
+    else os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Padawan")
+)
+PROMPTS_FILE = os.path.join(PROMPTS_DIR, "prompts.json")
+PROMPTS_BAK_DIR = os.environ.get("PADAWAN_PROMPTS_BAK") or (
+    _pc.bak_dir() if _pc is not None else
+    os.path.join(_WEB_PRIVATE, "bak") if _HAS_WEB_PRIVATE else os.path.join(PROMPTS_DIR, "bak")
+)
+PROMPT_ROLES = ("tous", "chercheur", "capitaine", "contrarian", "compagnon")
+PROMPT_ROLE_LABELS = {
+    "tous": "Tous", "chercheur": "Chercheur", "capitaine": "Capitaine",
+    "contrarian": "Contrarian", "compagnon": "Compagnon",
+}
+PROMPT_MODES = ("remplacer", "ajouter")
+PROMPT_MODE_LABELS = {
+    "remplacer": "Remplacer le prompt par défaut",
+    "ajouter": "Ajouter au prompt par défaut",
+}
+PROMPT_VARS = ("{date}", "{question}", "{role}")
+PROMPT_TEST_Q = "Présente-toi en 3 phrases : quel style de réponse vas-tu suivre avec ce prompt?"
+
+PROMPT_SEEDS: List[Dict[str, Any]] = [
+    {
+        "name": "Explique-moi tout (exemple)",
+        "role": "tous", "mode": "ajouter", "keep_base": True,
+        "text": (
+            "MODE « EXPLIQUE-MOI TOUT » : Marc veut comprendre à fond, pas un résumé.\n"
+            "Pour {question}, couvre dans l'ordre, en sautant ce qui ne s'applique pas :\n"
+            "1. **Réponse directe** en 2-3 phrases.\n"
+            "2. **Origine / étymologie** (seulement si le mot ou le nom est éclairant).\n"
+            "3. **Histoire** : d'où ça vient, dates clés, personnes clés.\n"
+            "4. **Mécanismes** : comment ça marche concrètement, étape par étape, avec un exemple chiffré.\n"
+            "5. **Ce que disent les études** : résultats principaux, taille des effets, niveau de preuve "
+            "(solide / mitigé / faible). N'invente aucune étude : si tu n'es pas sûr, dis-le.\n"
+            "6. **Débats et limites** : ce qui est contesté, les angles morts, les idées reçues.\n"
+            "7. **Concrètement pour Marc** : applications, pièges, quoi essayer.\n"
+            "8. **Pour aller plus loin** : mots-clés de recherche, livres ou sources sérieuses.\n"
+            "Sois long et complet; titres ### et puces. Rôle actif : {role}. Date : {date}."
+        ),
+    },
+    {
+        "name": "Résumé express (exemple)",
+        "role": "tous", "mode": "remplacer", "keep_base": True,
+        "text": (
+            "MODE « RÉSUMÉ EXPRESS » : Marc est pressé.\n"
+            "- Commence par **En bref** : une phrase qui répond à {question}.\n"
+            "- Puis 3 à 5 puces maximum, une idée par puce, chiffres si disponibles.\n"
+            "- Termine par **Verdict** en une ligne.\n"
+            "- 150 mots maximum au total. Pas d'introduction, pas de conclusion molle."
+        ),
+    },
+    {
+        "name": "Avocat du diable (exemple)",
+        "role": "tous", "mode": "ajouter", "keep_base": True,
+        "text": (
+            "MODE « AVOCAT DU DIABLE » : après ta réponse, ajoute une section **Avocat du diable** :\n"
+            "- la meilleure version de la position opposée (steelman), sans caricature;\n"
+            "- les 3 objections les plus fortes contre ta propre réponse;\n"
+            "- les angles morts et les intérêts de ceux qui poussent chaque version;\n"
+            "- **Qu'est-ce qui me ferait changer d'avis?** : les faits ou données qui trancheraient."
+        ),
+    },
+    {
+        "name": "Prof patient, étape par étape (exemple)",
+        "role": "compagnon", "mode": "ajouter", "keep_base": True,
+        "text": (
+            "MODE « PROF PATIENT » : explique {question} comme un bon prof à un élève curieux.\n"
+            "- Pars de ce que Marc connaît déjà; une notion à la fois.\n"
+            "- Une analogie de la vie courante pour chaque idée difficile.\n"
+            "- Un exemple concret résolu étape par étape.\n"
+            "- Termine par un mini-quiz de 3 questions (réponses cachées à la fin, sous **Réponses**)."
+        ),
+    },
+]
+
+
+def prompt_render(text: str, *, date: str = "", question: str = "", role: str = "") -> str:
+    """Remplace {date} {question} {role} sans toucher aux autres accolades."""
+    s = str(text or "")
+    return (s.replace("{date}", date or "")
+             .replace("{question}", question or "ta question")
+             .replace("{role}", role or ""))
+
+
+class PromptStore:
+    """Favoris de prompts + prompt actif par rôle (persistant, écriture atomique + .bak)."""
+
+    def __init__(self, path: str = "", bak_dir: str = ""):
+        self.path = path or PROMPTS_FILE
+        self.bak_dir = bak_dir or PROMPTS_BAK_DIR
+        self.error = ""
+        self.data: Dict[str, Any] = {"version": 1, "prompts": [], "active": {}, "seeded": False,
+                                     "seed_v": 1, "game": ""}
+        self.migrated_note = ""
+        self.load()
+
+    # ---- fichier
+    @staticmethod
+    def _new_id() -> str:
+        return "p" + uuid.uuid4().hex[:10]
+
+    def _norm_prompt(self, p: Any) -> Optional[Dict[str, Any]]:
+        if not isinstance(p, dict):
+            return None
+        text = str(p.get("text") or "")
+        name = str(p.get("name") or "").strip() or "Sans nom"
+        role = p.get("role") if p.get("role") in PROMPT_ROLES else "tous"
+        mode = p.get("mode") if p.get("mode") in PROMPT_MODES else "remplacer"
+        kind = "jeu" if p.get("kind") == "jeu" else "normal"
+        if kind == "jeu":
+            role = "tous"
+        return {
+            "id": str(p.get("id") or self._new_id()),
+            "name": name[:120],
+            "role": role,
+            "mode": mode,
+            "keep_base": bool(p.get("keep_base", True)),
+            "text": text,
+            "example": bool(p.get("example", False)),
+            "kind": kind,
+            "builtin": str(p.get("builtin") or "")[:40],
+            "created": str(p.get("created") or now()),
+            "updated": str(p.get("updated") or now()),
+        }
+
+    def load(self) -> None:
+        raw = None
+        if os.path.isfile(self.path):
+            try:
+                with open(self.path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+            except Exception as e:
+                self.error = f"prompts.json illisible ({e}); copie gardée dans bak"
+                log(f"prompts load: {e}")
+                self.data["seeded"] = True  # ne pas ré-ensemencer par-dessus le fichier de Marc
+                try:
+                    os.makedirs(self.bak_dir, exist_ok=True)
+                    shutil.copy2(self.path, os.path.join(
+                        self.bak_dir, f"prompts.json.corrompu-{time.strftime('%Y%m%d-%H%M%S')}.bak"))
+                except Exception:
+                    pass
+        if isinstance(raw, dict):
+            prompts = [q for q in (self._norm_prompt(p) for p in (raw.get("prompts") or [])) if q]
+            seen, uniq = set(), []
+            for q in prompts:
+                if q["id"] in seen:
+                    q["id"] = self._new_id()
+                seen.add(q["id"])
+                uniq.append(q)
+            act = raw.get("active") if isinstance(raw.get("active"), dict) else {}
+            self.data = {
+                "version": 1, "prompts": uniq,
+                "active": {k: str(v) for k, v in act.items() if k in RoleRouter_ROLE_IDS and v},
+                "seeded": bool(raw.get("seeded", True)),
+                "seed_v": int(raw.get("seed_v") or 1) if str(raw.get("seed_v") or "1").isdigit() else 1,
+                "game": str(raw.get("game") or ""),
+            }
+        if not self.data.get("seeded"):
+            for s in PROMPT_SEEDS:
+                q = self._norm_prompt(dict(s, example=True))
+                if q:
+                    self.data["prompts"].append(q)
+            self.data["seeded"] = True
+            self.save()
+        if int(self.data.get("seed_v") or 1) < 2 and not self.error:
+            self._seed_games()
+            self.data["seed_v"] = 2
+            self.save()
+        if int(self.data.get("seed_v") or 1) < 3 and not self.error:
+            self._seed_v394()
+            self.data["seed_v"] = 3
+            self.save()
+
+    def _seed_v394(self) -> None:
+        """v39.4 : 📰 favoris 🌍 / 🔭 (après les jeux) + jeux intégrés non modifiés mis à jour (inventaire robuste)."""
+        pos = sum(1 for q in self.data["prompts"] if q.get("kind") == "jeu")
+        for s in NEWS_SEEDS:
+            nid = "n_" + s["builtin"]
+            if not self.get(nid):
+                q = self._norm_prompt(dict(s, id=nid, example=True))
+                if q:
+                    self.data["prompts"].insert(pos, q)
+                    pos += 1
+        new_txt = {s["builtin"]: s["text"] for s in GAME_SEEDS}
+        for q in self.data["prompts"]:
+            b = q.get("builtin") or ""
+            if q.get("kind") == "jeu" and q.get("example") and b in new_txt and q.get("text") != new_txt[b]:
+                q["text"] = new_txt[b]
+
+    def _seed_games(self) -> None:
+        """v39.3: ajoute les jeux intégrés (sans toucher aux prompts existants)."""
+        for s in reversed(GAME_SEEDS):
+            gid = "g_" + s["builtin"]
+            if not self.get(gid):
+                q = self._norm_prompt(dict(s, id=gid, example=True))
+                if q:
+                    self.data["prompts"].insert(0, q)
+        # un ancien prompt « jeu » collé en prompt normal (actif partout) : on le désactive
+        # (le prompt reste intact dans la liste) et on bascule sur le vrai Mode Jeu.
+        moved = []
+        for r, pid in list(self.data["active"].items()):
+            p = self.get(pid)
+            if p and p.get("kind") != "jeu" and re.search(
+                    r"ma[iî]tre du jeu|jeu de r[ôo]le|fallout|QUE FAIS-TU", p.get("name", "") + " " + p.get("text", ""), re.I):
+                del self.data["active"][r]
+                moved.append(p["name"])
+        if moved:
+            self.data["game"] = "g_fallout_qc"
+            self.migrated_note = (
+                f"🎮 Ton prompt « {moved[0]} » était actif comme prompt normal (c'est pour ça que ça « jouait » mal : "
+                "les règles du Chercheur et la chasse web passaient devant). Il est gardé intact dans 📜 Prompts; "
+                "Padawan lance maintenant le vrai Mode Jeu « 🎮 Fallout — Terres désolées du Québec ».")
+
+    def save(self) -> bool:
+        try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+            if os.path.isfile(self.path):
+                try:
+                    os.makedirs(self.bak_dir, exist_ok=True)
+                    shutil.copy2(self.path, os.path.join(self.bak_dir, "prompts.json.bak"))
+                    day = os.path.join(self.bak_dir, f"prompts.json.{time.strftime('%Y%m%d')}.bak")
+                    if not os.path.isfile(day):
+                        shutil.copy2(self.path, day)
+                except Exception as e:
+                    log(f"prompts bak: {e}")
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except Exception:
+                    pass
+            os.replace(tmp, self.path)
+            self.error = ""
+            return True
+        except Exception as e:
+            self.error = f"Écriture impossible : {e}"
+            log(f"prompts save: {e}")
+            return False
+
+    # ---- accès
+    def all(self) -> List[Dict[str, Any]]:
+        return self.data["prompts"]
+
+    def get(self, pid: str) -> Optional[Dict[str, Any]]:
+        for p in self.data["prompts"]:
+            if p["id"] == pid:
+                return p
+        return None
+
+    def index_of(self, pid: str) -> int:
+        for i, p in enumerate(self.data["prompts"]):
+            if p["id"] == pid:
+                return i
+        return -1
+
+    def for_role(self, role: str) -> List[Dict[str, Any]]:
+        return [p for p in self.data["prompts"] if p["role"] in ("tous", role)]
+
+    def active_id(self, role: str) -> str:
+        return str(self.data["active"].get(role) or "")
+
+    def active_for(self, role: str) -> Optional[Dict[str, Any]]:
+        p = self.get(self.active_id(role))
+        if p and p.get("kind") != "jeu" and p["role"] in ("tous", role) and (p.get("text") or "").strip():
+            return p
+        return None
+
+    def active_roles(self, pid: str) -> List[str]:
+        return [r for r, v in self.data["active"].items() if v == pid]
+
+    # ---- modifs
+    def upsert(self, p: Dict[str, Any]) -> Dict[str, Any]:
+        q = self._norm_prompt(p) or {}
+        q["updated"] = now()
+        i = self.index_of(q["id"])
+        if i >= 0:
+            q["created"] = self.data["prompts"][i].get("created") or q["created"]
+            self.data["prompts"][i] = q
+        else:
+            self.data["prompts"].insert(0, q)
+        # un prompt devenu spécifique à un rôle ne reste pas actif ailleurs
+        for r in list(self.data["active"]):
+            if self.data["active"][r] == q["id"] and q["role"] not in ("tous", r):
+                del self.data["active"][r]
+        return q
+
+    def delete(self, pid: str) -> None:
+        self.data["prompts"] = [p for p in self.data["prompts"] if p["id"] != pid]
+        for r in list(self.data["active"]):
+            if self.data["active"][r] == pid:
+                del self.data["active"][r]
+
+    def move(self, pid: str, delta: int) -> bool:
+        i = self.index_of(pid)
+        j = i + delta
+        if i < 0 or not (0 <= j < len(self.data["prompts"])):
+            return False
+        L = self.data["prompts"]
+        L[i], L[j] = L[j], L[i]
+        return True
+
+    def move_to(self, pid: str, j: int) -> bool:
+        i = self.index_of(pid)
+        if i < 0:
+            return False
+        L = self.data["prompts"]
+        j = max(0, min(len(L) - 1, j))
+        if i == j:
+            return False
+        L.insert(j, L.pop(i))
+        return True
+
+    def activate(self, pid: str, role: Optional[str] = None) -> List[str]:
+        """Active pid pour `role` (ou pour tous les rôles si le prompt est « Tous » et role=None)."""
+        p = self.get(pid)
+        if not p or p.get("kind") == "jeu":
+            return []
+        roles = [role] if role else (list(RoleRouter_ROLE_IDS) if p["role"] == "tous" else [p["role"]])
+        roles = [r for r in roles if r in RoleRouter_ROLE_IDS and p["role"] in ("tous", r)]
+        for r in roles:
+            self.data["active"][r] = pid
+        return roles
+
+    def reset(self, role: Optional[str] = None) -> None:
+        if role:
+            self.data["active"].pop(role, None)
+        else:
+            self.data["active"] = {}
+
+
+RoleRouter_ROLE_IDS = ("capitaine", "chercheur", "contrarian", "compagnon")
+
+
 # ── RoleRouter ───────────────────────────────────────────────────────────────
 
 class RoleRouter:
@@ -2489,9 +2845,10 @@ class RoleRouter:
         },
     }
 
-    def __init__(self, mem: dict, active: str = "chercheur"):
+    def __init__(self, mem: dict, active: str = "chercheur", prompts: Optional["PromptStore"] = None):
         self.mem = mem
         self.active = active if active in self.ROLES else "chercheur"
+        self.prompts = prompts  # v39.2: favoris de prompts (actif par rôle)
         self._ensure_slots()
 
     def _ensure_slots(self) -> None:
@@ -2511,10 +2868,58 @@ class RoleRouter:
     def current(self) -> Dict[str, Any]:
         return self.ROLES[self.active]
 
-    def system_prompt(self, hunt_query: Optional[str] = None) -> str:
-        base = self.current()["system_prompt"] + f" Date du jour: {_today_fr()[0]}."
+    @classmethod
+    def default_role_text(cls, role_id: str) -> str:
+        """Texte propre au rôle (sans SYSTEM_BASE) — sert au 🔒 Défaut dans 📜 Prompts."""
+        sp = cls.ROLES[role_id]["system_prompt"]
+        return sp[len(SYSTEM_BASE):].strip() if sp.startswith(SYSTEM_BASE) else sp
+
+    def active_prompt(self, role_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        st = getattr(self, "prompts", None)
+        if st is None:
+            return None
+        try:
+            return st.active_for(role_id or self.active)
+        except Exception:
+            return None
+
+    def system_prompt(
+        self,
+        hunt_query: Optional[str] = None,
+        question: Optional[str] = None,
+        override: Optional[Dict[str, Any]] = None,
+        role_id: Optional[str] = None,
+        use_default: bool = False,
+    ) -> str:
+        """Prompt système final. v39.2: favori actif (Remplacer / Ajouter) ou `override` (🧪 test).
+        Toujours: date du jour + garde-fou de chasse du Chercheur."""
+        rid = role_id if role_id in self.ROLES else self.active
+        role = self.ROLES[rid]
+        date = _today_fr()[0]
+        core = role["system_prompt"]
+        p = None
+        if not use_default:
+            p = override if override is not None else self.active_prompt(rid)
+        if p and p.get("kind") == "jeu" and str(p.get("text") or "").strip():
+            # v39.3: prompt de JEU = prompt système pur (pas de règles de rôle, pas de chasse, pas d'outils)
+            mine = prompt_render(p.get("text", ""), date=date, question=(question or "").strip()[:500],
+                                 role=role["label"]).strip()
+            pre = GAME_ADN_LINE.strip() + "\n\n" if p.get("keep_base", True) else ""
+            return pre + mine + f"\n\nDate du jour (monde réel) : {date}."
+        if p and str(p.get("text") or "").strip():
+            mine = prompt_render(
+                p.get("text", ""), date=date,
+                question=(question or hunt_query or "").strip()[:500], role=role["label"],
+            ).strip()
+            if p.get("mode") == "ajouter":
+                core = core + "\n\n" + mine
+            elif p.get("keep_base", True):
+                core = SYSTEM_BASE + "\n\n" + mine
+            else:
+                core = mine
+        base = core + f" Date du jour: {date}."
         q = (hunt_query or "").strip()
-        if q and self.active == "chercheur":
+        if q and rid == "chercheur":
             return (
                 base
                 + f" Si les sources digressent, ignore-les. Reste sur: {q}."
@@ -2554,6 +2959,3508 @@ class RoleRouter:
 
     def contexte(self, n: int = 8) -> str:
         return "\n".join(f"{x['who']}: {x['text'][:350]}" for x in self.history()[-n:])
+
+
+# ── v39.3: bibliothèque d'art ASCII (dessiné à la main, ≤ 40 colonnes) ─────────
+# Les petits modèles (7-8B) dessinent mal : le maître du jeu choisit un mot-clé
+# « SCÈNE: … » et Padawan affiche l'art correspondant.
+GAME_ART: Dict[str, Dict[str, str]] = {
+"fallout": {
+"abri": r"""
+      ___________________________
+     /  _______________________  \
+    |  /    .-----------.      \  |
+    | |    /  .-------.  \     |  |
+    | |   |  /  1 1 1  \  |    |  |
+    | |   |  \  ABRI   /  |    |  |
+    | |    \  '-------'  /     |  |
+    |  \    '-----------'     /   |
+     \___________________________/
+   ===== VAULT-TEC · MONT-ROYAL =====""",
+"ruines": r"""
+        _      ___              _
+   ___ | |    |   |  __   _    | |__
+  |   || |_   | | | |  | | |_  |  __|
+  | | ||   |__| | |_|  |_|   |_| |
+  | |_||  _   | |  _    _   _    |
+ _|   ||_| |__|_|_| |__| |_| |___|_
+ ~~ . ~~ , ~~ . ~~~ , ~~ . ~~ , ~~
+   MONTRÉAL · 210 ANS APRÈS LA BOMBE""",
+"metro": r"""
+   ________________________________
+  |  (M)   STATION  BERRI-UQAM  (M) |
+  |________________________________|
+   ||    __________________    ||
+   ||   |  []  []  []  []  |   ||
+   ||   |__________________|   ||
+  _||__(o)______________(o)____||_
+  ~~~~~~~~ ~~~~~~~~~ ~~~~~~~~ ~~~~~
+     L'EAU NOIRE MONTE TOUJOURS""",
+"goule": r"""
+             .-~~~-.
+            /  _ _  \
+           |  (o)(O) |
+           |    ^    |
+            \  ===  /
+         ___/'-----'\___
+        /  /|  STM  |\  \
+       /__/ |_______| \__\
+            |  | |  |
+           _|__| |__|_
+        « T'AS-TU TON TITRE ? »""",
+"mutant": r"""
+            ___________
+           /  _     _  \
+          |  (@)   (@)  |
+          |      ^      |
+          |   \_____/   |
+       ____\___________/____
+      /    |  |  |  |  |    \
+     | [=] |  SUPER MUTANT  |  |
+     |_____|________________|__|
+           |___|     |___|
+          GRRRR... PETIT HUMAIN""",
+"pillard": r"""
+          ,  ,  ,
+         /|_/|_/|
+        |  x   x |___
+        |   __   |   \___
+         \_\__/_/    ====>
+        __/    \__
+       /  |PILLARD| \
+      /_/ |  ##  | \_\
+          |__||__|
+         _/  ||  \_
+      « TES CAPS OU TA VIE ! »""",
+"radio": r"""
+         _____________________
+        |  .---------------.  |
+        |  | 88  92  98 104|  |
+        |  |------^--------|  |
+        |  '---------------'  |
+        |   (O)  RADIO   (O)  |
+        |   ABRI ·· TI-GUY    |
+        |_____________________|
+          ))  ))  ))  ))  ))
+      « ICI TI-GUY LUMIÈRE ! »""",
+"marche": r"""
+                 /\
+                /  \  STADE OLYMPIQUE
+               /    \______
+          ____/   ___      \_____
+         /   /   /   \          \
+        |   |   | MAR |  ARMES   |
+        |___|___|_CHÉ_|__POUTINE_|
+        [##] [$$] [::] [%%] [@@]
+       ~ marchands · pillards · rats ~""",
+"foret": r"""
+          /\        /\     /\
+         /  \  /\  /  \   /  \
+        / /\ \/  \/ /\ \ / /\ \
+       /_/  \_\  /_/  \_\_/  \_\
+          ||   /\   ||    ||
+          ||  /  \  ||    ||
+     ,,,,,||,/____\,||,,,,||,,,,,
+        LES LAURENTIDES · RAD 12/H""",
+"orignal": r"""
+     \\  //             \\  //
+      \\//   _______     \\//
+       ||___/       \____||
+        \   o     o      /
+         \      __      /
+          \____(oo)____/
+             | |    | |
+             | |    | |
+            /__\    /__\
+       ORIGNAL DE LA BOMBE · 3 TONNES""",
+"chateau": r"""
+              |>>>       |>>>
+              |          |
+          _  _|_  _    _|_  _
+         | |_| |_| |  | |_| |
+         |  _   _  |__|  _  |
+         | | | | | |  | | | |
+     ____|_|_|_|_|_|__|_|_|_|____
+    |  CHÂTEAU FRONTENAC · CONFRÉRIE |
+    |________________________________|""",
+"barrage": r"""
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    |##|##|##|##|##|##|##|##|##|##|
+    |  |  |  |  |  |  |  |  |  |  |
+    |  |  |  | HYDRO-QUÉBEC |  |  |
+    |__|__|__|__|__|__|__|__|__|__|
+     \\ \\ \\ \\ \\ \\ \\ \\ \\ \\
+      \\ \\ \\ \\ \\ \\ \\ \\ \\
+    LA CITÉ DU BARRAGE · BAIE-JAMES""",
+"route": r"""
+                      .
+      _    __        /|\     _
+     | |  |  |      / | \   | |
+    _|_|__|__|_____/  |  \__|_|_
+            \      |  |      /
+             \     |  |     /
+              \    |  |    /
+    ___________\___|__|___/________
+      ROUTE 117 · TERRES DÉSOLÉES""",
+"campement": r"""
+                 (  )
+                (    )  )
+                 )  (  (
+           _______)__)______
+          /  /\    ||   /\  \
+         /  /  \   ||  /  \  \
+        /__/____\__||_/____\__\
+            ^^^ /\/\/\ ^^^
+           ~~~ (  ) (  ) ~~~
+         CAMPEMENT DES COUREURS""",
+"nuka": r"""
+                 ___
+                |___|
+                |   |
+               /     \
+              | NUKA- |
+              | COLA  |
+              |  ~~~  |
+              |  RAD  |
+               \_____/
+     « LA SOIF APRÈS LA FIN DU MONDE »""",
+"robot": r"""
+               ___
+              |_O_|
+            ___|_|___
+           |  _____  |
+           | | O O | |
+           | |_____| |
+         __|_________|__
+        |__| MISTER  |__|
+           |  HANDY  |
+          /_/       \_\
+       « BONJOUR, MONSIEUR ! »""",
+"combat": r"""
+        \         .  *   .     /
+          \   *  BOUM !  *   /
+       .    \   .-''''-.   /    .
+          *  ->|  ##  |<-  *
+               '-____-'
+        --==[  ]-----------[  ]==--
+             |   VATS : 74%   |
+             |   >> TIRER <<  |
+             '----------------'""",
+"coffre": r"""
+           ________________
+          /               /|
+         /_______________/ |
+        |  ___________  |  |
+        | |  $  CAPS  | |  |
+        | |___________| |  |
+        |      [O]      | /
+        |_______________|/
+          BUTIN · CRÉDITS · BALLES""",
+"pont": r"""
+      _/\_       _/\_       _/\_
+     /|  |\_____/|  |\_____/|  |\
+    / |  |       |  |       |  | \
+   /__|__|_______|__|_______|__|__\
+   ===================================
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   PONT JACQUES-CARTIER · PÉAGE 10 CAPS""",
+},
+"polar": {
+"bureau": r"""
+     _______________________________
+    |  DÉTECTIVE PRIVÉ  ·  2e ÉTAGE |
+    |   _____          ______       |
+    |  | ___ |   ___  |  ||  |      |
+    |  ||   || /   \ |  ||  |      |
+    |  ||___||  \_/  |__||__|      |
+    |  |_____| ____________ (_)    |
+    |_________|__WHISKY___|________|
+        LE BUREAU AU-DESSUS DU BARBIER""",
+"ruelle": r"""
+     |  |                    |  |
+     |  |   ___         ___  |  |
+     |  |  |___|  ( )  |___| |  |
+     |  |          |         |  |
+     |  |         /|\        |  |
+     |  |         / \        |  |
+     |__|__ . __ . __ . __ __|__|
+       NEIGE SALE · RUELLE DE LA MAIN""",
+"jazz": r"""
+         * . RED LIGHT . *
+      ___________________________
+     |   ♪   CLUB  ST-MICHEL  ♪  |
+     |___________________________|
+        _       _       _
+       ( )     ( )     ( )   o
+       /|\_    /|\=-   /|\  /|
+       / \     / \     / \  / \
+     ~~~~ JAZZ · FUMÉE · ENNUIS ~~~~""",
+"taverne": r"""
+      _____________________________
+     |  TAVERNE  ·  HOMMES SEULEMENT |
+     |_____________________________|
+        _   _   _   _   _   _
+       |_| |_| |_| |_| |_| |_|
+     =================================
+       ( )    ( )    ( )    ( )
+       /|\    /|\    /|\    /|\
+        BIÈRE · 10 CENNES · RUMEURS""",
+"telephone": r"""
+              _________
+             /  _____  \
+            |  / 1 2 3 \ |
+            | | 4 5 6 | |
+            | | 7 8 9 | |
+            |  \__0__/  |
+          __|___________|__
+         (_________________)
+       « ALLÔ ? C'EST POUR VOUS. »""",
+"voiture": r"""
+              ______________
+         ____/ |    |    |  \____
+        /  _   |____|____|   _   \
+       |__/ \______________/ \___|
+          \_/              \_/
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         FORD 1946 · PHARES ÉTEINTS""",
+"police": r"""
+            _____________
+           |  POLICE  ·  |
+           |  MONTRÉAL   |
+           |_____________|
+              .-----.
+             | o   o |
+             |   ^   |
+              \ --- /
+            __/'---'\__
+         « T'AS RIEN VU, LE PRIVÉ. »""",
+"cadavre": r"""
+     . . . . . . . . . . . . . . .
+     .                           .
+     .    ___                    .
+     .   (x_x)___________        .
+     .     |____________/__      .
+     .        ||     \\          .
+     . . . . . . . . . . . . . . .
+         SCÈNE DE CRIME · NE PAS ENTRER""",
+"port": r"""
+          |
+         -+-        _||_
+          |     ___|____|___
+     ____/|\___|  CARGO 47  |____
+     \_________________________/
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ~~ ~~~ ~~ ~~~ ~~ ~~~ ~~ ~~~
+         LE PORT · QUAI NO 12 · BRUME""",
+},
+"donjon": {
+"connexion": r"""
+   ╔══════════════════════════════════╗
+   ║                                  ║
+   ║  CONNECT 2400 ...                ║
+   ║                                  ║
+   ║   ____   ___   _  _       _      ║
+   ║  |  _ \ / _ \ | \| |   _ | |     ║
+   ║  | |_| | |_| || .` |  | || |     ║
+   ║  |____/ \___/ |_|\_|   \__/      ║
+   ║                                  ║
+   ║  SysOp: Ti-Guy · Nœud 1 sur 1    ║
+   ╚══════════════════════════════════╝""",
+"couloir": r"""
+       ##########################
+       #........#.......M......#
+       #..@.....+.......#......#
+       #........#.......#..$...#
+       ######+###.......####+###
+            #...........#
+            #####.#######
+                 #  > escalier
+       @ = toi   M = monstre   $ = or""",
+"monstre": r"""
+                 __        __
+                /  \______/  \
+               |  (O)    (O)  |
+                \     /\     /
+          /\_____\   /__\   /_____/\
+         <  ____  \________/  ____  >
+          \/    \__|  ||  |__/    \/
+                   |__||__|
+         UN DRAGON DE 640 Ko SURGIT !""",
+"tresor": r"""
+            _____________
+           /  *    *    /|
+          /_____*______/ |
+         | $$$  $$$  $$ |  |
+         | $$  DISQUETTE| /
+         |   5¼  RARE   |/
+         '--------------'
+       + 120 OR   + 1 Ko D'XP""",
+"porte": r"""
+          _____________________
+         |  _________________  |
+         | |       ___       | |
+         | |      |   |      | |
+         | |      | o |      | |
+         | |      |___|      | |
+         | |_________________| |
+         |_____________________|
+       C:\DONJON> OUVRIR PORTE.EXE""",
+"squelette": r"""
+               .---.
+              / x x \
+              \  ^  /
+               |===|
+            .--'---'--.
+           /|  |   |  |\
+            |  |   |  |
+            '--+---+--'
+              |     |
+             _|     |_
+          SQUELETTE NIV 3 · 12 PV""",
+"escalier": r"""
+        ____
+       |    |____
+       |         |____
+       |              |____
+       |                   |____
+       |  NIVEAU SUIVANT  >     |
+       |________________________|
+         C:\DONJON\NIVEAU2> _""",
+"taverne": r"""
+       _____________________________
+      | AUBERGE DU MODEM QUI SIFFLE |
+      |_____________________________|
+        _[]_      ( )      _[]_
+       |____|     /|\     |____|
+      ===========================
+        HP +10 · POTION 5 OR · RUMEURS""",
+},
+}
+
+GAME_ART_FAMILY = {"fallout_qc": "fallout", "polar_1947": "polar", "donjon_bbs": "donjon"}
+
+# Mots-clés de secours quand le modèle n'écrit pas de « SCÈNE: » valide
+GAME_ART_HINTS: Dict[str, Dict[str, Tuple[str, ...]]] = {
+"fallout": {
+    "abri": ("abri", "vault", "porte de l'abri"), "metro": ("métro", "metro", "station", "quai", "tunnel"),
+    "goule": ("goule",), "mutant": ("mutant",), "pillard": ("pillard", "raider"),
+    "radio": ("radio", "ti-guy"), "marche": ("stade", "marché", "marchand"),
+    "foret": ("forêt", "laurentide", "bois"), "orignal": ("orignal",),
+    "chateau": ("château", "frontenac", "confrérie", "québec"), "barrage": ("barrage", "hydro", "baie-james"),
+    "campement": ("campement", "feu de camp", "coureur"), "nuka": ("nuka",), "robot": ("robot", "handy", "protectron"),
+    "combat": ("combat", "attaque", "tire", "vats"), "coffre": ("coffre", "butin", "caisse"),
+    "pont": ("pont",), "route": ("route", "désert", "autoroute", "surface"), "ruines": ("ruine", "ville", "montréal"),
+},
+"polar": {
+    "bureau": ("bureau",), "ruelle": ("ruelle",), "jazz": ("jazz", "club", "cabaret"), "taverne": ("taverne", "bar"),
+    "telephone": ("téléphone", "appel"), "voiture": ("voiture", "auto", "ford"), "police": ("police", "flic", "poste"),
+    "cadavre": ("cadavre", "corps", "mort", "crime"), "port": ("port", "quai", "cargo"),
+},
+"donjon": {
+    "connexion": ("connexion", "bbs", "modem"), "monstre": ("dragon", "monstre", "troll", "orc"),
+    "squelette": ("squelette", "zombie", "mort-vivant"), "tresor": ("trésor", "coffre", "or "),
+    "porte": ("porte",), "escalier": ("escalier", "niveau"), "taverne": ("auberge", "taverne"),
+    "couloir": ("couloir", "salle", "carte"),
+},
+}
+
+
+def game_art_for(builtin: str, key: str = "", hint_text: str = "") -> Tuple[str, str]:
+    """(clé, art) pour un jeu intégré, d'après le mot-clé « SCÈNE: » ou le texte. ("", "") si rien."""
+    fam = GAME_ART_FAMILY.get(builtin or "")
+    if not fam:
+        return "", ""
+    lib = GAME_ART.get(fam, {})
+    k = _art_norm(key)
+    if k in lib:
+        return k, lib[k].strip("\n")
+    k = _ART_ALIAS.get(k, k)
+    if k in lib:
+        return k, lib[k].strip("\n")
+    for kk in lib:
+        if len(k) >= 4 and (kk in k or k in kk or kk[:4] == k[:4]):
+            return kk, lib[kk].strip("\n")
+    low = (key + " " + (hint_text or "")).lower()
+    for kk, words in GAME_ART_HINTS.get(fam, {}).items():
+        if any(w in low for w in words):
+            return kk, lib[kk].strip("\n")
+    return "", ""
+
+
+_ART_ALIAS = {"vault": "abri", "ruins": "ruines", "ruin": "ruines", "ville": "ruines", "city": "ruines",
+              "subway": "metro", "ghoul": "goule", "raider": "pillard", "market": "marche", "stade": "marche",
+              "forest": "foret", "bois": "foret", "moose": "orignal", "castle": "chateau", "dam": "barrage",
+              "road": "route", "desert": "route", "camp": "campement", "fight": "combat", "chest": "coffre",
+              "butin": "coffre", "bridge": "pont", "office": "bureau", "alley": "ruelle", "club": "jazz",
+              "bar": "taverne", "phone": "telephone", "car": "voiture", "auto": "voiture", "corps": "cadavre",
+              "quai": "port", "dragon": "monstre", "skeleton": "squelette", "treasure": "tresor",
+              "door": "porte", "stairs": "escalier", "salle": "couloir", "auberge": "taverne", "bbs": "connexion"}
+
+
+def _art_norm(s: str) -> str:
+    s = (s or "").strip().lower()
+    for a, b in (("é", "e"), ("è", "e"), ("ê", "e"), ("â", "a"), ("ç", "c"), ("ô", "o"), ("û", "u"), ("î", "i")):
+        s = s.replace(a, b)
+    return re.sub(r"[^a-z]", "", s)
+# ── v39.3: 🎮 Mode Jeu (prompts de type « jeu ») ────────────────────────────────
+GAME_PARTIES_DIR = os.path.join(PROMPTS_DIR, "parties")
+GAME_ADN_LINE = (
+    "Tu tutoies le joueur (un Québécois) et tu écris en français québécois naturel, avec un humour noir sec. "
+    "La narration dit toujours « tu » : jamais le prénom du joueur à la 3e personne. "
+)
+FENCE = "`" * 3
+
+def _scene_words(fam: str) -> str:
+    return ", ".join(GAME_ART.get(fam, {}).keys())
+
+
+GAME_FALLOUT_TEXT = "\n".join([
+    "Tu es le MAÎTRE DU JEU de « FALLOUT : TERRES DÉSOLÉES DU QUÉBEC », un jeu de rôle textuel post-apocalyptique.",
+    "Ton : 100 % Fallout — cynisme rétro-futuriste Vault-Tec, humour noir québécois, pubs pré-guerre absurdes.",
+    "",
+    "UNIVERS",
+    "- An 2287, 210 ans après la Grande Guerre. Le Québec est une Terre désolée.",
+    "- Départ : l'Abri 111, creusé sous le Mont-Royal (la croix du Mont-Royal clignote encore, radioactive).",
+    "- Lieux : Montréal en ruines (le Stade olympique est un marché de pillards, le métro inondé grouille de goules), "
+    "Sherbrooke irradiée, la Cité du Barrage à la Baie-James, Québec fortifiée derrière ses murs, "
+    "les Laurentides et leurs orignaux de la Bombe.",
+    "- Factions : l'Enclave d'Hydro-Québec (contrôle l'électricité, arrogante), la Confrérie de l'Acier du Château Frontenac, "
+    "les Coureurs des bois (caravaniers libres), les Pillards du pont Jacques-Cartier, les Goules du Vieux-Port, "
+    "les Super Mutants de la Côte-Nord.",
+    "- Culture pré-guerre : Nuka-Cola, poutine en canne « Poutine-O-Matic », sirop d'érable irradié, "
+    "Radio Abri avec l'animateur Ti-Guy Lumière, Pip-Boy 3000, capsules (CAPS) comme monnaie.",
+    "",
+    "RÈGLES",
+    "0. TUTOIE le joueur : « tu », « ton », « toi » — jamais « vous ».",
+    "1. Tu restes TOUJOURS le maître du jeu : aucun méta-commentaire, aucune URL, jamais « en tant qu'IA ».",
+    "2. L'histoire suit les choix du joueur, de façon cohérente et continue, avec de vraies conséquences "
+    "(blessures, alliés, ennemis, butin). Tu ne reviens jamais en arrière.",
+    "3. État cohérent d'un tour à l'autre : HP, RAD, CAPS, FAIM, SOIF, inventaire, lieu, quête. "
+    "Un chiffre ne change que pour une raison racontée. Il y a toujours une QUÊTE précise. "
+    "Le bloc ▓▓ est COMPLET à CHAQUE réponse, avec l'INVENTAIRE ENTIER et les quantités (ex. « 2 Stimpaks »).",
+    "3b. Quand le joueur gagne, perd ou utilise un objet, écris-le clairement dans la narration "
+    "(« Tu obtiens une clé rouillée. », « Tu utilises un Stimpak. ») ET mets l'INVENTAIRE à jour. "
+    "Les dégâts et les gains s'écrivent en chiffres (« tu perds 8 HP », « +15 RAD », « tu trouves 12 capsules »). "
+    "La faim et la soif montent avec le temps; manger ou boire les fait baisser.",
+    "4. Tests de compétence : le message du joueur contient [JET d20 = N]. Utilise ce N : 1-5 échec grave, "
+    "6-10 échec, 11-15 réussite, 16-19 belle réussite, 20 critique. Écris le test ainsi : "
+    "[Perception 6 · d20 14 → réussi].",
+    "5. Narration de 120 à 220 mots, au présent et à la 2e personne (« Tu avances… », jamais « Marc avance » "
+    "ni le nom du personnage hors des dialogues), "
+    "avec au moins un dialogue de PNJ entre « guillemets ».",
+    "6. UNE SEULE scène par réponse : tu t'arrêtes juste après le dernier choix et tu attends le joueur.",
+    "7. Ne dessine PAS d'art ASCII : écris seulement la ligne SCÈNE: avec UN mot de cette liste, "
+    "Padawan affiche l'image : " + _scene_words("fallout") + ".",
+    "",
+    "FORMAT OBLIGATOIRE DE CHAQUE RÉPONSE (dans cet ordre, rien d'autre) :",
+    "## Titre de la scène",
+    "SCÈNE: (un mot de la liste)",
+    "Narration et dialogues.",
+    FENCE,
+    "▓▓ PIP-BOY 3000 ▓▓",
+    "NOM: (nom) | NIV: 1",
+    "HP: 100/100 | RAD: 0 | CAPS: 25",
+    "FAIM: 0/100 | SOIF: 0/100",
+    "SPECIAL: F5 P5 E5 C5 I5 A5 L5",
+    "LIEU: (lieu)",
+    "QUÊTE: (quête active)",
+    "INVENTAIRE: (objet), (objet), (objet)",
+    FENCE,
+    "QUE FAIS-TU ?",
+    "1. (choix)",
+    "2. (choix)",
+    "3. (choix)",
+    "4. (choix)",
+    "",
+    "Mets 3 à 5 choix : des ACTIONS courtes (12 mots max), sans jet de dé ni résultat. Rien après le dernier choix.",
+    "",
+    "DÉMARRAGE : le premier message du joueur donne son personnage (nom, archétype, SPECIAL, inventaire). "
+    "Reprends-les EXACTEMENT dans le Pip-Boy, donne-lui une QUÊTE de départ, puis lance la première scène : "
+    "le matin où la porte de l'Abri 111 s'ouvre pour la première fois, annoncé par Ti-Guy Lumière à Radio Abri.",
+])
+
+GAME_POLAR_TEXT = "\n".join([
+    "Tu es le NARRATEUR d'un polar noir interactif : « MONTRÉAL 1947 — LA NUIT DU RED LIGHT ».",
+    "Ambiance : Montréal d'après-guerre sous Duplessis, boîtes de jazz de la rue Saint-Antoine, Red Light, "
+    "tavernes, police corrompue, pègre, fumée de cigarette, neige sale. Humour pince-sans-rire québécois, "
+    "dialogues en joual d'époque (sans exagérer).",
+    "Le joueur incarne un détective privé fauché, bureau au-dessus d'un barbier sur la Main.",
+    "",
+    "RÈGLES",
+    "0. Tutoie le joueur dans la narration (« tu »).",
+    "1. Tu restes TOUJOURS le narrateur : aucun méta-commentaire, aucune URL.",
+    "2. Une vraie enquête : indices, fausses pistes, suspects avec des motifs, conséquences. Garde la solution cohérente.",
+    "3. État cohérent d'un tour à l'autre : SANTÉ, NERFS, PIASTRES, indices, lieu, piste.",
+    "4. Le message du joueur contient [JET d20 = N] : 1-5 échec grave, 6-10 échec, 11-15 réussite, 16-20 belle réussite. "
+    "Écris : [Flair · d20 15 → réussi].",
+    "5. Narration de 120 à 220 mots, au présent, à la 2e personne (« tu »). UNE SEULE scène par réponse.",
+    "6. Ne dessine PAS d'art ASCII : écris seulement la ligne SCÈNE: avec UN mot de cette liste : "
+    + _scene_words("polar") + ".",
+    "",
+    "FORMAT OBLIGATOIRE DE CHAQUE RÉPONSE (rien d'autre) :",
+    "## Titre de la scène",
+    "SCÈNE: (un mot de la liste)",
+    "Narration et dialogues.",
+    FENCE,
+    "▓▓ CARNET DU DÉTECTIVE ▓▓",
+    "NOM: (nom)",
+    "SANTÉ: 100/100 | NERFS: 80/100 | PIASTRES: 12",
+    "LIEU: (lieu)",
+    "PISTE: (piste principale)",
+    "INDICES: (indice), (indice)",
+    FENCE,
+    "QUE FAIS-TU ?",
+    "1. (choix)",
+    "2. (choix)",
+    "3. (choix)",
+    "",
+    "Mets 3 à 5 choix numérotés (actions courtes, sans dé), un par ligne, rien après le dernier.",
+    "DÉMARRAGE : le premier message du joueur donne son détective. Lance l'affaire : une cliente mystérieuse "
+    "entre dans le bureau un soir de tempête de neige.",
+])
+
+GAME_DONJON_TEXT = "\n".join([
+    "Tu es le SYSOP-MAÎTRE DU JEU d'un « door game » de BBS de 1991 : « LE DONJON DU 2400 BAUDS ».",
+    "Ambiance : jeu d'aventure rétro DOS, écran 80 colonnes, humour geek québécois "
+    "(modem qui siffle, disquettes 5¼, AUTOEXEC.BAT, « Tu as reçu 1 Ko de XP »).",
+    "Le joueur explore un donjon de 5 niveaux sous le serveur du BBS, avec monstres, trésors, énigmes.",
+    "",
+    "RÈGLES",
+    "0. Tutoie le joueur (« tu »).",
+    "1. Tu restes TOUJOURS le maître du jeu : aucun méta-commentaire, aucune URL.",
+    "2. Conséquences réelles, butin, combats au tour par tour. État cohérent : PV, MANA, OR, niveau, salle, objets.",
+    "3. Le message du joueur contient [JET d20 = N] : 1-5 échec grave, 6-10 échec, 11-15 réussite, 16-20 coup critique. "
+    "Écris : [Attaque · d20 17 → touché, 6 dégâts].",
+    "4. Narration de 100 à 200 mots, style rétro, phrases courtes, à la 2e personne. UNE SEULE scène par réponse.",
+    "5. Ne dessine PAS d'art ASCII : écris seulement la ligne SCÈNE: avec UN mot de cette liste : "
+    + _scene_words("donjon") + ".",
+    "",
+    "FORMAT OBLIGATOIRE DE CHAQUE RÉPONSE (rien d'autre) :",
+    "## NIVEAU x — Nom de la salle",
+    "SCÈNE: (un mot de la liste)",
+    "Narration.",
+    FENCE,
+    "▓▓ FICHE DU HÉROS ▓▓",
+    "NOM: (nom) | CLASSE: (classe) | NIV: 1",
+    "PV: 20/20 | MANA: 10/10 | OR: 0",
+    "SALLE: (salle)",
+    "QUÊTE: (objectif)",
+    "INVENTAIRE: (objet), (objet)",
+    FENCE,
+    "QUE FAIS-TU ?",
+    "1. (choix)",
+    "2. (choix)",
+    "3. (choix)",
+    "",
+    "Mets 3 à 5 choix numérotés (actions courtes, sans dé), un par ligne, rien après le dernier.",
+    "DÉMARRAGE : le premier message du joueur donne son héros. Lance la partie au NIVEAU 1, à l'entrée du donjon.",
+])
+
+# Création du personnage faite par Padawan (fiable, même avec un petit modèle)
+GAME_META: Dict[str, Dict[str, Any]] = {
+    "fallout_qc": {
+        "title": "FALLOUT — TERRES DÉSOLÉES DU QUÉBEC", "art": "abri",
+        "intro": ("23 octobre 2287, 6 h 00. Les haut-parleurs de l'Abri 111 grésillent :\n"
+                  "« Bon matin, les résidents ! Ici Ti-Guy Lumière, sur Radio Abri. Aujourd'hui, c'est LE grand jour : "
+                  "après 210 ans, la porte s'ouvre. Il fait -12 dehors, 400 rads, pis y'a des orignaux. Bonne chance ! »\n\n"
+                  "Le Pip-Boy à ton poignet clignote : CRÉATION DU PERSONNAGE."),
+        "ask": "Qui es-tu ?",
+        "archetypes": [
+            {"label": "Le Résident de l'Abri", "desc": "intelligent, débrouillard, jamais vu le soleil",
+             "special": "F4 P6 E5 C6 I8 A5 L6", "inv": "pistolet 10 mm, 2 Stimpaks, poutine en canne", "name": "Marc"},
+            {"label": "La Coureuse des bois", "desc": "rapide, l'œil vif, connaît chaque sentier",
+             "special": "F5 P7 E6 C4 I5 A8 L5", "inv": "carabine de chasse, couteau, sirop d'érable irradié", "name": "Mélanie"},
+            {"label": "Le Mécano de la Baie-James", "desc": "costaud, répare tout avec du tape gris",
+             "special": "F6 P5 E7 C4 I8 A4 L6", "inv": "clé à molette lourde, tape gris, Nuka-Cola tiède", "name": "Réjean"},
+        ],
+        "custom": "Créer mon propre personnage (nom + 40 points SPECIAL)",
+        "start": "Commence la partie. Mon personnage : {name}, {label}. SPECIAL: {special}. Inventaire : {inv}. "
+                 "HP 100/100, RAD 0, CAPS 25.",
+        "status0": "▓▓ PIP-BOY 3000 ▓▓\nNOM: {name} | NIV: 1\nHP: 100/100 | RAD: 0 | CAPS: 25\n"
+                   "FAIM: 0/100 | SOIF: 0/100\nSPECIAL: {special}\nLIEU: Abri 111\nINVENTAIRE: {inv}",
+    },
+    "polar_1947": {
+        "title": "MONTRÉAL 1947 — LA NUIT DU RED LIGHT", "art": "bureau",
+        "intro": ("Décembre 1947. La neige tombe sur la Main. Ton bureau sent le tabac froid et le whisky de contrebande. "
+                  "Le loyer est dû depuis deux mois et le téléphone ne sonne plus.\n\nQui es-tu ?"),
+        "ask": "Ton détective :",
+        "archetypes": [
+            {"label": "L'ex-flic écœuré", "desc": "connaît la police par cœur — et ses secrets",
+             "special": "FLAIR 6 · POING 7 · BAGOU 4", "inv": "revolver .38, flasque, insigne périmé", "name": "Gérard Lacasse"},
+            {"label": "La journaliste du Devoir", "desc": "curieuse, culottée, un carnet plein de noms",
+             "special": "FLAIR 7 · POING 3 · BAGOU 7", "inv": "carnet, appareil photo, laissez-passer de presse", "name": "Simone Beaulieu"},
+            {"label": "Le joueur de cartes du Red Light", "desc": "charmant, endetté, connaît tout le monde",
+             "special": "FLAIR 5 · POING 4 · BAGOU 8", "inv": "jeu de cartes truqué, 12 piastres, briquet en or", "name": "Ti-Mé Desrosiers"},
+        ],
+        "custom": "Créer mon propre détective",
+        "start": "Commence la partie. Mon détective : {name}, {label} ({special}). Sur moi : {inv}. "
+                 "SANTÉ 100/100, NERFS 80/100, PIASTRES 12.",
+        "status0": "▓▓ CARNET DU DÉTECTIVE ▓▓\nNOM: {name}\nSANTÉ: 100/100 | NERFS: 80/100 | PIASTRES: 12\n"
+                   "LIEU: Bureau sur la Main\nINDICES: {inv}",
+    },
+    "donjon_bbs": {
+        "title": "LE DONJON DU 2400 BAUDS", "art": "connexion",
+        "intro": ("ATDT 555-2400... iiiiiiiiih-krrrrr-shhhhhh. CONNECT 2400.\n"
+                  "« Bienvenue sur LE DONJON BBS. Tu es l'appelant #1337. Temps restant : 60 minutes. »\n\n"
+                  "CHOISIS TA CLASSE :"),
+        "ask": "Ta classe :",
+        "archetypes": [
+            {"label": "Guerrier du DOS", "desc": "frappe fort, lit les fichiers .BAT comme des parchemins",
+             "special": "FOR 8 · INT 3 · DEX 5", "inv": "épée COMMAND.COM, bouclier de disquettes", "name": "Bozo"},
+            {"label": "Mage du Turbo Pascal", "desc": "sorts compilés, peu de PV",
+             "special": "FOR 3 · INT 9 · DEX 4", "inv": "bâton de RAM, grimoire BEGIN..END", "name": "Merlinux"},
+            {"label": "Voleur de shareware", "desc": "furtif, ouvre toutes les serrures (après 30 jours)",
+             "special": "FOR 4 · INT 5 · DEX 9", "inv": "dague, crochets, clé d'enregistrement volée", "name": "Ti-Pirate"},
+        ],
+        "custom": "Créer mon propre héros",
+        "start": "Commence la partie. Mon héros : {name}, {label} ({special}). Inventaire : {inv}. "
+                 "PV 20/20, MANA 10/10, OR 0.",
+        "status0": "▓▓ FICHE DU HÉROS ▓▓\nNOM: {name} | CLASSE: {label} | NIV: 1\nPV: 20/20 | MANA: 10/10 | OR: 0\n"
+                   "SALLE: Entrée du donjon\nINVENTAIRE: {inv}",
+    },
+}
+
+GAME_SEEDS: List[Dict[str, Any]] = [
+    {"name": "🎮 Fallout — Terres désolées du Québec", "role": "tous", "mode": "remplacer", "kind": "jeu",
+     "keep_base": True, "text": GAME_FALLOUT_TEXT, "builtin": "fallout_qc"},
+    {"name": "🕵️ Polar — Montréal 1947", "role": "tous", "mode": "remplacer", "kind": "jeu",
+     "keep_base": True, "text": GAME_POLAR_TEXT, "builtin": "polar_1947"},
+    {"name": "🧙 Donjon du BBS 2400 bauds (rétro DOS)", "role": "tous", "mode": "remplacer", "kind": "jeu",
+     "keep_base": True, "text": GAME_DONJON_TEXT, "builtin": "donjon_bbs"},
+]
+
+GAME_TURN_REMINDER = (
+    "\n\n(Rappel : tutoie-moi. Format : ## titre, NOUVEL art ASCII dans un bloc " + FENCE + ", narration, "
+    "statut dans un bloc " + FENCE + " qui commence par ▓▓, puis « QUE FAIS-TU ? » et 3 à 5 choix numérotés "
+    "« 1. », « 2. »… (actions courtes, sans dé). Rien après le dernier choix.)"
+)
+
+
+def game_reminder(builtin: str = "") -> str:
+    fam = GAME_ART_FAMILY.get(builtin or "")
+    if not fam:
+        return GAME_TURN_REMINDER
+    return ("\n\n(Rappel : tutoie-moi. Format : ## titre, puis la ligne SCÈNE: avec un mot parmi "
+            + _scene_words(fam) + " (pas d'art ASCII), narration avec un dialogue, statut dans un bloc " + FENCE
+            + " qui commence par ▓▓ et contient TOUTES les lignes (INVENTAIRE complet à jour), puis « QUE FAIS-TU ? » "
+            "et 3 à 5 choix numérotés (actions courtes, sans dé). Objet gagné ou utilisé = écris « Tu obtiens X » / "
+            "« Tu utilises X »; dégâts en chiffres. UNE seule scène, à la 2e personne (« tu », jamais mon prénom); "
+            "arrête-toi après le dernier choix.)")
+
+
+GAME_HIST_BUDGET = 9000  # caractères d'historique envoyés (le reste = résumé)
+
+_CHOICE_RE = re.compile(r"^\s*(?:[-*•]\s*)?(?:\*\*)?\s*\[?(\d{1,2})\]?\s*[.)\-:–]\s+(.+?)\s*$")
+_SCENE_RE = re.compile(r"^\s*[*_]*\s*SC[ÈEÉ]NE\s*[*_]*\s*:\s*[*_(«\"']*\s*([A-Za-zÀ-ÿ\-]+)", re.M | re.I)
+_FENCE_RE = re.compile(r"^\s*" + FENCE)
+_KV_RE = re.compile(r"([A-ZÀ-ÜÉÈ][A-ZÀ-ÜÉÈ0-9 ’'\-]{1,18})\s*:\s*([^|]+)")
+_FRAC_RE = re.compile(r"(-?\d+)\s*/\s*(\d+)")
+_ANSI_RE = re.compile("\x1b\\[([0-9;]*)m")
+_BOXCH = set("█▓▒░┌┐└┘─│├┤┬┴┼═║╔╗╚╝╠╣╦╩╬▀▄▌▐■□▪▫●○◘◙☢☠⚠/\\_|#@*=+<>^~")
+
+
+def _strip_md(s: str) -> str:
+    return re.sub(r"\*\*|__", "", s or "").strip()
+
+
+def game_split_blocks(text: str) -> List[Tuple[str, str]]:
+    """Découpe une réponse en blocs [("fence", contenu) | ("text", contenu)]."""
+    out: List[Tuple[str, str]] = []
+    cur: List[str] = []
+    in_f = False
+    for line in (text or "").replace("\r\n", "\n").split("\n"):
+        if _FENCE_RE.match(line):
+            if in_f:
+                out.append(("fence", "\n".join(cur)))
+                cur = []
+                in_f = False
+            else:
+                if cur:
+                    out.append(("text", "\n".join(cur)))
+                cur = []
+                in_f = True
+            continue
+        cur.append(line)
+    if cur:
+        out.append(("fence" if in_f else "text", "\n".join(cur)))
+    # le petit modèle met parfois TOUTE sa réponse dans un bloc ``` : un « bloc » qui contient un titre
+    # ou « QUE FAIS-TU » est en fait du texte
+    fixed: List[Tuple[str, str]] = []
+    for kind, body in out:
+        if kind == "fence" and (re.search(r"^\s*#{1,4}\s+\S", body, re.M) or re.search(r"QUE FAIS[- ]TU", body, re.I)):
+            kind = "text"
+        fixed.append((kind, body))
+    return fixed
+
+
+def game_is_status(block: str) -> bool:
+    b = block or ""
+    if "▓▓" in b.split("\n", 1)[0] or "PIP-BOY" in b.upper():
+        return True
+    return bool(re.search(r"\b(HP|PV|SANTÉ)\s*:", b)) and bool(re.search(r"\b(LIEU|SALLE|INVENTAIRE)\s*:", b))
+
+
+def game_is_art_line(line: str) -> bool:
+    s = (line or "").rstrip()
+    if len(s.strip()) < 3:
+        return False
+    sym = sum(1 for ch in s if ch in _BOXCH)
+    letters = sum(1 for ch in s if ch.isalpha())
+    return sym >= 3 and sym >= letters
+
+
+def game_parse(text: str) -> Dict[str, Any]:
+    """Analyse une réponse de jeu : titre, choix numérotés (dernière liste), bloc de statut."""
+    blocks = game_split_blocks(text)
+    status = ""
+    for kind, body in blocks:
+        if kind == "fence" and game_is_status(body):
+            status = body
+    if not status:  # statut écrit hors bloc ``` : ligne ▓▓ puis lignes CLÉ: valeur
+        lines = (text or "").replace("\r\n", "\n").split("\n")
+        for i, line in enumerate(lines):
+            if "▓▓" in line and not game_is_art_line(line.replace("▓", "")):
+                got = [line.strip()] + [x.rstrip() for x in lines[i + 1:game_status_span(lines, i)] if x.strip()]
+                if len(got) >= 3:
+                    status = "\n".join(got)
+    if not status:  # statut sans ▓▓ ni bloc : 3 lignes CLÉ: valeur consécutives avec des clés connues
+        known = ("HP", "PV", "SANTÉ", "RAD", "CAPS", "LIEU", "SALLE", "QUÊTE", "QUETE", "INVENTAIRE", "NOM",
+                 "NIV", "FAIM", "SOIF", "SPECIAL", "PISTE", "INDICES", "OR", "MANA", "NERFS", "PIASTRES")
+        lines = (text or "").replace("\r\n", "\n").split("\n")
+        run: List[str] = []
+        best: List[str] = []
+        for line in lines + [""]:
+            m0 = _KV_RE.match(line.strip()) if line.strip() and not _CHOICE_RE.match(line) else None
+            if m0 and m0.group(1).strip().upper().split(" ")[0] in known:
+                run.append(line.rstrip())
+            else:
+                if len(run) >= 3:
+                    best = run
+                run = []
+        if best:
+            status = "\n".join(best)
+    title = ""
+    m = re.search(r"^\s*#{1,4}\s*(.+)$", text or "", re.M)
+    if m:
+        title = _strip_md(m.group(1))[:90]
+    # choix : dernière série de lignes numérotées (1, 2, 3…) hors blocs
+    runs: List[List[Tuple[int, str]]] = []
+    cur: Optional[List[Tuple[int, str]]] = None
+    for kind, body in blocks:
+        if kind != "text":
+            if cur:
+                runs.append(cur)
+            cur = None
+            continue
+        for line in body.split("\n"):
+            mm = _CHOICE_RE.match(line)
+            if mm:
+                n, lab = int(mm.group(1)), _strip_md(mm.group(2))
+                if n == 1:
+                    if cur:
+                        runs.append(cur)
+                    cur = [(1, lab)]
+                elif cur and n == cur[-1][0] + 1:
+                    cur.append((n, lab))
+                elif cur:
+                    runs.append(cur)
+                    cur = None
+            elif not line.strip():
+                continue
+            elif cur and line[:1] in (" ", "\t"):
+                cur[-1] = (cur[-1][0], (cur[-1][1] + " " + _strip_md(line)).strip())
+            elif cur:
+                runs.append(cur)
+                cur = None
+    if cur:
+        runs.append(cur)
+    runs = [r for r in runs if len(r) >= 2]
+    choices = runs[-1] if runs else []
+    sc = _SCENE_RE.search(text or "")
+    return {"title": title, "choices": choices[:9], "status": status,
+            "scene": _art_norm(sc.group(1)) if sc else ""}
+
+
+def game_parse_status(block: str) -> Dict[str, Any]:
+    """Champs du bloc de statut : {'title', 'fields': [(clé, valeur)], 'bars': [(clé, val, max)]}."""
+    lines = [l for l in (block or "").split("\n") if l.strip()]
+    title = ""
+    if lines and "▓▓" in lines[0]:
+        title = lines[0].replace("▓", "").strip()
+        lines = lines[1:]
+    fields: List[Tuple[str, str]] = []
+    bars: List[Tuple[str, int, int]] = []
+    for line in lines:
+        for part in re.split(r"\s\|\s|\s{3,}|\s·\s(?=[A-ZÀ-Ü][A-ZÀ-Ü ]{1,12}\s*:)", line):
+            m = _KV_RE.search(part.strip())
+            if not m:
+                continue
+            k, v = m.group(1).strip().upper(), m.group(2).strip()
+            fields.append((k, v))
+            f = _FRAC_RE.search(v)
+            if f and int(f.group(2)) > 0:
+                bars.append((k, max(0, int(f.group(1))), int(f.group(2))))
+            elif k.startswith("RAD"):
+                n = re.search(r"\d+", v)
+                if n:
+                    val = int(n.group(0))
+                    bars.append((k, val, 1000 if val > 100 else 100))
+    return {"title": title or "STATUT", "fields": fields, "bars": bars}
+
+
+def ansi_segments(s: str) -> List[Tuple[str, Optional[str]]]:
+    """Sous-ensemble ANSI sûr : couleurs 30-37 / 90-97 (+0 reset). Retourne [(texte, couleur|None)]."""
+    pal = {30: "#4d4d4d", 31: "#ff5f56", 32: "#41ff6a", 33: "#ffcc4d", 34: "#5fa8ff", 35: "#ff79e1",
+           36: "#5ff5ff", 37: "#e6e6e6", 90: "#7f7f7f", 91: "#ff8a80", 92: "#8cff9e", 93: "#fff176",
+           94: "#90caf9", 95: "#f48fb1", 96: "#a7ffeb", 97: "#ffffff"}
+    out: List[Tuple[str, Optional[str]]] = []
+    col: Optional[str] = None
+    pos = 0
+    for m in _ANSI_RE.finditer(s or ""):
+        if m.start() > pos:
+            out.append((s[pos:m.start()], col))
+        for c in (m.group(1) or "0").split(";"):
+            try:
+                c = int(c or 0)
+            except ValueError:
+                continue
+            if c == 0 or c == 39:
+                col = None
+            elif c in pal:
+                col = pal[c]
+        pos = m.end()
+    if pos < len(s or ""):
+        out.append((s[pos:], col))
+    return out
+
+
+def game_clean_reply(text: str) -> str:
+    """Retire ce que le petit modèle ajoute après le dernier choix (notes méta, « (Début de partie) »…)."""
+    t = (text or "").replace("\r\n", "\n").rstrip()
+    m = re.search(r"QUE FAIS[- ]TU", t, re.I)
+    if m:  # le petit modèle enchaîne parfois une 2e scène : on garde la première
+        h = re.search(r"\n\s*#{1,4}\s+\S", t[m.end():])
+        if h:
+            t = t[:m.end() + h.start()].rstrip()
+    g = game_parse(t)
+    if not g["choices"]:
+        return t
+    lines = t.split("\n")
+    last_n = g["choices"][-1][0]
+    idx = -1
+    for i, line in enumerate(lines):
+        m = _CHOICE_RE.match(line)
+        if m and int(m.group(1)) == last_n:
+            idx = i
+    if idx < 0:
+        return t
+    j = idx + 1
+    while j < len(lines) and lines[j][:1] in (" ", "\t") and lines[j].strip():
+        j += 1
+    tail = "\n".join(lines[j:]).strip()
+    if tail and (FENCE in tail or "▓▓" in tail):
+        return t  # contenu utile après les choix : on ne coupe pas
+    return "\n".join(lines[:j]).rstrip()
+
+
+class _GameStop:
+    """« Annuler » combiné : Échap de Marc OU fin de scène détectée pendant le flux."""
+
+    def __init__(self, main: Optional[threading.Event] = None):
+        self.main = main
+        self.stop = False
+
+    def is_set(self) -> bool:
+        return self.stop or bool(self.main is not None and self.main.is_set())
+
+
+def game_turn_complete(text: str) -> bool:
+    """Vrai quand la scène est finie (≥3 choix après « QUE FAIS-TU ? » puis autre chose) → on coupe le flux."""
+    t = text or ""
+    m = None
+    for m in re.finditer(r"QUE FAIS[- ]TU", t, re.I):
+        pass
+    if not m:
+        return False
+    n = 0
+    has_status = "▓▓" in t[:m.start()]
+    lines = t[m.end():].split("\n")[1:]
+    for line in lines[:-1]:  # la dernière ligne est peut-être incomplète
+        if not has_status and (_FENCE_RE.match(line) or "▓▓" in line or (
+                n >= 3 and _KV_RE.match(line.strip()) and not _CHOICE_RE.match(line))):
+            return False  # statut écrit après les choix : on le laisse arriver
+        if _CHOICE_RE.match(line):
+            n += 1
+        elif not line.strip() or line[:1] in (" ", "\t"):
+            continue
+        elif n >= 3:
+            return True
+        else:
+            return False
+    return False
+
+
+# Nettoyage d'un prompt où Marc a collé l'aperçu complet (ADN + rôle + date + garde-fou de chasse)
+def prompt_clean(text: str) -> Tuple[str, List[str]]:
+    t = str(text or "")
+    found: List[str] = []
+    if SYSTEM_BASE in t:
+        t = t.replace(SYSTEM_BASE, "")
+        found.append("l'ADN Padawan")
+    elif SYSTEM_BASE[:70] in t:
+        i = t.index(SYSTEM_BASE[:70])
+        j = t.find("\n\n", i)
+        t = t[:i] + (t[j:] if j > 0 else "")
+        found.append("l'ADN Padawan")
+    for rid in RoleRouter_ROLE_IDS:
+        rt = RoleRouter.default_role_text(rid)
+        if rt and rt in t:
+            t = t.replace(rt, "")
+            found.append(f"le texte du rôle {RoleRouter.ROLES[rid]['label']}")
+    t2 = re.sub(r"\s*Si les sources digressent, ignore-les\.\s*Reste sur:\s*[^\n]*", "", t)
+    if t2 != t:
+        found.append("le garde-fou de chasse « Reste sur: … »")
+        t = t2
+    t2 = re.sub(r"\s*Date du jour:\s*\d{1,2} [a-zéû]+ \d{4}\.", "", t)
+    if t2 != t:
+        found.append("la date figée")
+        t = t2
+    t = re.sub(r"\n{3,}", "\n\n", t).strip()
+    return t, found
+
+
+
+GAME_COLORS = {
+    "bg": "#06120a", "panel": "#0a1a0f", "pip": "#020a04", "art": "#04140a", "fg": "#c9f7c9",
+    "dim": "#5f8f68", "green": "#41ff6a", "amber": "#ffc857", "cyan": "#5ff5ff", "bad": "#ff6b5f",
+    "line": "#1f4a2a", "btn": "#0f2e17", "btnh": "#1d5a2c",
+}
+GAME_INPUT_TIP = "🎮 Mode Jeu : clique un choix, tape 1–9, ou écris ton action ici puis Entrée · Échap = annuler"
+GAME_GEN_OPTIONS = {"num_predict": 1400, "temperature": 0.85, "repeat_penalty": 1.08}
+
+
+def game_trim_history(st: Dict[str, Any], budget: int = 0) -> Tuple[List[Dict[str, str]], str]:
+    """Derniers tours qui tiennent dans le budget + mémoire (chronique + dernier statut) si on a coupé."""
+    budget = budget or GAME_HIST_BUDGET
+    msgs = [m for m in (st.get("msgs") or []) if m.get("role") in ("user", "assistant") and m.get("content")]
+    keep: List[Dict[str, str]] = []
+    total = 0
+    i = len(msgs)
+    while i >= 2:
+        pair = msgs[i - 2:i]
+        size = sum(len(m["content"]) for m in pair)
+        if keep and total + size > budget:
+            break
+        keep = pair + keep
+        total += size
+        i -= 2
+    memo = ""
+    if i > 0:
+        chron = "; ".join((st.get("chronicle") or [])[-25:])
+        memo = "[MÉMOIRE DE LA PARTIE — tours précédents résumés] Choix du joueur : " + chron + ". "
+        if st.get("quests"):
+            memo += "Quêtes : " + " → ".join(st["quests"][-6:]) + ". "
+        if st.get("status"):
+            memo += "Dernier statut connu :\n" + FENCE + "\n" + st["status"] + "\n" + FENCE + "\n"
+        memo += "Continue l'histoire de façon cohérente.\n\n"
+    return keep, memo
+
+
+def game_export_txt(st: Dict[str, Any]) -> str:
+    out = [f"{st.get('name', 'Partie')} — exporté par Padawan le {time.strftime('%Y-%m-%d %H:%M')}", "=" * 60, ""]
+    for e in st.get("log") or []:
+        if e.get("who") == "you":
+            out.append(f"▶ {e.get('text', '')}")
+        elif e.get("who") == "mj":
+            fam_art = game_art_for(st.get("builtin", ""), game_parse(e.get("text", ""))["scene"])[1]
+            t = e.get("text", "")
+            if fam_art:
+                t = _SCENE_RE.sub(lambda m: fam_art, t, count=1)
+            out.append(t)
+        elif e.get("who") == "intro":
+            meta = GAME_META.get(st.get("builtin", ""), {})
+            out.append(meta.get("title", ""))
+            out.append(meta.get("intro", ""))
+        out.append("")
+    return "\n".join(out)
+
+
+def game_export_html(st: Dict[str, Any]) -> str:
+    import html as _h
+    css = ("body{background:#06120a;color:#c9f7c9;font:17px/1.55 'Segoe UI',sans-serif;max-width:860px;margin:30px auto;padding:0 18px}"
+           "h1{color:#ffc857;font-family:Consolas,monospace}h2{color:#ffc857;font-family:Consolas,monospace;margin-top:34px}"
+           "pre{background:#04140a;color:#41ff6a;padding:12px 16px;border:1px solid #1f4a2a;border-radius:6px;"
+           "font:14px/1.25 Consolas,'Cascadia Mono',monospace;overflow:auto}"
+           ".you{color:#ffc857;font-weight:bold;font-family:Consolas,monospace;margin-top:22px}"
+           ".ch{color:#41ff6a;font-weight:bold}.chk{color:#5ff5ff;font-family:Consolas,monospace}.sys{color:#5f8f68}")
+    body = [f"<h1>☢ {_h.escape(st.get('name', 'Partie'))}</h1>",
+            f"<p class='sys'>Exporté par Padawan le {time.strftime('%Y-%m-%d %H:%M')} · {st.get('turn', 0)} tours</p>"]
+    bi = st.get("builtin", "")
+
+    def para(line: str) -> str:
+        t = _h.escape(line)
+        t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", t)
+        t = re.sub(r"(\[[^\]]{2,90}\])", r"<span class='chk'>\1</span>", t)
+        return t
+
+    for e in st.get("log") or []:
+        who, text = e.get("who"), e.get("text", "")
+        if who == "you":
+            body.append(f"<p class='you'>▶ {_h.escape(text)}</p>")
+        elif who == "intro":
+            meta = GAME_META.get(bi, {})
+            art = game_art_for(bi, meta.get("art", ""))[1]
+            body.append(f"<h2>{_h.escape(meta.get('title', ''))}</h2>")
+            if art:
+                body.append(f"<pre>{_h.escape(art)}</pre>")
+            body.append("".join(f"<p>{para(x)}</p>" for x in meta.get("intro", "").split("\n") if x.strip()))
+        elif who == "mj":
+            g = game_parse(text)
+            art = game_art_for(bi, g["scene"], text[:600])[1] if bi else ""
+            done = False
+            for kind, blk in game_split_blocks(text):
+                if kind == "fence":
+                    if game_is_status(blk) or not art:
+                        body.append(f"<pre>{_h.escape(blk.strip(chr(10)))}</pre>")
+                    elif not done:
+                        body.append(f"<pre>{_h.escape(art)}</pre>")
+                        done = True
+                    continue
+                for line in blk.split("\n"):
+                    if not line.strip():
+                        continue
+                    m = re.match(r"^\s*#{1,4}\s*(.+)$", line)
+                    if m:
+                        body.append(f"<h2>{_h.escape(_strip_md(m.group(1)))}</h2>")
+                        if art and not done:
+                            body.append(f"<pre>{_h.escape(art)}</pre>")
+                            done = True
+                    elif _SCENE_RE.match(line):
+                        if art and not done:
+                            body.append(f"<pre>{_h.escape(art)}</pre>")
+                            done = True
+                    elif _CHOICE_RE.match(line):
+                        body.append(f"<p class='ch'>{para(line.strip())}</p>")
+                    else:
+                        body.append(f"<p>{para(line)}</p>")
+    return ("<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>"
+            + _h.escape(st.get("name", "Partie")) + "</title><style>" + css + "</style></head><body>"
+            + "\n".join(body) + "</body></html>")
+
+
+GAME_GENERIC_FORMAT = "\n".join([
+    "",
+    "FORMAT OBLIGATOIRE DE CHAQUE RÉPONSE (dans cet ordre, rien d'autre) :",
+    "## Titre de la scène",
+    FENCE,
+    "petit art ASCII (6 à 10 lignes, 40 colonnes maximum)",
+    FENCE,
+    "Narration et dialogues (120 à 220 mots, au présent, en tutoyant le joueur).",
+    FENCE,
+    "▓▓ STATUT ▓▓",
+    "NOM: (nom) | NIV: 1",
+    "PV: 20/20 | OR: 0",
+    "LIEU: (lieu)",
+    "QUÊTE: (quête active)",
+    "INVENTAIRE: (objet), (objet)",
+    FENCE,
+    "QUE FAIS-TU ?",
+    "1. (choix)",
+    "2. (choix)",
+    "3. (choix)",
+    "",
+    "Mets 3 à 5 choix numérotés (actions courtes, sans dé), un par ligne. Rien après le dernier choix.",
+    "Le message du joueur contient [JET d20 = N] : 1-5 échec grave, 6-10 échec, 11-15 réussite, 16-20 belle réussite.",
+    "DÉMARRAGE : quand le joueur dit « Commence la partie », présente le monde en quelques phrases, puis propose "
+    "3 personnages en choix numérotés + « 4. Créer mon propre personnage ».",
+])
+
+GAME_GEN_SYSTEM = ("Tu es un concepteur de jeux de rôle textuels. Tu écris en français québécois naturel. "
+                   "Tu réponds UNIQUEMENT avec le texte demandé, sans introduction ni commentaire.")
+GAME_GEN_ASK = (
+    "Écris le PROMPT SYSTÈME d'un jeu de rôle textuel interactif sur ce thème : « {idee} ».\n"
+    "Le prompt s'adresse au modèle qui sera le MAÎTRE DU JEU. Il doit contenir, avec ces titres :\n"
+    "1. Une phrase « Tu es le MAÎTRE DU JEU de « TITRE DU JEU » … » et le ton.\n"
+    "2. UNIVERS : 5 à 8 puces (époque, lieux précis, factions ou personnages, objets, humour).\n"
+    "3. RÈGLES : tu tutoies le joueur; tu restes toujours le maître du jeu (aucun méta-commentaire, aucune URL); "
+    "conséquences réelles; état cohérent d'un tour à l'autre; tests avec [JET d20 = N].\n"
+    "4. Les noms des jauges du statut adaptées au thème (ex. PV, MANA, OR, SANTÉ…), écrites comme « PV: 20/20 ».\n"
+    "N'écris PAS de section FORMAT : Padawan l'ajoute lui-même. 250 à 450 mots."
+)
+
+
+def game_fix_generated(txt: str) -> str:
+    """Nettoie un prompt de jeu généré et garantit le format attendu par Padawan."""
+    t = (txt or "").strip()
+    t = re.sub(r"^" + FENCE + r"[a-z]*\s*|\s*" + FENCE + r"$", "", t).strip()
+    t = re.split(r"\n\s*#*\s*\**\s*FORMAT OBLIGATOIRE", t)[0].strip()
+    return t + "\n" + GAME_GENERIC_FORMAT
+
+
+def game_merge_status(old: str, new: str) -> str:
+    """Statut partiel (ex. sans HP) : on garde les jauges du tour précédent pour le Pip-Boy."""
+    if not old or not new:
+        return new or old
+    o, n = game_parse_status(old), game_parse_status(new)
+    nd = dict(n["fields"])
+    if any(k in nd for k in ("HP", "PV", "SANTÉ")) or len(nd) >= 6:
+        return new
+    out = [(k, nd.get(k, v)) for k, v in o["fields"]]
+    seen = {k for k, _ in o["fields"]}
+    out += [(k, v) for k, v in n["fields"] if k not in seen]
+    title = n["title"] if n["title"] != "STATUT" else o["title"]
+    return f"▓▓ {title} ▓▓\n" + "\n".join(f"{k}: {v}" for k, v in out)
+
+
+# ── v39.4: moteur d'état du jeu (inventaire / jauges robustes, même si le modèle oublie le statut) ──
+def _fold(s: str) -> str:
+    """minuscules sans accents (comparaisons tolérantes)."""
+    s = unicodedata.normalize("NFD", str(s or ""))
+    return "".join(ch for ch in s if unicodedata.category(ch) != "Mn").lower()
+
+
+_GKEY_ALIAS = {"INV": "INVENTAIRE", "INVENTAIRE": "INVENTAIRE", "INVENTORY": "INVENTAIRE", "SAC": "INVENTAIRE",
+               "SAC A DOS": "INVENTAIRE", "OBJETS": "INVENTAIRE", "QUETE": "QUÊTE", "QUETES": "QUÊTE",
+               "QUETE ACTIVE": "QUÊTE", "QUEST": "QUÊTE", "MISSION": "QUÊTE", "PV": "PV", "HP": "HP",
+               "SANTE": "SANTÉ", "NIVEAU": "NIV", "CAPSULES": "CAPS"}
+_GKEY_KNOWN = {"HP", "PV", "SANTÉ", "RAD", "RADS", "CAPS", "FAIM", "SOIF", "NOM", "NIV", "SPECIAL", "LIEU", "QUÊTE",
+               "INVENTAIRE", "XP", "PISTE", "INDICES", "OR", "MANA", "NERFS", "PIASTRES", "SALLE", "ARME", "ARMURE",
+               "ÉTAGE", "ETAGE", "CLASSE", "MUNITIONS", "KARMA", "HEURE", "JOUR", "ALLIÉS", "ALLIES"}
+_HP_KEYS = ("HP", "PV", "SANTÉ")
+_GKV_LINE = re.compile(r"^([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 ’'\-]{0,18}?)\s*:\s*(.*)$")
+
+
+def game_norm_key(k: str) -> str:
+    raw = re.sub(r"[*_`▓]", "", str(k or "")).strip()
+    f = _fold(raw).upper().strip()
+    f = re.sub(r"\s+", " ", f)
+    if f in _GKEY_ALIAS:
+        return _GKEY_ALIAS[f]
+    for key in _GKEY_KNOWN:
+        if _fold(key).upper() == f:
+            return key
+    return raw.upper()
+
+
+def _gline_clean(line: str) -> str:
+    s = (line or "").strip()
+    s = re.sub(r"^[>\-*•·▸▶►]+\s*", "", s)
+    s = s.replace("**", "").replace("__", "").replace("`", "").strip()
+    return s.strip("▓ ").strip() if s.startswith("▓") else s
+
+
+def game_fields(text: str, extra_keys=()) -> Dict[str, str]:
+    """Toutes les lignes CLÉ: valeur connues de la réponse (statut ``` ou non, lignes vides tolérées,
+    puces, gras, « | »). Inventaire sur plusieurs lignes à puces accepté. La dernière occurrence gagne."""
+    known = set(_GKEY_KNOWN) | {game_norm_key(k) for k in extra_keys}
+    out: Dict[str, str] = {}
+    lines = (text or "").replace("\r\n", "\n").split("\n")
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
+        i += 1
+        if _CHOICE_RE.match(raw) and ":" not in raw[:24]:
+            continue
+        s = _gline_clean(raw)
+        if not s or ":" not in s:
+            continue
+        for part in re.split(r"\s*\|\s*|\s{3,}|\s·\s(?=[A-ZÀ-Ü][A-ZÀ-Ü ]{1,12}\s*:)", s):
+            m = _GKV_LINE.match(part.strip())
+            if not m:
+                continue
+            k = game_norm_key(m.group(1))
+            if k not in known:
+                continue
+            v = m.group(2).strip().strip("*").strip()
+            if k == "INVENTAIRE" and not v:  # liste à puces sur les lignes suivantes
+                items = []
+                while i < len(lines):
+                    nx = lines[i].strip()
+                    if not nx and not items:
+                        i += 1
+                        continue
+                    if re.match(r"^[-*•·▸]\s*\S", nx) and not _GKV_LINE.match(_gline_clean(nx) or "x"):
+                        items.append(re.sub(r"^[-*•·▸]\s*", "", nx).strip())
+                        i += 1
+                        continue
+                    if re.match(r"^[-*•·▸]\s*\S", nx):
+                        items.append(re.sub(r"^[-*•·▸]\s*", "", nx).strip())
+                        i += 1
+                        continue
+                    break
+                v = ", ".join(items)
+            if v or k == "INVENTAIRE":
+                out[k] = v
+    return out
+
+
+_ITEM_STOP = {"le", "la", "les", "un", "une", "des", "du", "de", "d", "l", "ton", "ta", "tes", "ce", "cet", "cette",
+              "ces", "son", "sa", "ses", "a", "au", "aux", "en", "et", "x", "mon", "ma", "mes", "quelques", "petit",
+              "petite", "vieux", "vieille", "vieil", "nouveau", "nouvelle", "deux", "trois", "quatre", "cinq"}
+_NUMW = {"un": 1, "une": 1, "deux": 2, "trois": 3, "quatre": 4, "cinq": 5, "six": 6, "sept": 7, "huit": 8,
+         "dix": 10, "quelques": 2}
+
+
+def _sing(w: str) -> str:
+    if len(w) > 3 and w.endswith(("s", "x")) and not w.endswith(("ss", "us")):
+        return w[:-1]
+    return w
+
+
+def game_item_words(name: str) -> List[str]:
+    f = _fold(name)
+    f = re.sub(r"\(.*?\)", " ", f)
+    ws = [_sing(w) for w in re.findall(r"[a-z0-9]+", f)]
+    return [w for w in ws if w not in _ITEM_STOP and not w.isdigit() and len(w) > 1]
+
+
+def game_item_parse(s: str) -> Tuple[int, str]:
+    t = (s or "").strip().strip(".").strip()
+    m = re.match(r"^(\d{1,3})\s*[x×]?\s+(.+)$", t)
+    if m:
+        return int(m.group(1)), m.group(2).strip()
+    m = re.match(r"^(.+?)\s*(?:[x×]\s*(\d{1,3})|\((\d{1,3})\))$", t)
+    if m:
+        return int(m.group(2) or m.group(3)), m.group(1).strip()
+    m = re.match(r"^(un|une|deux|trois|quatre|cinq|six|sept|huit|dix|quelques)\s+(.+)$", t, re.I)
+    if m:
+        return _NUMW[m.group(1).lower()], m.group(2).strip()
+    return 1, t
+
+
+def game_item_fmt(q: int, name: str) -> str:
+    return f"{q} {name}" if q > 1 else name
+
+
+def game_inv_list(v: str) -> List[Tuple[int, str]]:
+    out: List[Tuple[int, str]] = []
+    if not v or _fold(v).strip(" .-") in ("aucun", "rien", "vide", "n/a", "neant", "(vide)"):
+        return out
+    v = re.sub(r"\(([^()]*)\)", lambda m: "(" + m.group(1).replace(",", "/") + ")", v.strip().rstrip("."))
+    for part in re.split(r"\s*[,;•]\s*|\s+·\s+|\s+\+\s+", v):
+        part = part.strip().rstrip(".").strip()
+        if part.startswith("(") and part.endswith(")") or part.startswith("[") and part.endswith("]"):
+            part = part[1:-1].strip()
+        if part and len(part) <= 60 and not part.startswith(("+", "-", "−")):
+            q, n = game_item_parse(part)
+            if q > 0 and game_item_words(n):
+                out.append((q, n))
+    return out
+
+
+def game_item_match(inv: List[Tuple[int, str]], phrase: str) -> int:
+    """Index de l'objet d'inventaire nommé dans la phrase (tolérant : accents, pluriel, articles), sinon -1."""
+    pw = set(game_item_words(phrase))
+    if not pw:
+        return -1
+    best, score = -1, 0
+    for i, (_q, name) in enumerate(inv):
+        iw = game_item_words(name)
+        if not iw:
+            continue
+        common = [w for w in iw if w in pw and len(w) >= 3]
+        sc = len(common) * 10 + (5 if iw[0] in pw else 0)
+        if common and sc > score:
+            best, score = i, sc
+    return best
+
+
+_ITEM_LEX = ("stimpak", "stim", "nuka", "cola", "munition", "balle", "cartouche", "chargeur", "arme", "pistolet", "fusil",
+             "revolver", "couteau", "machette", "batte", "hache", "masse", "cle", "carte", "plan", "holobande",
+             "holodisque", "radaway", "radx", "med", "buffout", "mentat", "jet", "eau", "conserve", "poutine",
+             "sirop", "grenade", "mine", "armure", "casque", "veste", "manteau", "batterie", "cellule", "fusible",
+             "outil", "pince", "pied", "lampe", "corde", "bandage", "trousse", "medicament", "pilule", "seringue",
+             "potion", "parchemin", "epee", "dague", "bouclier", "anneau", "amulette", "lettre", "photo", "dossier",
+             "cigarette", "flasque", "whisky", "gin", "biere", "badge", "insigne", "boussole", "radio", "piece",
+             "composant", "ferraille", "vis", "ruban", "colle", "tissu", "cuir", "viande", "ration", "nourriture",
+             "bouteille", "canette", "boite", "sac", "kit", "detonateur", "dynamite", "molotov", "jambon", "pomme",
+             "steak", "baie", "champignon", "talisman", "grimoire", "livre", "journal", "magazine", "disquette",
+             "crochet", "epingle", "jumelle", "lunette", "masque", "filtre", "gant", "botte", "tuyau", "lance")
+_CONSUMABLE = ("stimpak", "stim", "nuka", "cola", "eau", "conserve", "poutine", "sirop", "radaway", "radx", "med",
+               "buffout", "mentat", "jet", "bandage", "pilule", "seringue", "potion", "cigarette", "flasque", "whisky",
+               "gin", "biere", "ration", "nourriture", "viande", "bouteille", "canette", "grenade", "molotov",
+               "dynamite", "jambon", "pomme", "steak", "baie", "champignon", "parchemin", "munition", "balle",
+               "cartouche", "mine", "trousse", "medicament", "kit", "epingle", "crochet")
+_FOOD = ("poutine", "conserve", "viande", "ration", "nourriture", "jambon", "pomme", "steak", "baie", "champignon",
+         "sirop", "repas", "bouffe", "pain", "fromage", "orignal")
+_DRINK = ("eau", "nuka", "cola", "biere", "whisky", "gin", "flasque", "bouteille", "canette", "cafe", "the")
+_GAIN_BAD = {"fuite", "decision", "refuge", "courage", "temps", "conscience", "souffle", "chemin", "route", "direction",
+             "place", "peur", "confiance", "force", "sens", "idee", "moyen", "plaisir", "parole", "note", "garde", "air",
+             "vue", "position", "controle", "fin", "raison", "distance", "pause", "risque", "porte", "passage", "coup",
+             "oeil", "main", "pied", "tete", "elan", "reponse", "information", "indice", "nouvelle", "piste", "aide",
+             "conseil", "avance", "rendez", "corps", "cadavre", "trace", "odeur", "bruit", "silence", "lumiere",
+             "ombre", "sortie", "entree", "escalier", "couloir", "piece", "salle", "abri", "temps", "envie", "gout",
+             "chance", "occasion", "dessin", "cache", "vie", "point", "degat", "rad", "hp", "pv", "xp"}
+_PH = r"((?:\d{1,3}\s+|un |une |des |du |de la |de l['’]|l['’]|le |la |les |ce |cet |cette |ces |quelques |deux |trois |ton |ta |tes )[^.,;:!?»«\"\n()]{2,60}?)(?=\s+(?:et|puis|mais|qui|que|qu['’]|dans|sur|pour|avec|avant|apr[èe]s|en|sous|vers|contre|d['’]un|d['’]une)\b|[.,;:!?»«\"\n()]|$)"
+_GAIN_STRONG = re.compile(
+    r"\b(?:tu\s+|t['’])(?:obtiens|ramasses|re[çc]ois|r[ée]cup[èe]res|empoches|voles|ach[èe]tes|d[ée]robes|chipes|"
+    r"pognes|chopes|as\s+(?:obtenu|ramass[ée]|re[çc]u|r[ée]cup[ée]r[ée]|empoch[ée]|vol[ée]|achet[ée]|trouv[ée]|gagn[ée]))\s+"
+    r"(?:aussi\s+|enfin\s+|alors\s+|finalement\s+)?" + _PH, re.I)
+_GAIN_WEAK = re.compile(r"\b(?:tu\s+|t['’])(?:trouves|prends|gagnes|d[ée]couvres|d[ée]nich(?:es)|d[ée]terres|saisis|attrapes)\s+"
+                        r"(?:aussi\s+|enfin\s+|alors\s+)?" + _PH, re.I)
+_GAIN_GIVEN = re.compile(r"\b(?:te|t['’])\s*(?:donne|donnent|donna|donnèrent|tend|tendent|tendit|remet|remettent|remit|"
+                         r"offre|offrent|offrit|confie|confient|confia|lance|lança|vend|vendent|vendit|glisse|glissa)\s+" + _PH, re.I)
+_GAIN_BAG = re.compile(r"\b(?:tu\s+)?(?:glisses|ranges|mets|fourres|places|accroches)\s+" + _PH + r"\s+(?:dans|à|a|sur)\s+(?:ton|ta|tes)\s+"
+                       r"(?:sac|inventaire|poche|pip-boy|ceinture|besace|holster|dos)", re.I)
+_GAIN_TAG = re.compile(r"(?:\[\s*\+\s*|\(\s*\+\s*|\b(?:objet|item)s?\s+(?:obtenu|trouv[ée]|ajout[ée])s?\s*:\s*|"
+                       r"\bnouvel?\s+objet\s*:\s*|\bajout[ée]s?\s+(?:à|a)\s+l['’]inventaire\s*:\s*|\b(?:butin|loot)\s*:\s*)"
+                       r"([^\]\)\n.;]{2,60})", re.I)
+_LOSS_ANY = re.compile(r"\b(?:tu\s+|t['’])(?:perds|donnes|vends|jettes|abandonnes|[ée]changes|laisses tomber|troques|"
+                       r"c[èe]des|as\s+perdu|as\s+donn[ée]|as\s+vendu|te fais voler|te fais prendre)\s+" + _PH, re.I)
+_LOSS_USE = re.compile(r"\b(?:tu\s+|t['’])(?:utilises|bois|avales|manges|consommes|injectes|t['’]injectes|lances|"
+                       r"vides|engloutis|d[ée]vores|grignotes|sirotes|ouvres|appliques|as\s+(?:utilis[ée]|bu|mang[ée]|aval[ée]|"
+                       r"consomm[ée]|lanc[ée]|inject[ée]))\s+" + _PH, re.I)
+_LOSS_TAG = re.compile(r"(?:\[\s*[-−–]\s*|\(\s*[-−–]\s*|\bobjets?\s+(?:perdu|utilis[ée]|consomm[ée])s?\s*:\s*|"
+                       r"\bretir[ée]s?\s+de\s+l['’]inventaire\s*:\s*)([^\]\)\n.;]{2,60})", re.I)
+_STAT_SIGNED = re.compile(r"(?<![\w/])([+\-−–])\s?(\d{1,3})\s?(HP|PV|RADS?|CAPS|XP|SANT[ÉE]|NERFS|OR|MANA|PIASTRES|"
+                          r"points? de vie|capsules?)\b", re.I)
+_STAT_VERB = re.compile(r"\b(perds|encaisses|subis|prends|absorbes|r[ée]cup[èe]res|regagnes|gagnes|re[çc]ois|obtiens|"
+                        r"trouves|empoches|ramasses|d[ée]penses|paies|payes|donnes|as\s+perdu|as\s+gagn[ée])\s+(\d{1,3})\s+"
+                        r"(HP|PV|points? de vie|points? de sant[ée]|rads?|capsules?|caps|XP|points? d['’]exp[ée]rience|"
+                        r"pi[èe]ces? d['’]or|piastres?|points? de d[ée]g[âa]ts|d[ée]g[âa]ts)", re.I)
+_DMG = re.compile(r"\b(\d{1,3})\s+(?:points?\s+de\s+)?d[ée]g[âa]ts\b", re.I)
+_QUEST_NARR = re.compile(r"(?:nouvelle\s+qu[êe]te|qu[êe]te\s+(?:mise\s+[àa]\s+jour|ajout[ée]e|active)|"
+                         r"\[\s*qu[êe]te\s*\])\s*[:\-–]?\s*([^\n\]]{4,120})", re.I)
+_WOUND = re.compile(r"\bte\s+(?:mord|frapp|griff|touch|br[ûu]l|cogn|bless|lac[èe]r|transperc|percut|plaqu|ent[ae]ill|mitraill|tire\s+dessus)|"
+                    r"\bt['’](?:attaqu|atteint|[ée]gratign|[ée]corch|[ée]clabouss)|"
+                    r"\btu\s+(?:es|te\s+fais)\s+(?:bless|touch|mordu|griff|frapp|projet)|\btu\s+saignes|\btu\s+tombes|"
+                    r"\bdouleur|\bblessure|\bmorsure|\bton\s+sang|\bta\s+(?:jambe|main|t[êe]te|cheville)\s+(?:saigne|br[ûu]le)", re.I)
+
+
+def _phrase_ok(ph: str, weak: bool = False) -> Optional[str]:
+    ph = re.split(r"\s+(?:et|qui|que|qu['’]|dans|sur|pour|avant|apr[èe]s|pendant|avec\s+(?:un|une|le|la|les)\s+\w+\s+\w+|"
+                  r"en\s+\w+ant|sous|vers|contre|parmi|derri[èe]re|devant|puis|mais|alors|car|quand|lorsque|si|comme)\b",
+                  ph.strip(), maxsplit=1)[0].strip(" -–—'’")
+    words = ph.split()
+    if not words:
+        return None
+    ph = " ".join(words[:7])
+    w = game_item_words(ph)
+    if not w or w[0] in _GAIN_BAD or all(x in _GAIN_BAD for x in w):
+        return None
+    if weak and not any(x.startswith(lx) for x in w for lx in _ITEM_LEX):
+        return None
+    if re.match(r"^(?:l['’]|le |la |les |un |une )?(?:air|temps|fuite|parole|d[ée]cision)\b", _fold(ph)):
+        return None
+    return ph
+
+
+def game_narrative(text: str) -> Dict[str, Any]:
+    """Objets gagnés / perdus et variations de jauges racontés dans la narration."""
+    lines = []
+    for raw in (text or "").replace("\r\n", "\n").split("\n"):
+        s = _gline_clean(raw)
+        if not s or _CHOICE_RE.match(raw) or re.match(r"^\s*#", raw) or re.match(r"^\s*QUE FAIS", s, re.I):
+            continue
+        m = _GKV_LINE.match(s)
+        if m and game_norm_key(m.group(1)) in _GKEY_KNOWN:
+            continue
+        lines.append(s)
+    narr = "\n".join(lines)
+    gains: List[str] = []
+    losses: List[Tuple[str, bool]] = []  # (phrase, usage)
+    for rx, weak in ((_GAIN_STRONG, False), (_GAIN_GIVEN, False), (_GAIN_BAG, False), (_GAIN_WEAK, True)):
+        for m in rx.finditer(narr):
+            ph = _phrase_ok(m.group(1), weak)
+            if ph:
+                gains.append(ph)
+    for m in _GAIN_TAG.finditer(narr):
+        ph = m.group(1).strip()
+        if not re.match(r"^\d{1,3}\s*(HP|PV|RAD|CAPS|XP)\b", ph, re.I) and game_item_words(ph):
+            gains.append(ph)
+    for m in _LOSS_ANY.finditer(narr):
+        losses.append((m.group(1).strip(), False))
+    for m in _LOSS_USE.finditer(narr):
+        losses.append((m.group(1).strip(), True))
+    for m in _LOSS_TAG.finditer(narr):
+        ph = m.group(1).strip()
+        if not re.match(r"^\d{1,3}\s*(HP|PV|RAD|CAPS|XP)\b", ph, re.I):
+            losses.append((ph, False))
+    stats: Dict[str, int] = {}
+
+    def add(k, d):
+        stats[k] = stats.get(k, 0) + d
+
+    def skey(u: str) -> str:
+        f = _fold(u)
+        if f.startswith(("hp", "pv", "point de vie", "points de vie", "sante", "point de sante", "points de sante")):
+            return "HP"
+        if f.startswith("rad"):
+            return "RAD"
+        if f.startswith(("cap",)):
+            return "CAPS"
+        if "or" == f or "piece" in f:
+            return "OR"
+        if "piastre" in f:
+            return "PIASTRES"
+        if "exp" in f or f == "xp":
+            return "XP"
+        if "degat" in f:
+            return "DMG"
+        return f.upper()
+
+    for m in _STAT_SIGNED.finditer(narr):
+        sign = -1 if m.group(1) in "-−–" else 1
+        add(skey(m.group(3)), sign * int(m.group(2)))
+    for m in _STAT_VERB.finditer(narr):
+        verb, n, k = _fold(m.group(1)), int(m.group(2)), skey(m.group(3))
+        if k == "DMG":
+            add("HP", -n)
+            continue
+        neg = verb.startswith(("perds", "encaisses", "subis", "depenses", "paies", "payes", "donnes", "as perdu"))
+        if k == "RAD" and verb.startswith(("prends", "absorbes", "subis", "encaisses", "recois")):
+            neg = False
+        if k == "HP" and verb.startswith("prends"):
+            continue
+        add(k, -n if neg else n)
+    if "HP" not in stats:
+        for m in _DMG.finditer(narr):
+            add("HP", -int(m.group(1)))
+    quest = ""
+    mq = None
+    for mq in _QUEST_NARR.finditer(narr):
+        pass
+    if mq:
+        quest = mq.group(1).strip(" .*»«\"")
+    return {"gains": gains, "losses": losses, "stats": stats, "quest": quest, "narr": narr}
+
+
+def _num(v: str) -> Optional[Tuple[int, Optional[int]]]:
+    m = _FRAC_RE.search(v or "")
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = re.search(r"-?\d+", v or "")
+    return (int(m.group(0)), None) if m else None
+
+
+def game_status_dict(status: str) -> Tuple[str, Dict[str, str]]:
+    info = game_parse_status(status or "")
+    d: Dict[str, str] = {}
+    for k, v in info["fields"]:
+        d[game_norm_key(k)] = v
+    return info["title"] if info["title"] != "STATUT" else "", d
+
+
+def game_status_text(title: str, d: Dict[str, str], template: str = "") -> str:
+    """Rebâtit un bloc ▓▓ propre (le Pip-Boy le relit) en gardant la disposition du statut précédent."""
+    rows: List[str] = []
+    if template:
+        used = set()
+        for line in template.split("\n"):
+            if not line.strip() or "▓▓" in line:
+                continue
+            parts = []
+            for part in re.split(r"\s\|\s|\s{3,}|\s·\s(?=[A-ZÀ-Ü][A-ZÀ-Ü ]{1,12}\s*:)", line):
+                m = _KV_RE.search(part.strip())
+                if not m:
+                    continue
+                k = game_norm_key(m.group(1))
+                if k in d and k not in used:
+                    used.add(k)
+                    parts.append(f"{k}: {d[k]}")
+            if parts:
+                rows.append(" | ".join(parts))
+        rest = {k: v for k, v in d.items() if k not in used}
+        if rest:
+            extra = game_status_text("", rest).split("\n")[1:]
+            rows += [x for x in extra if x.strip()]
+        return f"▓▓ {title or 'STATUT'} ▓▓\n" + "\n".join(rows)
+    short: List[str] = []
+    long_keys = ("INVENTAIRE", "QUÊTE", "LIEU", "SPECIAL", "INDICES", "PISTE", "ALLIÉS")
+    order = ["NOM", "NIV", "XP", "HP", "PV", "SANTÉ", "RAD", "CAPS", "OR", "PIASTRES", "MANA", "NERFS", "FAIM", "SOIF"]
+    keys = [k for k in order if k in d] + [k for k in d if k not in order and k not in long_keys] + \
+           [k for k in long_keys if k in d]
+    for k in keys:
+        v = (d.get(k) or "").strip()
+        if k in long_keys:
+            if short:
+                rows.append(" | ".join(short))
+                short = []
+            rows.append(f"{k}: {v}")
+        else:
+            short.append(f"{k}: {v}")
+            if len(short) == 3:
+                rows.append(" | ".join(short))
+                short = []
+    if short:
+        rows.append(" | ".join(short))
+    return f"▓▓ {title or 'STATUT'} ▓▓\n" + "\n".join(rows)
+
+
+def game_apply_turn(old_status: str, reply: str, dice: int = 0, tick: bool = True) -> Dict[str, Any]:
+    """Applique un tour : statut du modèle (tolérant) + ce que raconte la narration + faim/soif/dés.
+    Retourne {'status', 'gained', 'lost', 'stat_changes', 'quest', 'notes'}."""
+    title, old = game_status_dict(old_status)
+    g = game_parse(reply)
+    model_title, _x = game_status_dict(g["status"]) if g["status"] else ("", {})
+    fields = game_fields(reply, extra_keys=old.keys())
+    new = dict(old)
+    notes: List[str] = []
+    # 1. champs fournis par le modèle (sauf l'inventaire, traité à part)
+    heal = bool(re.search(r"soign|stimpak|repos|dors|dormi|gu[ée]ri|bandage|m[ée]dic|r[ée]cup[èe]re|regagne|potion|soin",
+                          _fold(reply)))
+    fed = bool(re.search(r"\btu\s+(?:manges|devores|grignotes|engloutis|avales\s+(?:un|une|ta|ton|tes|des|le|la|les)\s+(?!gorgee))"
+                         r"|\bt['’]empiffres|\btu\s+as\s+mange", _fold(reply)))
+    drunk = bool(re.search(r"\btu\s+(?:bois|sirotes|te\s+desalteres|avales\s+une\s+gorgee|vides\s+ta\s+(?:bouteille|canette|flasque))"
+                           r"|\bt['’]abreuves|\btu\s+as\s+bu", _fold(reply)))
+    for k, v in fields.items():
+        if k == "INVENTAIRE" or v.strip(" .-?") == "":
+            continue
+        nv, ov = _num(v), _num(old.get(k, ""))
+        if nv and ov and nv[0] < ov[0] and (k == "FAIM" and not fed or k == "SOIF" and not drunk):
+            continue  # le modèle recopie un vieux chiffre : la faim / soif ne baisse pas sans manger / boire
+        if nv and ov and nv[0] > ov[0] and k in _HP_KEYS and not heal:
+            continue  # HP qui remonte sans soin raconté = statut recopié d'un ancien tour
+        new[k] = v
+    hp_key = next((k for k in _HP_KEYS if k in new), "HP")
+    narr = game_narrative(reply)
+    # 2. inventaire
+    old_inv = game_inv_list(old.get("INVENTAIRE", ""))
+    inv = list(old_inv)
+    gained: List[str] = []
+    lost: List[str] = []
+    model_inv_raw = fields.get("INVENTAIRE")
+    deltas_plus, deltas_minus = [], []
+    if model_inv_raw is not None:
+        for part in re.split(r"\s*[,;]\s*", model_inv_raw):
+            p = part.strip()
+            if p.startswith("+"):
+                deltas_plus.append(p[1:].strip())
+            elif p[:1] in ("-", "−", "–"):
+                deltas_minus.append(p[1:].strip())
+    model_inv = game_inv_list(model_inv_raw) if model_inv_raw is not None else None
+    changed_by_model = False
+    if model_inv is not None and (model_inv or not deltas_plus and not deltas_minus):
+        okeys = sorted(" ".join(game_item_words(n)) + f"#{q}" for q, n in old_inv)
+        nkeys = sorted(" ".join(game_item_words(n)) + f"#{q}" for q, n in model_inv)
+        if not old_inv or okeys != nkeys:
+            if model_inv or not old_inv or "INVENTAIRE" in fields:
+                changed_by_model = bool(old_inv) and okeys != nkeys
+                for q, n in model_inv:
+                    j = game_item_match(old_inv, n)
+                    if j < 0:
+                        gained.append(n)
+                    elif q > old_inv[j][0]:
+                        gained.append(f"{q - old_inv[j][0]} {n}" if q - old_inv[j][0] > 1 else n)
+                for q, n in old_inv:
+                    j = game_item_match(model_inv, n)
+                    if j < 0:
+                        lost.append(n)
+                inv = list(model_inv)
+    for p in deltas_plus:
+        q, n = game_item_parse(p)
+        j = game_item_match(inv, n)
+        if j >= 0:
+            inv[j] = (inv[j][0] + q, inv[j][1])
+        else:
+            inv.append((q, n))
+        gained.append(game_item_fmt(q, n))
+    for p in deltas_minus:
+        q, n = game_item_parse(p)
+        j = game_item_match(inv, n)
+        if j >= 0:
+            lost.append(inv[j][1])
+            if inv[j][0] > q:
+                inv[j] = (inv[j][0] - q, inv[j][1])
+            else:
+                inv.pop(j)
+    # narration : si le modèle n'a pas lui-même tenu l'inventaire à jour
+    ate, drank = fed, drunk
+    stim = rad_away = 0
+    if not changed_by_model:
+        for ph in narr["gains"]:
+            q, n = game_item_parse(ph)
+            n = re.sub(r"^(?:de la |de l['’]|du |des |de |le |la |les |l['’]|ce |cet |cette |ces |ton |ta |tes )", "", n, flags=re.I).strip()
+            words = game_item_words(n)
+            if not words:
+                continue
+            if words[0] in ("capsule", "cap") and q:
+                k = "CAPS"
+                if k in new:
+                    nv = _num(new[k])
+                    if nv:
+                        new[k] = str(nv[0] + q)
+                        notes.append(f"+{q} CAPS")
+                continue
+            j = game_item_match(inv, n)
+            if j >= 0:
+                if q > 1 or re.match(r"^\d", ph.strip()) or any(words[0].startswith(c) for c in _CONSUMABLE):
+                    inv[j] = (inv[j][0] + q, inv[j][1])
+                    gained.append(game_item_fmt(q, inv[j][1]))
+                continue
+            n = n[:1].upper() + n[1:]
+            inv.append((q, n))
+            gained.append(game_item_fmt(q, n))
+    for ph, use in narr["losses"]:
+        j = game_item_match(inv, ph)
+        if j < 0:
+            continue
+        q0, n0 = inv[j]
+        w0 = game_item_words(n0)
+        cons = any(x.startswith(c) for x in w0 for c in _CONSUMABLE)
+        if use and not cons:
+            continue  # « tu utilises ta machette » : l'arme reste
+        if changed_by_model and any(game_item_match([(1, n0)], x) == 0 for x in lost):
+            continue
+        qn = game_item_parse(ph)[0] if re.match(r"^\d", ph.strip()) else 1
+        fn = _fold(n0)
+        if any(x in fn for x in ("stimpak", "stim")):
+            stim += 1
+        if "radaway" in fn or "rad-away" in fn:
+            rad_away += 1
+        if any(x in fn for x in _FOOD):
+            ate = True
+        if any(x in fn for x in _DRINK):
+            drank = True
+        if q0 > qn:
+            left = q0 - qn
+            if left == 1:  # « 2 Stimpaks » → « Stimpak »
+                w = n0.split(" ", 1)
+                if len(w[0]) > 3 and w[0][-1:] in ("s", "x") and not w[0].endswith(("ss", "us")):
+                    n0 = " ".join([w[0][:-1]] + w[1:])
+            inv[j] = (left, n0)
+        else:
+            inv.pop(j)
+        lost.append(n0)
+    if inv or "INVENTAIRE" in old or model_inv_raw is not None:
+        new["INVENTAIRE"] = ", ".join(game_item_fmt(q, n) for q, n in inv) if inv else "(vide)"
+    # 3. jauges
+    stat_changes: List[str] = []
+
+    def bump(key: str, delta: int, why: str = ""):
+        if key not in new or not delta:
+            return
+        nv = _num(new[key])
+        if not nv:
+            return
+        v, mx = nv
+        lim = mx if mx else (1000 if key.startswith("RAD") else 999999)
+        v2 = max(0, min(lim, v + delta))
+        if v2 == v:
+            return
+        new[key] = f"{v2}/{mx}" if mx else str(v2)
+        stat_changes.append(f"{'+' if v2 > v else '−'}{abs(v2 - v)} {key}{(' (' + why + ')') if why else ''}")
+
+    def model_moved(key: str) -> bool:
+        return key in fields and new.get(key) == fields.get(key) and _num(fields.get(key, "")) is not None and \
+            (_num(fields[key]) or (0,))[0] != (_num(old.get(key, "")) or (None,))[0]
+
+    st = narr["stats"]
+    for k, d in st.items():
+        key = hp_key if k == "HP" else ("RAD" if k == "RAD" and "RAD" in new else ("RADS" if k == "RAD" else k))
+        if key in new and not model_moved(key):
+            bump(key, d)
+    if stim and not model_moved(hp_key) and "HP" not in st:
+        bump(hp_key, 25 * stim, "Stimpak")
+    if rad_away and "RAD" in new and not model_moved("RAD"):
+        bump("RAD", -50 * rad_away, "RadAway")
+    if dice and dice <= 5 and hp_key in new and not model_moved(hp_key) and "HP" not in st and _WOUND.search(narr["narr"]):
+        bump(hp_key, -(12 - dice), f"jet raté {dice}")
+    if tick:
+        for key, step, done, amount in (("FAIM", 3, ate, -30), ("SOIF", 4, drank, -35)):
+            if key not in new:
+                continue
+            if done and not model_moved(key):
+                bump(key, amount, "mange" if key == "FAIM" else "bu")
+            elif not model_moved(key):
+                nv = _num(new[key])
+                if nv:
+                    v, mx = nv
+                    v2 = min(mx or 100, v + step)
+                    new[key] = f"{v2}/{mx}" if mx else str(v2)
+    hp = _num(new.get(hp_key, "")) if hp_key in new else None
+    if hp and hp[0] <= 0:
+        notes.append("☠ HP à zéro !")
+    for key, warn in (("FAIM", "🍖 Tu as faim : mange quelque chose"), ("SOIF", "💧 Tu as soif : bois quelque chose")):
+        nv = _num(new.get(key, "")) if key in new else None
+        if nv and nv[0] >= 70:
+            notes.append(warn)
+    quest = (fields.get("QUÊTE") or narr["quest"] or "").strip()
+    if narr["quest"] and not fields.get("QUÊTE"):
+        new["QUÊTE"] = narr["quest"]
+    status = game_status_text(model_title or title, new, old_status) if new else (g["status"] or old_status)
+    # dédoublonnage des listes
+    def uniq(xs):
+        seen, out = set(), []
+        for x in xs:
+            k = " ".join(game_item_words(x))
+            if k and k not in seen:
+                seen.add(k)
+                out.append(x)
+        return out
+    return {"status": status, "gained": uniq(gained), "lost": uniq(lost), "stat_changes": stat_changes,
+            "quest": quest, "notes": notes}
+
+
+def game_state_line(status: str) -> str:
+    """Rappel compact de l'état réel, envoyé au maître du jeu à chaque tour (pas gardé dans l'historique)."""
+    title, d = game_status_dict(status)
+    if not d:
+        return ""
+    parts = [f"{k}: {v}" for k, v in d.items() if k not in ("SPECIAL",)]
+    return ("\n\n[ÉTAT ACTUEL DU PIP-BOY (vérité du jeu) — " + " · ".join(parts)[:900]
+            + ". Recopie ce statut dans ton bloc ▓▓ en le METTANT À JOUR selon ce qui arrive "
+              "(INVENTAIRE complet : ajoute ce que je ramasse, retire ce que j'utilise; chiffres HP/RAD/CAPS/FAIM/SOIF changés si raconté).]")
+
+
+def game_dice_hint(dice: int) -> str:
+    if not dice:
+        return ""
+    if dice <= 5:
+        h = "échec grave : si l'action est risquée, vraie conséquence chiffrée (ex. « tu perds 12 HP », un objet perdu)"
+    elif dice <= 10:
+        h = "échec : petit coût chiffré (ex. « tu perds 5 HP » ou du temps)"
+    elif dice <= 15:
+        h = "réussite"
+    elif dice <= 19:
+        h = "belle réussite : petit bonus (objet, info ou CAPS)"
+    else:
+        h = "CRITIQUE : récompense mémorable"
+    return f" [JET d20 = {dice} → {h}]"
+
+
+def _status_kv_known(line: str) -> bool:
+    s = _gline_clean(line)
+    m = _GKV_LINE.match(s.split("|")[0].strip()) if s else None
+    return bool(m) and game_norm_key(m.group(1)) in _GKEY_KNOWN
+
+
+def game_status_span(lines: List[str], i: int) -> int:
+    """Fin (exclue) d'un statut ▓▓ hors bloc commençant à la ligne i : tolère les lignes vides
+    si la suite est encore une clé connue (INVENTAIRE après une ligne vide, etc.)."""
+    j = i + 1
+    while j < len(lines):
+        s = lines[j]
+        if not s.strip():
+            k = j + 1
+            while k < len(lines) and not lines[k].strip():
+                k += 1
+            if k < len(lines) and _status_kv_known(lines[k]) and not _CHOICE_RE.match(lines[k]):
+                j = k
+                continue
+            break
+        if _CHOICE_RE.match(s) or not (_KV_RE.search(s) or _status_kv_known(s)):
+            break
+        j += 1
+    return j
+
+
+_TEMPLATE_LINES = re.compile(r"^\s*(?:\(?narration et dialogues\.?\)?|\(?un mot de la liste\)?|mets 3 [àa] 5 choix.*|"
+                             r"rien apr[èe]s le dernier choix\.?|\*\*\s*[ée]tat mis [àa] jour\s*\*\*\s*:?)\s*$", re.I)
+
+
+def game_strip_template(text: str) -> str:
+    """Le petit modèle recopie parfois des bouts du gabarit (« Narration et dialogues. », « Mets 3 à 5 choix… »)."""
+    return "\n".join(l for l in (text or "").split("\n") if not _TEMPLATE_LINES.match(l))
+
+
+# ── v39.4: 📰 Nouvelles — briefings sourcés (vraie chasse web, sources datées) ─────
+BRIEF_DIR = os.path.join(PROMPTS_DIR, "briefings")
+
+NEWS_GEO_TEXT = "\n".join([
+    "Tu es VESNA ORLOV-TREMBLAY, géopoliticologue de l'an 2077. Depuis le futur, tu relis notre présent comme une archive : "
+    "tu sais quelles nouvelles comptaient vraiment et lesquelles n'étaient que du bruit. Tu tutoies Marc (Québec), "
+    "en français québécois clair, ton posé, lucide, un brin ironique. Sujet demandé : {question}.",
+    "",
+    "MÉTHODE (non négociable)",
+    "- Les FAITS viennent UNIQUEMENT des SOURCES de la chasse, cités avec leur numéro [n] et leur date. "
+    "Aucun fait, chiffre, nom ou date inventé : pas de source = tu ne l'affirmes pas.",
+    "- Tu sépares toujours 📌 les faits sourcés et 🔮 ta lecture du futur (interprétation clairement marquée).",
+    "- Plusieurs angles : Occident, Russie et Chine, Sud global, acteurs locaux. Aucune propagande, d'aucun bord; "
+    "si une source est un média d'État ou partisan, tu le dis.",
+    "- Probabilités honnêtes, jamais de certitudes. Si les sources sont minces sur une région, dis-le en une ligne et passe.",
+    "- Pas d'URL dans le texte (Padawan ajoute les sources datées à la fin).",
+    "",
+    "FORMAT (markdown, en français)",
+    "## 🌍 Briefing géopolitique — (période) · vu de 2077",
+    "Une phrase d'ouverture, en italique, écrite depuis 2077.",
+    "### 🔥 Les 3 points chauds",
+    "- une ligne par point chaud, avec [n]",
+    "Puis 4 à 6 sujets, par région où il y a des sources (🇪🇺 Europe & Russie, 🕌 Moyen-Orient, 🌏 Asie-Pacifique, "
+    "🌍 Afrique, 🌎 Amériques, 🍁 Canada & Québec) :",
+    "### (emoji) Région — Sujet précis   (pour CHAQUE sujet, les 6 puces suivantes)",
+    "- **📌 Faits** : 2 à 4 faits sourcés [n] (date)",
+    "- **🎭 Acteurs & intérêts** : qui veut quoi, et pourquoi",
+    "- **🙈 Ce que les grands médias disent peu** : angle mort, contexte oublié (🔮 interprétation)",
+    "- **🎲 Scénarios** : probable (~ %), possible (~ %), cygne noir (~ %)",
+    "- **📡 Signaux faibles** : 2 indices concrets à surveiller",
+    "- **🎯 Confiance** : ●●●○○ (faible / moyenne / élevée) — pourquoi",
+    "### 🧭 Le mot de 2077",
+    "2 à 4 phrases : ce que l'histoire retiendra de cette période (🔮 interprétation assumée).",
+])
+
+NEWS_DISC_TEXT = "\n".join([
+    "Tu es le CURATEUR DES DÉCOUVERTES de Padawan : un scientifique curieux et rigoureux qui raconte à Marc (Québec), "
+    "en le tutoyant, les avancées qui font dire « wow », dans toutes les sphères. Français québécois clair, enthousiaste "
+    "mais jamais crédule. Domaine ciblé : {question}.",
+    "",
+    "RÈGLES",
+    "- Chaque découverte vient UNIQUEMENT des SOURCES de la chasse, citée avec son numéro [n] et sa date. Rien d'inventé : "
+    "aucun chiffre, nom de revue, de chercheur ou d'entreprise absent des sources.",
+    "- Niveau de preuve honnête : 🧪 préprint (pas encore révisé), 📄 étude publiée (revue révisée par les pairs), "
+    "📣 annonce d'entreprise ou communiqué, 📰 reportage seulement. Si la source ne le dit pas : « preuve : non précisée ».",
+    "- Prudence : souris ≠ humains, petit échantillon, pas encore reproduit, promesse marketing… dis-le.",
+    "- Médecine & santé : inclus aussi la médecine régénératrice et les approches naturelles quand les sources en parlent, "
+    "avec la même exigence de preuve.",
+    "- Ne retiens QUE les sources qui annoncent vraiment une découverte ou une avancée (étude, mesure, fouille, "
+    "observation, prototype, essai). IGNORE expositions, prix, partenariats, opinions, valorisations boursières.",
+    "- Le « Quoi » reformule fidèlement le titre et l'extrait de la source, sans rien ajouter.",
+    "- 6 à 10 découvertes, regroupées par domaine; saute un domaine sans source. Pas d'URL dans le texte.",
+    "",
+    "FORMAT (markdown, en français)",
+    "## 🔭 Découvertes & avancées — (période)",
+    "Une phrase d'accroche en italique.",
+    "### 🏆 La plus wow",
+    "**Nom de la découverte** — 2 phrases [n]",
+    "Puis par domaine (🤖 Tech & IA, ⚛️ Science & physique, 🧬 Médecine & santé, 🏺 Archéologie & histoire, 🚀 Espace, "
+    "🌿 Environnement & nature, ⚡ Énergie) :",
+    "### (emoji) Domaine",
+    "**Nom de la découverte**   (pour CHAQUE découverte, les 4 puces suivantes)",
+    "- **Quoi** : ce qui a été trouvé ou construit [n] (date)",
+    "- **Pourquoi ça compte** : l'impact concret",
+    "- **Preuve** : 🧪 / 📄 / 📣 / 📰 + la prudence qui va avec",
+    "- **Wow** : 🤯🤯🤯○○ (3/5) — en quelques mots, pourquoi cette note",
+    "### 🔮 À surveiller",
+    "2 ou 3 pistes qui pourraient avoir une suite.",
+])
+
+NEWS_SEEDS: List[Dict[str, Any]] = [
+    {"name": "🌍 Géopoliticologue du futur", "role": "chercheur", "mode": "remplacer", "kind": "normal",
+     "keep_base": False, "text": NEWS_GEO_TEXT, "builtin": "geo_futur"},
+    {"name": "🔭 Découvertes & avancées", "role": "chercheur", "mode": "remplacer", "kind": "normal",
+     "keep_base": False, "text": NEWS_DISC_TEXT, "builtin": "decouvertes"},
+]
+
+NEWS_KINDS: Dict[str, Dict[str, Any]] = {
+    "geo_futur": {
+        "label": "🌍 Briefing géopolitique", "default_q": "la géopolitique mondiale",
+        "queries": [
+            ("Ukraine Russie guerre", "fr-fr", "Europe & Russie"), ("Russia Ukraine war", "us-en", "Europe & Russie"),
+            ("Israël Gaza Liban Iran", "fr-fr", "Moyen-Orient"), ("Middle East Iran Israel", "us-en", "Moyen-Orient"),
+            ("Chine Taïwan États-Unis", "fr-fr", "Asie-Pacifique"), ("China Taiwan US", "us-en", "Asie-Pacifique"),
+            ("Afrique Sahel Soudan conflit", "fr-fr", "Afrique"), ("Union européenne OTAN défense", "fr-fr", "Europe & Russie"),
+            ("Amérique latine Venezuela Brésil", "fr-fr", "Amériques"), ("Inde Pakistan géopolitique", "fr-fr", "Asie-Pacifique"),
+            ("sanctions tarifs commerce mondial", "fr-fr", "Économie mondiale"), ("Canada relations internationales", "fr-fr", "Canada & Québec"),
+        ],
+        "focus": [("{q} actualité", "fr-fr", "{q}"), ("{q} news", "us-en", "{q}"),
+                  ("{q} analyse géopolitique", "fr-fr", "{q}"), ("{q} tensions", "us-en", "{q}")],
+    },
+    "decouvertes": {
+        "label": "🔭 Découvertes & avancées", "default_q": "tous les domaines",
+        "queries": [
+            ("AI researchers new model breakthrough", "us-en", "Tech & IA"),
+            ("chercheurs intelligence artificielle nouvelle méthode", "fr-fr", "Tech & IA"),
+            ("physicists discover", "us-en", "Science & physique"),
+            ("scientists discover study published", "us-en", "Science & physique"),
+            ("new study treatment patients trial results", "us-en", "Médecine & santé"),
+            ("regenerative medicine stem cell study", "us-en", "Médecine & santé"),
+            ("chercheurs découvrent traitement étude", "fr-fr", "Médecine & santé"),
+            ("natural compound plant study health benefits", "us-en", "Médecine & santé"),
+            ("archaeologists discover", "us-en", "Archéologie & histoire"),
+            ("archéologues ont découvert", "fr-fr", "Archéologie & histoire"),
+            ("astronomers discover", "us-en", "Espace"), ("James Webb telescope discovery", "us-en", "Espace"),
+            ("new species discovered scientists", "us-en", "Environnement & nature"),
+            ("battery breakthrough researchers", "us-en", "Énergie"), ("fusion energy record", "us-en", "Énergie"),
+        ],
+        "focus": [("{q} découverte", "fr-fr", "{q}"), ("{q} breakthrough", "us-en", "{q}"),
+                  ("{q} nouvelle étude", "fr-fr", "{q}"), ("{q} researchers new study", "us-en", "{q}")],
+    },
+}
+NEWS_TITLE_JUNK = {
+    "decouvertes": re.compile(r"exposition|partenariat|award|recogni[sz]ed|of the year|valorisation|stock|shares|bourse|"
+                              r"webinar|promo|horoscope|soldes|black friday|concert|festival|recette|deal|market|marché|investment|"
+                              r"investissement|free trade|officers|ceo\b|earnings|résultats financiers|climbs|slides|dips|notes\b|"
+                              r"\breview\b|essai routier|rival tested", re.I),
+}
+NEWS_PERIODS = {"d": "dernières 24 h", "w": "cette semaine", "m": "ce mois-ci"}
+NEWS_MAX_SOURCES = 15
+NEWS_GEN_OPTIONS = {"num_predict": 2400, "temperature": 0.45, "repeat_penalty": 1.1}
+
+
+def _news_date(s: str) -> str:
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(s or ""))
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else ""
+
+
+def _news_date_fr(iso: str) -> str:
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", iso or "")
+    if not m:
+        return "date ?"
+    return f"{int(m.group(3))} {MOIS_FR[int(m.group(2)) - 1]} {m.group(1)}"
+
+
+_NEWS_JUNK = re.compile(r"wikipedia\.org|/tag/|/tags/|/topics?/|/live-?map|tracker|/category/|/rubrique/|/search|youtube\.com|"
+                        r"facebook\.com|instagram\.com|tiktok\.com|x\.com/|twitter\.com", re.I)
+
+
+def _url_date(url: str) -> str:
+    m = re.search(r"(20\d\d)[/-](0[1-9]|1[0-2])[/-]([0-2]\d|3[01])(?!\d)", url or "")
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    m = re.search(r"(?<!\d)(20\d\d)(0[1-9]|1[0-2])([0-2]\d|3[01])(?!\d)", url or "")
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else ""
+
+
+def _news_row(row: dict, timelimit: str = "", is_news: bool = True) -> Optional[Dict[str, str]]:
+    it = _norm_row(row)
+    if not it or _NEWS_JUNK.search(it["url"]):
+        return None
+    path = urlparse(it["url"]).path.strip("/")
+    if not is_news and (path.count("/") < 1 and len(path) < 25):
+        return None  # page d'accueil / rubrique, pas un article
+    # date : celle de l'URL d'abord (fiable), sinon celle du moteur si elle tombe dans la fenêtre demandée,
+    # sinon « ≤ 24 h / ≤ 7 jours » (le filtre de temps du moteur est appliqué côté serveur)
+    ud, ed = _url_date(it["url"]), _news_date(row.get("date") or "")
+    win = {"d": 2, "w": 8, "m": 32}.get(timelimit, 0)
+    pd = ud
+    if not pd and ed and win:
+        try:
+            age = (datetime.now() - datetime.strptime(ed, "%Y-%m-%d")).days
+            pd = ed if -1 <= age <= win else ""
+        except Exception:
+            pd = ""
+    elif not pd and ed and not win:
+        pd = ed
+    it["pubdate"] = pd
+    it["pubhint"] = "" if pd else ({"d": "≤ 24 h", "w": "≤ 7 jours", "m": "≤ 1 mois"}.get(timelimit, "") if is_news else "")
+    it["outlet"] = clean(str(row.get("source") or "") or host_of(it["url"]))[:60]
+    it["snippet"] = clean(row.get("body") or "")[:230]
+    it["_news"] = True
+    return it
+
+
+def news_fetch_one(qtext: str, region: str, timelimit: str, n: int = 6,
+                   cancel: Optional[threading.Event] = None, errors: Optional[List[str]] = None) -> List[Dict[str, str]]:
+    """Une requête DDGS news datée (repli : texte avec limite de temps)."""
+    if not DDGS or (cancel and cancel.is_set()):
+        return []
+    out: List[Dict[str, str]] = []
+    for be in ("bing", "auto", "duckduckgo"):
+        if cancel and cancel.is_set():
+            break
+        try:
+            raw = list(DDGS().news(qtext, region=region, timelimit=timelimit, max_results=n, backend=be) or [])
+        except Exception as e:
+            if errors is not None:
+                errors.append(f"news/{be}: {_short_exc(e)}")
+            continue
+        out = [x for x in (_news_row(r, timelimit, True) for r in raw) if x]
+        if out:
+            break
+    if not out:
+        try:
+            raw = list(DDGS().text(qtext, region=region, timelimit=timelimit, max_results=n, backend="auto") or [])
+            out = [x for x in (_news_row(r, timelimit, False) for r in raw) if x]
+        except Exception as e:
+            if errors is not None:
+                errors.append(f"text: {_short_exc(e)}")
+    return out
+
+
+def news_collect(kind: str, period: str = "d", question: str = "", cancel: Optional[threading.Event] = None,
+                 on_progress: Optional[Callable[[str], None]] = None, per_query: int = 2,
+                 max_sources: int = NEWS_MAX_SOURCES, read_top: int = 5) -> Tuple[List[Dict[str, str]], Dict[str, Any]]:
+    """Chasse multi-requêtes en parallèle (régions FR + EN), dédoublonnée, triée par date, top pages lues."""
+    spec = NEWS_KINDS[kind]
+    tl = period if period in NEWS_PERIODS else "d"
+    q = (question or "").strip()
+    if q:
+        queries = [(a.format(q=q), r, t.format(q=q)) for a, r, t in spec["focus"]]
+        per_query = max(per_query, 4)
+    else:
+        queries = list(spec["queries"])
+    meta: Dict[str, Any] = {"queries": [a for a, _r, _t in queries], "errors": [], "period": tl, "widened": False}
+    buckets: Dict[int, List[Dict[str, str]]] = {}
+
+    def run(tl_now: str):
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            futs = {ex.submit(news_fetch_one, a, r, tl_now, 6, cancel, meta["errors"]): i
+                    for i, (a, r, _t) in enumerate(queries)}
+            for f in as_completed(futs):
+                try:
+                    buckets[futs[f]] = f.result() or []
+                except Exception as e:
+                    meta["errors"].append(str(e)[:80])
+                if on_progress:
+                    on_progress(f"{len(buckets)}/{len(queries)} requêtes")
+
+    run(tl)
+    if sum(len(v) for v in buckets.values()) < 4 and tl == "d" and not (cancel and cancel.is_set()):
+        meta["widened"] = True  # trop peu en 24 h : on élargit à la semaine
+        buckets.clear()
+        run("w")
+    seen_u, seen_t, picked = set(), set(), []
+    rounds = [sorted(buckets.get(i, []), key=lambda x: x.get("pubdate") or "", reverse=True) for i in range(len(queries))]
+    for depth in range(per_query + 2):
+        for qi, lst in enumerate(rounds):
+            if depth >= len(lst):
+                continue
+            it = lst[depth]
+            tk = re.sub(r"\W+", " ", _fold(it.get("title", ""))).strip()[:60]
+            if it["url"] in seen_u or tk in seen_t:
+                continue
+            if depth >= per_query and len(picked) >= max_sources * 2 // 3:
+                continue
+            seen_u.add(it["url"])
+            seen_t.add(tk)
+            it["tag"] = queries[qi][2]
+            picked.append(it)
+        if len(picked) >= max_sources:
+            break
+    junk = NEWS_TITLE_JUNK.get(kind)
+    if junk:
+        picked = [x for x in picked if not junk.search(x.get("title", ""))]
+    picked = picked[:max_sources]
+    order = []
+    for _a, _r, t in queries:
+        if t not in order:
+            order.append(t)
+    picked.sort(key=lambda x: order.index(x.get("tag")) if x.get("tag") in order else 99)  # groupé par région / domaine
+    # lire les premières pages (contexte réel, pas seulement les titres)
+    if read_top and picked and not (cancel and cancel.is_set()):
+        if on_progress:
+            on_progress(f"lecture de {min(read_top, len(picked))} pages…")
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            tgt, seen_tag = [], set()
+            for it in picked:  # une page par région / domaine d'abord
+                if it.get("tag") not in seen_tag:
+                    seen_tag.add(it.get("tag"))
+                    tgt.append(it)
+            tgt = (tgt + [x for x in picked if x not in tgt])[:read_top]
+            futs = {ex.submit(read_page, it["url"], 1800): it for it in tgt}
+            for f in as_completed(futs):
+                try:
+                    body = f.result() or ""
+                except Exception:
+                    body = ""
+                if len(body) > 120:
+                    futs[f]["body"] = body[:520]
+    meta["n"] = len(picked)
+    return picked, meta
+
+
+def news_item_date(it: Dict[str, str]) -> str:
+    if it.get("pubdate"):
+        return _news_date_fr(it["pubdate"])
+    return it.get("pubhint") or "date non indiquée"
+
+
+def news_format_part(text: str) -> str:
+    """La partie FORMAT du prompt (rappelée à la fin du message : le petit modèle suit mieux)."""
+    m = re.search(r"^FORMAT\b.*$", text or "", re.M)
+    return (text or "")[m.start():].strip() if m else ""
+
+
+def news_user_msg(kind: str, items: List[Dict[str, str]], period: str, question: str = "",
+                  prev: Optional[Dict[str, Any]] = None, widened: bool = False, fmt: str = "") -> str:
+    spec = NEWS_KINDS[kind]
+    today = _today_fr()[0]
+    per = NEWS_PERIODS.get(period, period)
+    if widened:
+        per += " (peu de nouvelles en 24 h : élargi à la semaine)"
+    lines = [f"BRIEFING : {spec['label']} · période : {per} · date du jour : {today}.",
+             f"Sujet : {question or spec['default_q']}.", ""]
+    if prev and prev.get("text"):
+        old = re.sub(r"\*\*Sources\*\*[\s\S]*$", "", prev["text"]).strip()
+        heads = [l for l in old.split("\n") if l.startswith(("#", "- ", "**"))][:28]
+        lines += [f"BRIEFING PRÉCÉDENT ({prev.get('date', '?')}) — résumé :", "\n".join(heads)[:1600], "",
+                  "MODE « CE QUI A CHANGÉ » : commence par la section « ### 🔄 Ce qui a changé depuis le "
+                  f"{prev.get('date', 'dernier briefing')} » avec 3 à 6 puces : 🆕 nouveau, 📈 ça s'aggrave ou avance, "
+                  "📉 ça se calme ou recule, ✅ réglé. Appuie chaque puce sur les SOURCES ci-dessous [n]. Ensuite le format habituel, "
+                  "plus court sur ce qui n'a pas bougé.", ""]
+    lines.append("SOURCES DE CETTE CHASSE (les SEULES informations factuelles permises) :")
+    for i, it in enumerate(items, 1):
+        d = news_item_date(it)
+        tag = f"{it['tag']} · " if it.get("tag") else ""
+        lines.append(f"[{i}] ({tag}{d} · {it.get('outlet') or host_of(it.get('url', ''))}) {it.get('title', '')}")
+        if it.get("snippet"):
+            lines.append(f"    {it['snippet']}")
+        if it.get("body"):
+            lines.append(f"    [extrait] {it['body']}")
+    lines += ["", "CONSIGNES : suis ton FORMAT. Cite [n] juste après chaque fait, avec la date. N'utilise QUE ces sources pour les "
+              "faits; tes interprétations sont marquées 🔮. Si une source est vieille, floue ou partisane, dis-le. "
+              "Aucune URL. N'écris PAS de section Sources : Padawan l'ajoute."]
+    if fmt:
+        lines += ["", "RAPPEL — suis ce " + fmt[:1800], "",
+                  "Commence directement par le titre ##. Remplace « (période) » par : " + per + "."]
+        if kind == "decouvertes":
+            lines.append("Au moins 6 découvertes si les sources le permettent. Chaque découverte DOIT citer [n] et avoir ses 4 puces "
+                         "(Quoi, Pourquoi ça compte, Preuve, Wow X/5). "
+                         "La plus wow = la plus surprenante scientifiquement (pas une étude d'affaires).")
+        else:
+            lines.append("Chaque sujet DOIT avoir ses 6 puces (Faits, Acteurs, Ce que les médias disent peu, Scénarios, "
+                         "Signaux faibles, Confiance). Classe chaque sujet dans la région indiquée par sa source.")
+    return "\n".join(lines)
+
+
+_NEWS_STOP = {"cette", "selon", "entre", "aussi", "comme", "leurs", "avoir", "était", "etait", "pourrait", "pourraient",
+              "nouvelle", "nouveau", "nouvelles", "about", "their", "there", "which", "would", "could", "after", "before",
+              "while", "these", "those", "being", "where", "first", "years", "année", "annee", "depuis", "toute", "toutes",
+              "encore", "contre", "monde", "world", "people", "study", "étude", "etude", "researchers", "chercheurs",
+              "scientists", "scientifiques", "découverte", "decouverte", "discover", "discovered", "novembre", "november"}
+
+
+def _news_stems(text: str) -> set:
+    f = _fold(text)
+    out = set()
+    for w in re.findall(r"[a-z0-9]{5,}", f):
+        if w in _NEWS_STOP:
+            continue
+        out.add(w[:6])
+    for nmb in re.findall(r"\d[\d.,]*\d|\d", f):
+        if len(nmb) >= 2:
+            out.add("#" + nmb.replace(",", "."))
+    return out
+
+
+def news_flag_unsupported(text: str, items: List[Dict[str, str]]) -> str:
+    """Garde-fou anti-invention : un bloc (titre + puces) qui cite [n] mais ne partage presque aucun mot
+    avec la source n reçoit « ⚠ à vérifier »."""
+    src = {i: _news_stems(" ".join([it.get("title", ""), it.get("snippet", ""), it.get("body", "")]))
+           for i, it in enumerate(items, 1)}
+    lines = text.split("\n")
+    blocks: List[List[int]] = []
+    cur: List[int] = []
+    for k, line in enumerate(lines):
+        if re.match(r"^\s*(?:#{2,4}\s|\*\*[^*]+\*\*\s*(?:—|-|:|$))", line) and cur:
+            blocks.append(cur)
+            cur = []
+        cur.append(k)
+    if cur:
+        blocks.append(cur)
+    flagged = 0
+    for b in blocks:
+        body = "\n".join(lines[k] for k in b)
+        nums = sorted({int(x) for x in re.findall(r"\[(\d{1,2})\]", body) if int(x) in src})
+        mine = _news_stems(re.sub(r"\[\d+\]", " ", body))
+        if not mine:
+            continue
+        if not nums:  # le modèle a oublié [n] : on rattache le bloc à la source qui lui ressemble le plus
+            if not re.search(r"\*\*\s*(?:quoi|📌)", _fold(body)) and not re.match(r"^\s*\*\*[^*]+\*\*", lines[b[0]]):
+                continue
+            sc = sorted(((len(mine & st), i) for i, st in src.items()), reverse=True)
+            if sc and sc[0][0] >= 3:
+                h = b[0]
+                lines[h] = lines[h].rstrip() + f" [{sc[0][1]}]"
+            continue
+        best = max(len(mine & src[x]) for x in nums)
+        if best < 2:
+            last = max(k for k in b if lines[k].strip())
+            lines[last] = lines[last].rstrip() + "  ⚠ _à vérifier : la source citée ne semble pas dire ça_"
+            flagged += 1
+    return "\n".join(lines)
+
+
+def news_postprocess(ans: str, items: List[Dict[str, str]]) -> Tuple[str, List[int]]:
+    """Retire URLs et section Sources du modèle, enlève les [n] hors liste, ajoute les sources datées citées."""
+    t = clean(ans or "").strip()
+    t = _strip_sources_section(t)
+    t = re.sub(r"\n\s*(?:#+\s*)?\**\s*Sources?\s*\**\s*:?\s*\n[\s\S]*$", "", t).rstrip()
+    t = re.sub(r"\(?https?://\S+\)?", "", t)
+    n = len(items)
+
+    def fix(m):
+        nums = [int(x) for x in re.findall(r"\d+", m.group(0))]
+        keep = [x for x in nums if 1 <= x <= n]
+        return "".join(f"[{x}]" for x in keep)
+    t = re.sub(r"\[(\d{1,2})(?:\s*[,;\]\[]\s*\d{1,2})*\]", fix, t)
+    t = news_flag_unsupported(t, items)
+    cited = sorted({int(x) for x in re.findall(r"\[(\d{1,2})\]", t) if 1 <= int(x) <= n})
+    show = cited if len(cited) >= 3 else list(range(1, n + 1))
+    lines = ["**Sources** (chasse web du " + _today_fr()[0] + ")"]
+    for i in show:
+        it = items[i - 1]
+        d = news_item_date(it)
+        lines.append(f"{i}. {it.get('title', '')} — {it.get('outlet') or host_of(it.get('url', ''))} · {d}")
+        lines.append(it.get("url", ""))
+    return (t.rstrip() + "\n\n" + "\n".join(lines)).strip(), cited
+
+
+def news_last_path(kind: str) -> str:
+    return os.path.join(BRIEF_DIR, f"last_{kind}.json")
+
+
+def news_save(kind: str, text: str, period: str, question: str = "") -> Tuple[str, str]:
+    """Garde le briefing (.md + .html) dans briefings/ et mémorise le dernier pour « Ce qui a changé »."""
+    os.makedirs(BRIEF_DIR, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M")
+    slug = kind + (("_" + re.sub(r"[^a-z0-9]+", "-", _fold(question)).strip("-")[:30]) if question else "")
+    base = os.path.join(BRIEF_DIR, f"{slug}_{stamp}")
+    title = f"{NEWS_KINDS[kind]['label']} — {_today_fr()[0]}"
+    md = f"# {title}\n\n_{NEWS_PERIODS.get(period, period)} · généré par Padawan le {_today_fr()[0]} à {time.strftime('%H:%M')}_\n\n{text}\n"
+    with open(base + ".md", "w", encoding="utf-8") as fh:
+        fh.write(md)
+    with open(base + ".html", "w", encoding="utf-8") as fh:
+        fh.write(md_to_html(md, title))
+    if not question:
+        savej(news_last_path(kind), {"date": f"{_today_fr()[0]} {time.strftime('%H:%M')}", "t": time.time(),
+                                     "period": period, "text": text[:12000]})
+    return base + ".md", base + ".html"
+
+
+def news_last(kind: str) -> Optional[Dict[str, Any]]:
+    p = news_last_path(kind)
+    if not os.path.isfile(p):
+        return None
+    d = loadj(p, {})
+    return d if d.get("text") else None
+
+
+# ── v39.2: fenêtre 📜 Prompts (⭐ Mes prompts + 💡 Idées garées) ─────────────────
+PROMPT_LOCK_BASE = "__base__"
+PROMPT_LOCK_PREFIX = "__def_"
+
+
+def _hex_shift(c: str, amt: float = 0.12) -> str:
+    """Éclaircit (amt>0) ou assombrit (amt<0) une couleur #rrggbb — survol neutre au thème."""
+    try:
+        c = str(c)
+        if not c.startswith("#") or len(c) != 7:
+            return c
+        r, g, b = int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16)
+        if amt >= 0:
+            r, g, b = (int(v + (255 - v) * amt) for v in (r, g, b))
+        else:
+            r, g, b = (int(v * (1 + amt)) for v in (r, g, b))
+        return f"#{r:02x}{g:02x}{b:02x}"
+    except Exception:
+        return c
+
+
+def _fr_int(n: int) -> str:
+    return f"{int(n):,}".replace(",", "\u00a0")
+
+
+class PromptsWindow(tk.Toplevel):
+    """Bibliothèque de prompts : liste filtrable/réordonnable + éditeur + aperçu en direct."""
+
+    def __init__(self, app, tab: str = "prompts"):
+        super().__init__(app)
+        self.app = app
+        self.store: PromptStore = app.prompts
+        self.title("📜 Prompts · Padawan")
+        self.configure(bg=C["bg"])
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        w = min(sw, max(1000, int(sw * 0.84)))
+        h = min(sh - 40, max(660, int(sh * 0.86)))
+        self.geometry(f"{w}x{h}+{max(0, (sw - w) // 2)}+{max(0, (sh - h) // 2 - 20)}")
+        self.minsize(920, 600)
+        try:  # Marc aime les fenêtres maximisées (redimensionnable / restaurable)
+            if os.name == "nt":
+                self.state("zoomed")
+        except Exception:
+            pass
+        try:
+            ico = os.path.join(BASE, "padawan.ico")
+            if os.path.isfile(ico):
+                self.iconbitmap(ico)
+        except Exception:
+            pass
+        self.cur_id = ""
+        self.dirty = False
+        self._loading = False
+        self._prev_job = None
+        self._drag = None
+        self._view_ids: List[str] = []
+        self._n_user_view = 0
+        # petit écran (ex. portable 1366×768 à 125 %) : mise en page compacte
+        self._compact = self.winfo_screenheight() < 860
+        self._style()
+        self._build()
+        self._fill_list()
+        first = self.store.active_id(app.router.active) if self.store.active_for(app.router.active) else ""
+        if not first and self._view_ids:
+            first = self._view_ids[0]
+        if first:
+            self._select_id(first)
+        self.select_tab(tab)
+        for seq, fn in (
+            ("<Control-s>", self.save_current), ("<Control-S>", self.save_current),
+            ("<Control-n>", self.new_prompt), ("<Control-N>", self.new_prompt),
+            ("<Control-d>", self.duplicate), ("<Control-D>", self.duplicate),
+            ("<Control-f>", self._focus_filter), ("<Control-F>", self._focus_filter),
+            ("<F5>", self.test_prompt),
+            ("<F6>", self._toggle_pane),
+        ):
+            self.bind(seq, lambda e, f=fn: (f(), "break")[1])
+        self.bind("<Escape>", lambda e: self.close())
+        self.protocol("WM_DELETE_WINDOW", self.close)
+        self._refresh_header()
+        if self.store.error:
+            self._status(f"⚠ {self.store.error}", "bad")
+        app._theme_fix(self)
+        self.after(60, self._update_preview)
+        self.after(220, self._place_sash)
+        try:
+            self.lift()
+            self.focus_force()
+        except Exception:
+            pass
+
+    # ── style / helpers ─────────────────────────────────────────────────────
+    def _style(self):
+        s = ttk.Style(self)
+        s.configure("Prompts.TNotebook", background=C["bg"], borderwidth=0, tabmargins=(4, 6, 4, 0))
+        s.configure(
+            "Prompts.TNotebook.Tab", background=C["card"], foreground=C["fg"],
+            padding=(16, 5) if self._compact else (22, 9),
+            font=("Segoe UI", 11 if self._compact else 12, "bold"),
+        )
+        s.map(
+            "Prompts.TNotebook.Tab",
+            background=[("selected", C["gold"])], foreground=[("selected", "#1a1408")],
+        )
+        s.configure("Prompts.TCombobox", fieldbackground=C["card"], background=C["card"],
+                    foreground=C["fg"], arrowcolor=C["gold"], padding=4)
+        s.map("Prompts.TCombobox", fieldbackground=[("readonly", C["card"])],
+              foreground=[("readonly", C["fg"])])
+        try:
+            self.option_add("*TCombobox*Listbox.font", ("Segoe UI", 11))
+        except Exception:
+            pass
+
+    def _place_sash(self):
+        """Partage éditeur / aperçu ~55/45 selon la hauteur réelle (aperçu toujours visible)."""
+        try:
+            self.update_idletasks()
+            h = self.vp.winfo_height() if self.vp is not None else 0
+            if self.vp is not None and h > 80:
+                self.vp.sash_place(0, 1, max(120, int(h * 0.55)))
+        except Exception:
+            pass
+
+    def _tip(self, w, text):
+        try:
+            self.app._tip(w, text)
+        except Exception:
+            pass
+
+    def _btn(self, parent, text, cmd, tip="", kind="normal", size=11):
+        pal = {
+            "primary": (C["gold"], "#1a1408"),
+            "ok": (C["ok"], "#06261a"),
+            "danger": (C["card2"], C["bad"]),
+            "normal": (C["card"], C["fg"]),
+        }
+        bg, fg = pal.get(kind, pal["normal"])
+        b = tk.Button(
+            parent, text=text, command=cmd, bg=bg, fg=fg, relief="flat", bd=0,
+            font=("Segoe UI", size, "bold"), padx=14, pady=7, cursor="hand2",
+            activebackground=C["gold"], activeforeground="#1a1408",
+            disabledforeground=C["dim"], highlightthickness=0,
+        )
+        st = {}
+
+        def _enter(e, btn=b):
+            if str(btn.cget("state")) == "disabled":
+                return
+            st["bg"] = btn.cget("bg")
+            btn.configure(bg=_hex_shift(st["bg"], 0.16))
+
+        def _leave(e, btn=b):
+            if "bg" in st:
+                try:
+                    btn.configure(bg=st.pop("bg"))
+                except Exception:
+                    pass
+
+        b.bind("<Enter>", _enter)
+        b.bind("<Leave>", _leave)
+        if tip:
+            self._tip(b, tip)
+        return b
+
+    def _lbl(self, parent, text, *, size=11, bold=True, fg=None, bg=None, **kw):
+        return tk.Label(parent, text=text, bg=bg or C["bg"], fg=fg or C["fg"],
+                        font=("Segoe UI", size, "bold" if bold else "normal"), **kw)
+
+    def _status(self, msg: str, kind: str = "info"):
+        col = {"ok": C["ok"], "bad": C["bad"], "warn": C["gold"]}.get(kind, C["dim"])
+        try:
+            self.status.config(text=msg, fg=col)
+        except Exception:
+            pass
+
+    # ── construction ─────────────────────────────────────────────────────────
+    def _build(self):
+        # Barre d'état (bas, toujours visible)
+        self.status = tk.Label(self, text="", bg=C["bg"], fg=C["dim"], font=("Segoe UI", 10),
+                               anchor="w", justify="left")
+        self.status.pack(side="bottom", fill="x", padx=14, pady=(0, 8))
+
+        head = tk.Frame(self, bg=C["bg"])
+        head.pack(side="top", fill="x", padx=14, pady=(6, 2) if self._compact else (12, 4))
+        left = tk.Frame(head, bg=C["bg"])
+        left.pack(side="left", fill="x", expand=True)
+        self._lbl(left, "📜 Prompts", size=16 if self._compact else 22, fg=C["gold"]).pack(anchor="w")
+        self._lbl(
+            left,
+            "Tes meilleurs prompts, prêts à resservir. ✅ Activer = Padawan suit ce prompt · "
+            "↩ = retour au prompt d'origine · rien n'est perdu.",
+            size=9 if self._compact else 10, bold=False, fg=C["dim"],
+        ).pack(anchor="w")
+        right = tk.Frame(head, bg=C["card"], highlightbackground=C["line"], highlightthickness=1)
+        right.pack(side="right", padx=(10, 0))
+        self.hdr_role = self._lbl(right, "", size=9, fg=C["dim"], bg=C["card"])
+        self.hdr_role.pack(anchor="w", padx=12, pady=(6, 0))
+        self.hdr_active = self._lbl(right, "", size=13, fg=C["gold"], bg=C["card"])
+        self.hdr_active.pack(anchor="w", padx=12, pady=(0, 6))
+        self._tip(right, "Prompt suivi par Padawan pour le rôle sélectionné dans la fenêtre principale.")
+
+        self.nb = ttk.Notebook(self, style="Prompts.TNotebook")
+        self.nb.pack(fill="both", expand=True, padx=10, pady=(4, 6))
+        self.tab_p = tk.Frame(self.nb, bg=C["bg"])
+        self.tab_i = tk.Frame(self.nb, bg=C["bg"])
+        self.nb.add(self.tab_p, text="  ⭐ Mes prompts  ")
+        self.nb.add(self.tab_i, text=self._ideas_tab_label())
+        self._build_prompts_tab(self.tab_p)
+        self._build_ideas_tab(self.tab_i)
+
+    def _ideas_tab_label(self) -> str:
+        n = len(self.app.mem.get("inbox") or [])
+        return f"  💡 Idées garées ({n})  " if n else "  💡 Idées garées  "
+
+    def select_tab(self, tab: str):
+        try:
+            self.nb.select(self.tab_i if tab in ("idees", "inbox") else self.tab_p)
+        except Exception:
+            pass
+
+    def _build_prompts_tab(self, root):
+        pw = tk.PanedWindow(root, orient="horizontal", bg=C["line"], sashwidth=6,
+                            bd=0, sashrelief="flat")
+        pw.pack(fill="both", expand=True, pady=(6, 0))
+
+        # ---- gauche : liste
+        L = tk.Frame(pw, bg=C["bg"])
+        pw.add(L, minsize=260, width=320 if self._compact else 380)
+        self._lbl(L, "MES PROMPTS", size=9, fg=C["dim"]).pack(anchor="w", padx=(4, 0), pady=(2, 3))
+        frow = tk.Frame(L, bg=C["input"], highlightbackground=C["line"], highlightthickness=1)
+        frow.pack(fill="x", padx=(2, 8))
+        self._lbl(frow, "🔎", size=12, bold=False, bg=C["input"]).pack(side="left", padx=(8, 2))
+        self.fvar = tk.StringVar()
+        self.filter_ent = self.app._make_entry(frow, self.fvar, font_size=12)
+        self.filter_ent.configure(highlightthickness=0)
+        self.filter_ent.pack(side="left", fill="x", expand=True, ipady=5, padx=(0, 4))
+        self._tip(self.filter_ent, "Filtrer par nom ou par texte (Ctrl+F)")
+        clr = tk.Label(frow, text="✕", bg=C["input"], fg=C["dim"], font=("Segoe UI", 11, "bold"),
+                       cursor="hand2", padx=6)
+        clr.pack(side="right")
+        clr.bind("<Button-1>", lambda e: (self.fvar.set(""), self.filter_ent.focus_set()))
+        self._tip(clr, "Effacer le filtre")
+        self.fvar.trace_add("write", lambda *a: self._fill_list(keep=True))
+
+        rrow = tk.Frame(L, bg=C["bg"])
+        rrow.pack(fill="x", padx=(2, 8), pady=(6, 4))
+        self._lbl(rrow, "Rôle :", size=10, fg=C["dim"]).pack(side="left")
+        self.rfilter = tk.StringVar(value="Tous les rôles")
+        cb = ttk.Combobox(rrow, textvariable=self.rfilter, state="readonly", width=16,
+                          style="Prompts.TCombobox", font=("Segoe UI", 11),
+                          values=["Tous les rôles"] + [PROMPT_ROLE_LABELS[r] for r in PROMPT_ROLES[1:]])
+        cb.pack(side="left", padx=6)
+        cb.bind("<<ComboboxSelected>>", lambda e: self._fill_list(keep=True))
+        self._tip(cb, "Montrer seulement les prompts utilisables par ce rôle")
+
+        lwrap = tk.Frame(L, bg=C["panel"], highlightbackground=C["line"], highlightthickness=1)
+        lwrap.pack(fill="both", expand=True, padx=(2, 8))
+        self.lb = tk.Listbox(
+            lwrap, bg=C["panel"], fg=C["fg"], selectbackground=C["gold"], selectforeground="#1a1408",
+            font=("Segoe UI", 12), activestyle="none", relief="flat", bd=0, highlightthickness=0,
+            exportselection=False, height=8,
+        )
+        lsb = ttk.Scrollbar(lwrap, orient="vertical", command=self.lb.yview, style="Gold.Vertical.TScrollbar")
+        self.lb.configure(yscrollcommand=lsb.set)
+        self.lb.pack(side="left", fill="both", expand=True, padx=(6, 0), pady=6)
+        lsb.pack(side="right", fill="y")
+        self.lb.bind("<<ListboxSelect>>", self._on_select)
+        self.lb.bind("<ButtonPress-1>", self._drag_start, add="+")
+        self.lb.bind("<B1-Motion>", self._drag_motion)
+        self.lb.bind("<ButtonRelease-1>", self._drag_end, add="+")
+        self.lb.bind("<Double-Button-1>", lambda e: self.activate())
+        self.lb.bind("<Delete>", lambda e: self.delete())
+        self.lb.bind("<Control-Up>", lambda e: (self.move(-1), "break")[1])
+        self.lb.bind("<Control-Down>", lambda e: (self.move(1), "break")[1])
+
+        mrow = tk.Frame(L, bg=C["bg"])
+        mrow.pack(fill="x", padx=(2, 8), pady=(6, 2))
+        self._btn(mrow, "↑", lambda: self.move(-1), "Monter le prompt (Ctrl+↑) — ou glisse-le avec la souris",
+                  size=12).pack(side="left")
+        self._btn(mrow, "↓", lambda: self.move(1), "Descendre le prompt (Ctrl+↓)", size=12).pack(side="left", padx=4)
+        self.count_lbl = self._lbl(mrow, "", size=9, bold=False, fg=C["dim"])
+        self.count_lbl.pack(side="left", padx=8)
+        self._btn(mrow, "➕ Nouveau", self.new_prompt, "Nouveau prompt vide (Ctrl+N)", kind="primary").pack(side="right")
+        self._lbl(
+            L, "⭐ actif   🔒 prompt d'origine (lecture seule)\nDouble-clic = activer · glisser = réordonner",
+            size=9, bold=False, fg=C["dim"], justify="left",
+        ).pack(anchor="w", padx=(4, 0), pady=(2, 4))
+
+        # ---- droite : éditeur
+        R = tk.Frame(pw, bg=C["bg"])
+        pw.add(R, minsize=520 if self._compact else 560)
+
+        # boutons (bas, toujours visibles)
+        bgrid = tk.Frame(R, bg=C["bg"])
+        bgrid.pack(side="bottom", fill="x", padx=(10, 4), pady=(4, 0) if self._compact else (6, 2))
+        specs = [
+            ("save", "💾 Enregistrer", self.save_current, "Enregistrer les changements (Ctrl+S)", "primary"),
+            ("act", "✅ Activer", self.activate,
+             "Padawan suit ce prompt dès la prochaine question.\n"
+             "Rôle « Tous » = actif pour les 4 rôles; sinon pour son rôle seulement.", "ok"),
+            ("test", "🧪 Tester", self.test_prompt,
+             "Pose la question test dans le chat de Padawan avec CE texte (même pas enregistré) — F5", "normal"),
+            ("new", "➕ Nouveau", self.new_prompt, "Nouveau prompt vide (Ctrl+N)", "normal"),
+            ("dup", "📄 Dupliquer", self.duplicate,
+             "Copie modifiable de ce prompt (Ctrl+D).\nSur un 🔒 défaut : pars du prompt d'origine.", "normal"),
+            ("del", "🗑 Supprimer", self.delete, "Supprimer ce prompt (confirmation; copie gardée dans le .bak)", "danger"),
+            ("reset", "↩ Revenir au défaut", self.reset_default,
+             "Tous les rôles reprennent le prompt d'origine de Padawan.\n"
+             "(Pour un seul rôle : bouton 📜 à côté des rôles, ou activer son 🔒 Défaut.)", "normal"),
+            ("imp", "📥 Importer", self.import_prompts, "Importer un .txt (un prompt) ou un .json (plusieurs)", "normal"),
+            ("exp", "📤 Exporter", self.export_prompts,
+             "Exporter tous tes prompts (.json) ou le prompt affiché (.txt)", "normal"),
+            ("gen", "✨ Générer un jeu", lambda: self.app.game_generate(self),
+             "Padawan écrit un prompt de 🎮 jeu complet à partir d'une idée en une ligne", "normal"),
+        ]
+        self.btns = {}
+        if self._compact:  # 2 rangées : actions principales / gestion
+            order = {"save": (0, 0, 6), "act": (0, 6, 6), "test": (0, 12, 6), "reset": (0, 18, 6),
+                     "new": (1, 0, 4), "dup": (1, 4, 4), "del": (1, 8, 4), "imp": (1, 12, 4), "exp": (1, 16, 4),
+                     "gen": (1, 20, 4)}
+            for key, text, cmd, tip, kind in specs:
+                b = self._btn(bgrid, text, cmd, tip, kind=kind, size=10)
+                b.configure(pady=4, padx=8)
+                r_, c_, span = order[key]
+                b.grid(row=r_, column=c_, columnspan=span, sticky="ew", padx=2, pady=2)
+                self.btns[key] = b
+            for c in range(24):
+                bgrid.columnconfigure(c, weight=1, uniform="pbtn")
+        else:
+            for i, (key, text, cmd, tip, kind) in enumerate(specs):
+                b = self._btn(bgrid, text, cmd, tip, kind=kind)
+                b.grid(row=i // 3, column=i % 3, sticky="ew", padx=3, pady=3)
+                self.btns[key] = b
+            for c in range(3):
+                bgrid.columnconfigure(c, weight=1, uniform="pbtn")
+
+        trow = tk.Frame(R, bg=C["bg"])
+        trow.pack(side="bottom", fill="x", padx=(10, 4), pady=(2, 0) if self._compact else (4, 0))
+        self._lbl(trow, "🧪 Question test :", size=10, fg=C["dim"]).pack(side="left")
+        self.qvar = tk.StringVar(value=PROMPT_TEST_Q)
+        qe = self.app._make_entry(trow, self.qvar, font_size=11)
+        qe.pack(side="left", fill="x", expand=True, padx=(6, 0), ipady=3)
+        qe.bind("<Return>", lambda e: self.test_prompt())
+        self.qvar.trace_add("write", lambda *a: self._schedule_preview())
+        self._tip(qe, "Question utilisée par 🧪 Tester et pour {question} dans l'aperçu")
+
+        top = tk.Frame(R, bg=C["bg"])
+        top.pack(side="top", fill="x", padx=(10, 4))
+        trow2 = tk.Frame(top, bg=C["bg"])
+        trow2.pack(fill="x", pady=(0, 2) if self._compact else (2, 4))
+        self.ed_title = self._lbl(trow2, "", size=13 if self._compact else 15, fg=C["fg"])
+        self.ed_title.pack(side="left")
+        self.dirty_lbl = self._lbl(trow2, "", size=10, fg=C["gold"])
+        self.dirty_lbl.pack(side="left", padx=10)
+        self.active_badge = self._lbl(trow2, "", size=10, fg=C["ok"])
+        self.active_badge.pack(side="right")
+
+        form = tk.Frame(top, bg=C["bg"])
+        form.pack(fill="x")
+        form.columnconfigure(1, weight=1)
+        self._lbl(form, "Nom", size=11).grid(row=0, column=0, sticky="w", pady=3)
+        self.nvar = tk.StringVar()
+        self.name_ent = self.app._make_entry(form, self.nvar, font_size=13)
+        self.name_ent.grid(row=0, column=1, sticky="ew", padx=(10, 0), pady=2, ipady=2 if self._compact else 4)
+        self.nvar.trace_add("write", lambda *a: self._changed())
+        self._tip(self.name_ent, "Nom affiché dans la liste et dans le menu rapide 📜")
+        kf = tk.Frame(form, bg=C["bg"])
+        kf.grid(row=0, column=2, sticky="e", padx=(10, 0))
+        self.kindvar = tk.StringVar(value="normal")
+        self.kind_rbs = []
+        for key, lab in (("normal", "💬 Normal"), ("jeu", "🎮 Jeu")):
+            rb = tk.Radiobutton(
+                kf, text=lab, value=key, variable=self.kindvar, command=self._changed,
+                bg=C["bg"], fg=C["fg"], selectcolor=C["card"], activebackground=C["bg"],
+                activeforeground=C["gold"], font=("Segoe UI", 11, "bold"), cursor="hand2",
+            )
+            rb.pack(side="left", padx=(0, 6))
+            self.kind_rbs.append(rb)
+        self._tip(self.kind_rbs[0], "💬 Normal : modifie la façon dont Padawan répond (avec ou sans le défaut du rôle).")
+        self._tip(self.kind_rbs[1], "🎮 Jeu : prompt système PUR pour un jeu de rôle (pas de règles de Chercheur,\n"
+                                    "pas de chasse web). Activer = lancer la partie avec choix cliquables et Pip-Boy.")
+
+        self._lbl(form, "Rôle", size=11).grid(row=1, column=0, sticky="w", pady=3)
+        rf = tk.Frame(form, bg=C["bg"])
+        rf.grid(row=1, column=1, sticky="ew", padx=(10, 0), pady=3)
+        self.rvar = tk.StringVar(value="Tous")
+        self.role_cb = ttk.Combobox(rf, textvariable=self.rvar, state="readonly", width=14,
+                                    style="Prompts.TCombobox", font=("Segoe UI", 11),
+                                    values=[PROMPT_ROLE_LABELS[r] for r in PROMPT_ROLES])
+        self.role_cb.pack(side="left")
+        self.role_cb.bind("<<ComboboxSelected>>", lambda e: self._changed())
+        self._tip(self.role_cb, "Tous = utilisable avec n'importe quel rôle.\n"
+                                "Un rôle précis = ce prompt ne s'applique qu'à ce rôle.")
+        self.kvar = tk.BooleanVar(value=True)
+        if self._compact:  # Mode sur la même rangée que Rôle
+            self._lbl(rf, "Mode", size=11).pack(side="left", padx=(14, 6))
+            mf = rf
+        else:
+            self._lbl(form, "Mode", size=11).grid(row=2, column=0, sticky="w", pady=3)
+            mf = tk.Frame(form, bg=C["bg"])
+            mf.grid(row=2, column=1, sticky="w", padx=(10, 0), pady=3)
+        self.mvar = tk.StringVar(value="ajouter")
+        self.mode_rbs = []
+        short = {"remplacer": "Remplacer le défaut", "ajouter": "Ajouter au défaut"}
+        for key in ("remplacer", "ajouter"):
+            rb = tk.Radiobutton(
+                mf, text=short[key] if self._compact else PROMPT_MODE_LABELS[key], value=key,
+                variable=self.mvar, command=self._changed,
+                bg=C["bg"], fg=C["fg"], selectcolor=C["card"], activebackground=C["bg"],
+                activeforeground=C["gold"], font=("Segoe UI", 11), cursor="hand2",
+            )
+            rb.pack(side="left", padx=(0, 10 if self._compact else 18))
+            self.mode_rbs.append(rb)
+        self._tip(self.mode_rbs[0], PROMPT_MODE_LABELS["remplacer"] + " : ton texte prend la place des consignes du rôle.")
+        self._tip(self.mode_rbs[1], PROMPT_MODE_LABELS["ajouter"] + " : ton texte s'ajoute APRÈS le prompt normal du rôle (le plus sûr).")
+        self.keep_chk = tk.Checkbutton(
+            rf, text="ADN Padawan" if self._compact else "Garder l'ADN Padawan (tutoiement, honnêteté, style québécois)",
+            variable=self.kvar, command=self._changed,
+            bg=C["bg"], fg=C["fg"], selectcolor=C["card"], activebackground=C["bg"],
+            activeforeground=C["gold"], font=("Segoe UI", 10), cursor="hand2",
+        )
+        self.keep_chk.pack(side="left", padx=(6 if self._compact else 16, 0))
+        self._tip(self.keep_chk, "Garder l'ADN Padawan (tutoiement, honnêteté, style québécois).\n"
+                                 "Coché : en mode Remplacer, la base commune de Padawan reste devant ton texte;\n"
+                                 "seul le texte du rôle est remplacé.\n"
+                                 "Décoché : ton texte remplace TOUT (contrôle total). La date est toujours ajoutée.")
+
+        vrow = tk.Frame(top, bg=C["bg"])
+        vrow.pack(fill="x", pady=(2, 0) if self._compact else (6, 2))
+        self._lbl(vrow, "Variables :", size=10, fg=C["dim"]).pack(side="left")
+        for var, tip in (
+            ("{date}", "Date du jour (ex. 16 novembre 2026)"),
+            ("{question}", "La question que tu poses à Padawan"),
+            ("{role}", "Le nom du rôle actif (Chercheur, Capitaine…)"),
+        ):
+            b = self._btn(vrow, var, lambda v=var: self._insert_var(v), f"Insérer {var} au curseur — {tip}", size=9)
+            b.configure(padx=8, pady=2)
+            b.pack(side="left", padx=3)
+        self.count_txt = self._lbl(vrow, "", size=9, bold=False, fg=C["dim"])
+        self.count_txt.pack(side="right")
+
+        # éditeur + aperçu : empilés avec séparateur (grand écran) ou bascule ✏ / 👁 (petit écran)
+        self._split = self.winfo_screenheight() >= 900
+        self.vp = None
+        if self._split:
+            vp = self.vp = tk.PanedWindow(R, orient="vertical", bg=C["line"], sashwidth=6, bd=0,
+                                          sashrelief="flat")
+            vp.pack(side="top", fill="both", expand=True, padx=(10, 4), pady=(4, 2))
+            ef = tk.Frame(vp, bg=C["input"], highlightbackground=C["line"], highlightthickness=1)
+            pf = tk.Frame(vp, bg=C["bg"])
+            vp.add(ef, minsize=120, height=260)
+            vp.add(pf, minsize=100)
+        else:
+            seg = tk.Frame(R, bg=C["bg"])
+            seg.pack(side="top", fill="x", padx=(10, 4), pady=(4, 0))
+            self.seg_btns = {}
+            for key, lab, tip in (
+                ("edit", "✏ Texte du prompt", "Écrire / modifier ton texte (F6 = basculer)"),
+                ("prev", "👁 Aperçu en direct", "Le prompt final exact que Padawan recevra (F6 = basculer)"),
+            ):
+                sb_ = tk.Label(seg, text=lab, font=("Segoe UI", 10, "bold"), padx=16, pady=4,
+                               cursor="hand2", bg=C["card"], fg=C["fg"])
+                sb_.pack(side="left", padx=(0, 4))
+                sb_.bind("<Button-1>", lambda e, k=key: self._show_pane(k))
+                self._tip(sb_, tip)
+                self.seg_btns[key] = sb_
+            holder = tk.Frame(R, bg=C["bg"])
+            holder.pack(side="top", fill="both", expand=True, padx=(10, 4), pady=(2, 2))
+            ef = tk.Frame(holder, bg=C["input"], highlightbackground=C["line"], highlightthickness=1)
+            pf = tk.Frame(holder, bg=C["bg"])
+            self._panes = {"edit": ef, "prev": pf}
+            self._pane_cur = "edit"
+        self.txt = tk.Text(
+            ef, wrap="word", undo=True, maxundo=-1, bg=C["input"], fg=C["fg"], height=6,
+            insertbackground=C["cursor"], insertwidth=3, relief="flat", bd=0,
+            font=("Segoe UI", 12), padx=12, pady=10, selectbackground=C["sel"],
+            highlightthickness=0, spacing1=2, spacing3=2,
+        )
+        esb = ttk.Scrollbar(ef, orient="vertical", command=self.txt.yview, style="Gold.Vertical.TScrollbar")
+        self.txt.configure(yscrollcommand=esb.set)
+        self.txt.pack(side="left", fill="both", expand=True)
+        esb.pack(side="right", fill="y")
+        self.txt.bind("<<Modified>>", self._on_text_modified)
+        self.txt.bind("<Control-a>", lambda e: (self.txt.tag_add("sel", "1.0", "end-1c"), "break")[1])
+
+        ph = tk.Frame(pf, bg=C["bg"])
+        ph.pack(fill="x", pady=(4, 2))
+        self.prev_title = self._lbl(ph, "👁 Aperçu en direct", size=10, fg=C["cyan"])
+        self.prev_title.pack(side="left")
+        self.prev_count = self._lbl(ph, "", size=9, bold=False, fg=C["dim"])
+        self.prev_count.pack(side="right")
+        pwrap = tk.Frame(pf, bg=C["panel"], highlightbackground=C["line"], highlightthickness=1)
+        pwrap.pack(fill="both", expand=True)
+        self.prev = tk.Text(
+            pwrap, wrap="word", bg=C["panel"], fg=C["dim"], relief="flat", bd=0, height=6,
+            font=("Consolas", 10), padx=10, pady=8, highlightthickness=0, cursor="arrow",
+        )
+        psb = ttk.Scrollbar(pwrap, orient="vertical", command=self.prev.yview, style="Gold.Vertical.TScrollbar")
+        self.prev.configure(yscrollcommand=psb.set)
+        self.prev.pack(side="left", fill="both", expand=True)
+        psb.pack(side="right", fill="y")
+        self.prev.tag_configure("mine", foreground=C["gold"])
+        self.prev.tag_configure("note", foreground=C["cyan"], font=("Segoe UI", 10, "italic"))
+        self.prev.configure(state="disabled")
+        self._tip(self.prev_title, "Le prompt système exact que Padawan recevra (variables remplacées).\n"
+                                   "En doré : ta partie. Le reste : base Padawan, date, garde-fous de chasse.")
+        if not self._split:
+            self._show_pane("edit")
+
+    def _show_pane(self, key: str):
+        if self._split or key not in getattr(self, "_panes", {}):
+            return
+        for k, fr in self._panes.items():
+            fr.pack_forget()
+        self._panes[key].pack(fill="both", expand=True)
+        self._pane_cur = key
+        for k, b in self.seg_btns.items():
+            on = k == key
+            b.configure(bg=C["gold"] if on else C["card"], fg="#1a1408" if on else C["fg"])
+        if key == "prev":
+            self._update_preview()
+        else:
+            try:
+                self.txt.focus_set()
+            except Exception:
+                pass
+        self.app._theme_fix(self.seg_btns[key].master)
+
+    def _toggle_pane(self):
+        if not self._split:
+            self._show_pane("prev" if self._pane_cur == "edit" else "edit")
+
+    def _build_ideas_tab(self, root):
+        self._lbl(
+            root,
+            "Une question qui te passe par la tête pendant une chasse ? Ctrl+I la met de côté ; "
+            "Relancer la remet dans la barre plus tard.",
+            size=12, bold=False, fg=C["fg"], wraplength=1100, justify="left",
+        ).pack(anchor="w", padx=12, pady=(12, 6))
+        row = tk.Frame(root, bg=C["bg"])
+        row.pack(fill="x", padx=10, pady=(0, 6))
+        self._btn(row, "➕ Garer ce qui est dans la barre  (Ctrl+I)", self._park_from_win,
+                  "Met de côté le texte de la barre (ou de la chasse) de Padawan", kind="primary").pack(side="left")
+        self.ideas_count = self._lbl(row, "", size=10, bold=False, fg=C["dim"])
+        self.ideas_count.pack(side="left", padx=12)
+
+        wrap = tk.Frame(root, bg=C["bg"])
+        wrap.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+        canvas = tk.Canvas(wrap, bg=C["bg"], highlightthickness=0)
+        sb = ttk.Scrollbar(wrap, orient="vertical", command=canvas.yview, style="Gold.Vertical.TScrollbar")
+        self.ideas_inner = tk.Frame(canvas, bg=C["bg"])
+        self.ideas_inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        win = canvas.create_window((0, 0), window=self.ideas_inner, anchor="nw")
+        canvas.configure(yscrollcommand=sb.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(win, width=max(300, e.width - 4)))
+
+        def _wheel(e):
+            if getattr(e, "num", None) == 4:
+                canvas.yview_scroll(-1, "units")
+            elif getattr(e, "num", None) == 5:
+                canvas.yview_scroll(1, "units")
+            else:
+                canvas.yview_scroll(int(-1 * ((e.delta or 0) / 120)), "units")
+
+        canvas.bind("<Enter>", lambda e: (canvas.bind_all("<MouseWheel>", _wheel),
+                                          canvas.bind_all("<Button-4>", _wheel),
+                                          canvas.bind_all("<Button-5>", _wheel)))
+        canvas.bind("<Leave>", lambda e: (canvas.unbind_all("<MouseWheel>"),
+                                          canvas.unbind_all("<Button-4>"),
+                                          canvas.unbind_all("<Button-5>")))
+        self._refresh_ideas()
+
+    # ── idées garées ─────────────────────────────────────────────────────────
+    def _park_from_win(self):
+        self.app.park()
+        self._refresh_ideas()
+
+    def _refresh_ideas(self):
+        try:
+            self.nb.tab(self.tab_i, text=self._ideas_tab_label())
+        except Exception:
+            pass
+        inner = getattr(self, "ideas_inner", None)
+        if inner is None:
+            return
+        for w in inner.winfo_children():
+            w.destroy()
+        allitems = list(self.app.mem.get("inbox") or [])
+        items = allitems[:80]
+        self.ideas_count.config(text=f"{len(allitems)} idée(s) garée(s)" if allitems else "")
+        if not items:
+            self._lbl(inner, "Aucune idée garée pour l'instant — Ctrl+I dans Padawan pour en mettre une de côté.",
+                      size=11, bold=False, fg=C["dim"]).pack(anchor="w", padx=8, pady=24)
+            self.app._theme_fix(inner)
+            return
+        for idx, it in enumerate(items):
+            row = tk.Frame(inner, bg=C["card"], highlightbackground=C["line"], highlightthickness=1)
+            row.pack(fill="x", padx=4, pady=3)
+            stamp = (it.get("t") or "")[5:16]
+            txt = (it.get("text") or "")[:300]
+
+            def relancer(t=it.get("text", "")):
+                if not self._confirm_discard():
+                    return
+                self._destroy()
+                try:
+                    self.app.hunt.set(t)
+                    self.app.var.set(t)
+                    self.app.ent.focus_set()
+                except Exception:
+                    pass
+
+            def supprimer(i=idx):
+                try:
+                    del self.app.mem["inbox"][i]
+                except Exception:
+                    return
+                savej(MEM_FILE, self.app.mem)
+                self.app._refresh_inbox_badge()
+
+            self._btn(row, "▶ Relancer", relancer, "Remettre cette idée dans la barre de Padawan",
+                      kind="primary", size=10).pack(side="right", padx=(3, 6), pady=5)
+            self._btn(row, "🗑 Supprimer", supprimer, "Retirer cette idée", kind="danger",
+                      size=10).pack(side="right", padx=3, pady=5)
+            tk.Label(row, text=stamp, bg=C["card"], fg=C["dim"], font=("Segoe UI", 9)).pack(
+                side="left", padx=(10, 4), pady=6)
+            tk.Label(row, text=txt, bg=C["card"], fg=C["fg"], font=("Segoe UI", 11), anchor="w",
+                     wraplength=900, justify="left").pack(side="left", fill="x", expand=True, padx=4, pady=6)
+        self.app._theme_fix(inner)
+
+    # ── liste ────────────────────────────────────────────────────────────────
+    def _locked_items(self) -> List[Dict[str, Any]]:
+        out = []
+        for rid in RoleRouter_ROLE_IDS:
+            out.append({
+                "id": PROMPT_LOCK_PREFIX + rid, "name": f"Défaut — {RoleRouter.ROLES[rid]['label']}",
+                "role": rid, "mode": "remplacer", "keep_base": True,
+                "text": RoleRouter.default_role_text(rid), "locked": True,
+            })
+        out.append({
+            "id": PROMPT_LOCK_BASE, "name": "ADN Padawan (base commune)", "role": "tous",
+            "mode": "remplacer", "keep_base": False, "text": SYSTEM_BASE, "locked": True,
+        })
+        return out
+
+    def _item(self, pid: str) -> Optional[Dict[str, Any]]:
+        if pid.startswith("__"):
+            for it in self._locked_items():
+                if it["id"] == pid:
+                    return it
+            return None
+        return self.store.get(pid)
+
+    def _role_filter(self) -> str:
+        lab = self.rfilter.get()
+        for r, l in PROMPT_ROLE_LABELS.items():
+            if l == lab and r != "tous":
+                return r
+        return ""
+
+    def _match(self, p, q: str, rf: str) -> bool:
+        if rf and p["role"] not in ("tous", rf):
+            return False
+        if q:
+            hay = (p["name"] + "\n" + p.get("text", "")).lower()
+            return all(w in hay for w in q.lower().split())
+        return True
+
+    def _fill_list(self, keep: bool = False):
+        if not hasattr(self, "lb"):
+            return
+        q, rf = self.fvar.get().strip(), self._role_filter()
+        top = self.lb.nearest(0) if keep else 0
+        cur_role = self.app.router.active
+        self.lb.delete(0, "end")
+        self._view_ids = []
+        users = [p for p in self.store.all() if self._match(p, q, rf)]
+        locks = [p for p in self._locked_items() if self._match(p, q, rf)]
+        self._n_user_view = len(users)
+        game_id = (getattr(self.app, "game", None) or {}).get("pid", "")
+        for p in users:
+            act = self.store.active_roles(p["id"])
+            if p.get("kind") == "jeu":
+                act = list(RoleRouter_ROLE_IDS) if p["id"] == game_id else []
+            star = "⭐" if act else "    "
+            tag = "" if p["role"] == "tous" else f"   · {PROMPT_ROLE_LABELS[p['role']]}"
+            if p.get("kind") == "jeu":
+                tag = "   · Jeu" if not p["name"].startswith("🎮") else ""
+            self.lb.insert("end", f" {star} {p['name']}{tag}")
+            self._view_ids.append(p["id"])
+            i = self.lb.size() - 1
+            if cur_role in act:
+                self.lb.itemconfigure(i, foreground=C["gold"])
+            elif act:
+                self.lb.itemconfigure(i, foreground=C["ok"])
+        if not users:
+            self.lb.insert("end", "   (aucun favori — ➕ Nouveau ou 📄 Dupliquer un 🔒)" if not q
+                           else "   (aucun résultat)")
+            self.lb.itemconfigure(self.lb.size() - 1, foreground=C["dim"])
+            self._view_ids.append("")
+        for p in locks:
+            rid = p["role"]
+            is_def_active = rid in RoleRouter_ROLE_IDS and not self.store.active_for(rid)
+            star = "⭐" if is_def_active else "    "
+            self.lb.insert("end", f" {star} 🔒 {p['name']}")
+            self._view_ids.append(p["id"])
+            self.lb.itemconfigure(self.lb.size() - 1, foreground=C["dim"])
+        nu = len(self.store.all())
+        self.count_lbl.config(text=f"{nu} favori(s)")
+        if self.cur_id in self._view_ids:
+            i = self._view_ids.index(self.cur_id)
+            self.lb.selection_clear(0, "end")
+            self.lb.selection_set(i)
+        try:
+            self.lb.yview(top)
+        except Exception:
+            pass
+        self.app._theme_fix(self.lb)
+
+    def _select_id(self, pid: str, *, force: bool = False):
+        if pid not in self._view_ids:
+            self.fvar.set("")
+            self.rfilter.set("Tous les rôles")
+            self._fill_list()
+        if pid in self._view_ids:
+            i = self._view_ids.index(pid)
+            self.lb.selection_clear(0, "end")
+            self.lb.selection_set(i)
+            self.lb.see(i)
+        self._load(pid)
+
+    def _on_select(self, e=None):
+        sel = self.lb.curselection()
+        if not sel:
+            return
+        pid = self._view_ids[sel[0]] if sel[0] < len(self._view_ids) else ""
+        if not pid or pid == self.cur_id:
+            if not pid and self.cur_id in self._view_ids:
+                self.lb.selection_clear(0, "end")
+                self.lb.selection_set(self._view_ids.index(self.cur_id))
+            return
+        if not self._confirm_discard():
+            if self.cur_id in self._view_ids:
+                self.lb.selection_clear(0, "end")
+                self.lb.selection_set(self._view_ids.index(self.cur_id))
+            return
+        self._load(pid)
+
+    # glisser-déposer (liste complète seulement)
+    def _drag_start(self, e):
+        i = self.lb.nearest(e.y)
+        can = (not self.fvar.get().strip() and not self._role_filter()
+               and 0 <= i < self._n_user_view)
+        self._drag = {"i": i, "moved": False} if can else None
+
+    def _drag_motion(self, e):
+        d = self._drag
+        if not d:
+            return
+        j = self.lb.nearest(e.y)
+        j = max(0, min(self._n_user_view - 1, j))
+        if j == d["i"]:
+            return "break"
+        pid = self._view_ids[d["i"]]
+        if self.store.move_to(pid, j):
+            d["i"], d["moved"] = j, True
+            self._fill_list(keep=True)
+            self.lb.selection_clear(0, "end")
+            self.lb.selection_set(j)
+        return "break"
+
+    def _drag_end(self, e):
+        d, self._drag = self._drag, None
+        if d and d.get("moved"):
+            if self.store.save():
+                self._status("↕ Ordre enregistré.", "ok")
+                self.app._refresh_prompt_ui()
+            else:
+                self._status(f"⚠ {self.store.error}", "bad")
+
+    def move(self, delta: int):
+        if not self.cur_id or self.cur_id.startswith("__"):
+            return self._status("Choisis un de tes favoris pour le déplacer (les 🔒 restent en bas).", "warn")
+        if self.store.move(self.cur_id, delta):
+            self.store.save()
+            self._fill_list(keep=True)
+            if self.cur_id in self._view_ids:
+                self.lb.see(self._view_ids.index(self.cur_id))
+            self.app._refresh_prompt_ui()
+
+    def _focus_filter(self):
+        self.select_tab("prompts")
+        self.filter_ent.focus_set()
+        self.filter_ent.select_range(0, "end")
+
+    # ── éditeur ──────────────────────────────────────────────────────────────
+    def _load(self, pid: str):
+        p = self._item(pid)
+        if not p:
+            return
+        self._loading = True
+        try:
+            self.cur_id = pid
+            locked = bool(p.get("locked"))
+            self.name_ent.configure(state="normal")
+            self.nvar.set(p["name"])
+            self.rvar.set(PROMPT_ROLE_LABELS.get(p["role"], "Tous"))
+            self.mvar.set(p["mode"])
+            self.kvar.set(bool(p.get("keep_base", True)))
+            self.kindvar.set("jeu" if p.get("kind") == "jeu" else "normal")
+            self.txt.configure(state="normal")
+            self.txt.delete("1.0", "end")
+            self.txt.insert("1.0", p.get("text", ""))
+            self.txt.edit_reset()
+            self.txt.edit_modified(False)
+            st = "disabled" if locked else "normal"
+            self.txt.configure(state=st, fg=C["dim"] if locked else C["fg"])
+            self.name_ent.configure(state="readonly" if locked else "normal")
+            self.role_cb.configure(state="disabled" if locked else "readonly")
+            for w in self.mode_rbs + [self.keep_chk] + self.kind_rbs:
+                w.configure(state=st)
+            for k in ("save", "del"):
+                self.btns[k].configure(state="disabled" if locked else "normal")
+            self.btns["act"].configure(state="disabled" if pid == PROMPT_LOCK_BASE else "normal")
+            self.ed_title.config(text=("🔒 " if locked else "✏ ") + p["name"])
+            self.dirty = False
+            self.dirty_lbl.config(text="")
+        finally:
+            self._loading = False
+        self._update_keep_state()
+        self._refresh_badge()
+        self._update_counts()
+        self._update_preview()
+        if locked:
+            self._status("🔒 Prompt d'origine en lecture seule — 📄 Dupliquer pour en faire ta version.", "info")
+        else:
+            self._status("", "info")
+        self.app._theme_fix(self)
+
+    def _update_keep_state(self):
+        p = self._item(self.cur_id) if self.cur_id else None
+        if p and p.get("locked"):
+            return
+        jeu = self.kindvar.get() == "jeu"
+        self.keep_chk.configure(state="normal" if (self.mvar.get() == "remplacer" or jeu) else "disabled")
+        for w in self.mode_rbs:
+            w.configure(state="disabled" if jeu else "normal")
+        self.role_cb.configure(state="disabled" if jeu else "readonly")
+        if jeu and self.rvar.get() != PROMPT_ROLE_LABELS["tous"]:
+            self.rvar.set(PROMPT_ROLE_LABELS["tous"])
+        try:
+            self.btns["act"].configure(text="🎮 Jouer" if jeu else "✅ Activer")
+        except Exception:
+            pass
+
+    def _refresh_badge(self):
+        pid = self.cur_id
+        if not pid:
+            self.active_badge.config(text="")
+            return
+        if pid.startswith(PROMPT_LOCK_PREFIX):
+            rid = pid[len(PROMPT_LOCK_PREFIX):]
+            on = not self.store.active_for(rid)
+            self.active_badge.config(text="⭐ ACTIF (aucun favori sur ce rôle)" if on else "")
+            return
+        roles = self.store.active_roles(pid)
+        if roles:
+            labs = ", ".join(RoleRouter.ROLES[r]["label"] for r in RoleRouter_ROLE_IDS if r in roles)
+            self.active_badge.config(text=f"⭐ ACTIF : {labs}")
+        else:
+            self.active_badge.config(text="")
+
+    def _changed(self):
+        if self._loading:
+            return
+        self._update_keep_state()
+        p = self._item(self.cur_id) if self.cur_id else None
+        if p and not p.get("locked"):
+            self.dirty = True
+            self.dirty_lbl.config(text="● non enregistré  (Ctrl+S)")
+        self._schedule_preview()
+
+    def _on_text_modified(self, e=None):
+        if self.txt.edit_modified():
+            self.txt.edit_modified(False)
+            if not self._loading:
+                self._changed()
+                self._update_counts()
+
+    def _insert_var(self, v: str):
+        if str(self.txt.cget("state")) == "disabled":
+            return self._status("🔒 Lecture seule — 📄 Dupliquer d'abord.", "warn")
+        self.txt.insert("insert", v)
+        self.txt.focus_set()
+
+    def _editor_prompt(self) -> Dict[str, Any]:
+        role = "tous"
+        for r, l in PROMPT_ROLE_LABELS.items():
+            if l == self.rvar.get():
+                role = r
+        jeu = self.kindvar.get() == "jeu"
+        old = self.store.get(self.cur_id) or {}
+        return {
+            "id": self.cur_id, "name": self.nvar.get().strip(), "role": "tous" if jeu else role,
+            "mode": "remplacer" if jeu else self.mvar.get(),
+            "keep_base": bool(self.kvar.get()), "text": self.txt.get("1.0", "end-1c"),
+            "kind": "jeu" if jeu else "normal", "builtin": old.get("builtin", ""),
+        }
+
+    def _update_counts(self):
+        t = self.txt.get("1.0", "end-1c")
+        n, w = len(t), len(t.split())
+        self.count_txt.config(text=f"{_fr_int(n)} caractères · {_fr_int(w)} mots · ≈ {_fr_int(max(0, n // 4))} jetons")
+
+    def _schedule_preview(self):
+        if self._prev_job:
+            try:
+                self.after_cancel(self._prev_job)
+            except Exception:
+                pass
+        self._prev_job = self.after(220, self._update_preview)
+
+    def _preview_role(self, p: Dict[str, Any]) -> str:
+        return p["role"] if p["role"] in RoleRouter_ROLE_IDS else self.app.router.active
+
+    def _update_preview(self):
+        self._prev_job = None
+        if not self.cur_id:
+            return
+        try:
+            locked = self.cur_id.startswith("__")
+            p = self._item(self.cur_id) if locked else self._editor_prompt()
+            rid = self._preview_role(p)
+            q = self.qvar.get().strip() or PROMPT_TEST_Q
+            if self.cur_id.startswith(PROMPT_LOCK_PREFIX):
+                full = self.app.router.system_prompt(role_id=rid, use_default=True)
+                mine = ""
+            else:
+                full = self.app.router.system_prompt(question=q, override=p, role_id=rid)
+                mine = prompt_render(p.get("text", ""), date=_today_fr()[0], question=q,
+                                     role=RoleRouter.ROLES[rid]["label"]).strip()
+            note = ""
+            if not locked and not (p.get("text") or "").strip():
+                note = "(Texte vide : c'est le prompt par défaut du rôle qui s'appliquera.)\n\n"
+            if rid == "chercheur" and p.get("kind") != "jeu":
+                full_show = full + " Si les sources digressent, ignore-les. Reste sur: <ta chasse>."
+            else:
+                full_show = full
+            self.prev.configure(state="normal")
+            self.prev.delete("1.0", "end")
+            if note:
+                self.prev.insert("end", note, "note")
+            k = full_show.find(mine) if mine else -1
+            if k >= 0:
+                self.prev.insert("end", full_show[:k])
+                self.prev.insert("end", mine, "mine")
+                self.prev.insert("end", full_show[k + len(mine):])
+            else:
+                self.prev.insert("end", full_show)
+            self.prev.configure(state="disabled")
+            if k >= 0:
+                try:  # montre directement TA partie (en doré)
+                    self.prev.see("mine.first")
+                except Exception:
+                    pass
+            lab = RoleRouter.ROLES[rid]["label"]
+            extra = "" if p["role"] in RoleRouter_ROLE_IDS else " (rôle actuel de Padawan)"
+            self.prev_title.config(text=f"👁 Aperçu en direct — prompt final, rôle : {lab}{extra}"
+                                   if p.get("kind") != "jeu" else "👁 Aperçu — prompt système du 🎮 jeu (pur)")
+            self.prev_count.config(text=f"{_fr_int(len(full_show))} caractères au total")
+        except Exception as e:
+            log(f"prompt preview: {e}")
+
+    def _refresh_header(self):
+        rid = self.app.router.active
+        lab = RoleRouter.ROLES[rid]["label"]
+        p = self.store.active_for(rid)
+        self.hdr_role.config(text=f"RÔLE ACTUEL : {lab.upper()}")
+        self.hdr_active.config(text=f"⭐ {p['name']}" if p else "Prompt : défaut",
+                               fg=C["gold"] if p else C["dim"])
+
+    def _refresh_from_app(self):
+        """Appelé par Padawan quand le rôle ou le prompt actif change."""
+        self._refresh_header()
+        self._fill_list(keep=True)
+        self._refresh_badge()
+        self._schedule_preview()
+
+    # ── actions ──────────────────────────────────────────────────────────────
+    def _confirm_discard(self) -> bool:
+        if not self.dirty:
+            return True
+        name = self.nvar.get().strip() or "ce prompt"
+        r = messagebox.askyesnocancel(
+            "📜 Prompts", f"Enregistrer les modifications de « {name} » ?", parent=self)
+        if r is None:
+            return False
+        if r:
+            return self.save_current()
+        self.dirty = False
+        self.dirty_lbl.config(text="")
+        return True
+
+    def save_current(self) -> bool:
+        if not self.cur_id or self.cur_id.startswith("__"):
+            self._status("🔒 Lecture seule — 📄 Dupliquer pour créer ta version.", "warn")
+            return False
+        p = self._editor_prompt()
+        if not p["name"]:
+            self._status("Donne un nom au prompt avant d'enregistrer.", "warn")
+            self.name_ent.focus_set()
+            return False
+        old = self.store.get(self.cur_id) or {}
+        cleaned, found = prompt_clean(p["text"])
+        if found and cleaned and messagebox.askyesno(
+                "📜 Nettoyer le prompt ?",
+                "Ton texte contient " + ", ".join(found) + " — sûrement copié depuis l'👁 Aperçu.\n\n"
+                "Padawan ajoute déjà ces morceaux lui-même : les garder les met en double (et la chasse\n"
+                "« Reste sur: <ta chasse> » brouille les jeux).\n\nLes retirer automatiquement ?", parent=self):
+            p["text"] = cleaned
+            self._loading = True
+            try:
+                self.txt.delete("1.0", "end")
+                self.txt.insert("1.0", cleaned)
+            finally:
+                self._loading = False
+        p["example"] = bool(old.get("example")) and p["text"] == old.get("text") and p["name"] == old.get("name")
+        self.store.upsert(p)
+        if not self.store.save():
+            self._status(f"⚠ {self.store.error}", "bad")
+            return False
+        self.dirty = False
+        self.dirty_lbl.config(text="")
+        self.ed_title.config(text="✏ " + p["name"])
+        self._fill_list(keep=True)
+        self._refresh_badge()
+        self.app._refresh_prompt_ui()
+        live = self.store.active_roles(self.cur_id)
+        self._status("💾 Enregistré" + (" — déjà actif : effet dès la prochaine question." if live else "."), "ok")
+        return True
+
+    def _add_and_select(self, p: Dict[str, Any], after: str = ""):
+        q = self.store.upsert(dict(p, id=PromptStore._new_id()))
+        if after:
+            j = self.store.index_of(after)
+            if j >= 0:
+                self.store.move_to(q["id"], j + 1)
+        if not self.store.save():
+            self._status(f"⚠ {self.store.error}", "bad")
+        self.fvar.set("")
+        self.rfilter.set("Tous les rôles")
+        self._fill_list()
+        self._select_id(q["id"])
+        return q
+
+    def new_prompt(self):
+        if not self._confirm_discard():
+            return
+        self.select_tab("prompts")
+        self._add_and_select({"name": "Nouveau prompt", "role": "tous", "mode": "ajouter",
+                              "keep_base": True, "text": ""})
+        self.name_ent.focus_set()
+        self.name_ent.select_range(0, "end")
+        self._status("➕ Nouveau prompt créé — donne-lui un nom, écris ton texte, puis 💾 et ✅.", "ok")
+
+    def duplicate(self):
+        if not self.cur_id:
+            return
+        if not self._confirm_discard():
+            return
+        p = dict(self._item(self.cur_id) or {})
+        if not p:
+            return
+        if self.cur_id == PROMPT_LOCK_BASE:
+            p.update(name="Mon ADN Padawan", role="tous", mode="remplacer", keep_base=False)
+            after = ""
+        elif self.cur_id.startswith(PROMPT_LOCK_PREFIX):
+            p.update(name=f"Mon {RoleRouter.ROLES[p['role']]['label']}", mode="remplacer", keep_base=True)
+            after = ""
+        else:
+            p["name"] = (p["name"].replace(" (exemple)", "") + " (copie)")[:120]
+            after = self.cur_id
+        p.pop("locked", None)
+        p["example"] = False
+        self._add_and_select(p, after=after)
+        self.name_ent.focus_set()
+        self.name_ent.select_range(0, "end")
+        self._status("📄 Copie créée et enregistrée — modifie-la à ton goût.", "ok")
+
+    def delete(self):
+        if not self.cur_id or self.cur_id.startswith("__"):
+            return self._status("🔒 Les prompts d'origine ne se suppriment pas.", "warn")
+        p = self.store.get(self.cur_id)
+        if not p:
+            return
+        if not messagebox.askyesno(
+            "📜 Supprimer",
+            f"Supprimer « {p['name']} » ?\n\nUne copie de sécurité reste dans\n"
+            f"{os.path.join(self.store.bak_dir, 'prompts.json.bak')}",
+            parent=self, icon="warning",
+        ):
+            return
+        i = self._view_ids.index(self.cur_id) if self.cur_id in self._view_ids else 0
+        self.store.delete(self.cur_id)
+        if not self.store.save():
+            self._status(f"⚠ {self.store.error}", "bad")
+        self.dirty = False
+        self.cur_id = ""
+        self._fill_list()
+        ids = [x for x in self._view_ids if x]
+        if ids:
+            self._select_id(ids[min(i, len(ids) - 1)])
+        self.app._refresh_prompt_ui()
+        self._status(f"🗑 « {p['name']} » supprimé.", "ok")
+
+    def activate(self):
+        if not self.cur_id:
+            return
+        if self.cur_id == PROMPT_LOCK_BASE:
+            return self._status("L'ADN seul ne s'active pas : 📄 Dupliquer pour en faire ton prompt complet.", "warn")
+        if self.cur_id.startswith(PROMPT_LOCK_PREFIX):
+            rid = self.cur_id[len(PROMPT_LOCK_PREFIX):]
+            self.app._prompt_set_active(None, rid)
+            self._status(f"↩ {RoleRouter.ROLES[rid]['label']} : prompt d'origine rétabli.", "ok")
+            return
+        if self.dirty and not self.save_current():
+            return
+        p = self.store.get(self.cur_id)
+        if not p:
+            return
+        if not (p.get("text") or "").strip():
+            return self._status("Ce prompt est vide — écris ton texte avant de l'activer.", "warn")
+        if p.get("kind") == "jeu":
+            self.app.game_start(p["id"])
+            self._status(f"🎮 « {p['name']} » lancé dans la fenêtre principale de Padawan.", "ok")
+            self._fill_list(keep=True)
+            return
+        roles = self.app._prompt_set_active(p["id"], None)
+        if roles:
+            labs = ", ".join(RoleRouter.ROLES[r]["label"] for r in roles)
+            self._status(f"✅ « {p['name']} » actif pour : {labs}.", "ok")
+
+    def reset_default(self):
+        self.app._prompt_set_active(None, None)
+        self._status("↩ Tous les rôles reprennent le prompt d'origine de Padawan.", "ok")
+
+    def test_prompt(self):
+        if not self.cur_id:
+            return
+        locked = self.cur_id.startswith("__")
+        p = dict(self._item(self.cur_id) or {}) if locked else self._editor_prompt()
+        if not p:
+            return
+        rid = self._preview_role(p)
+        q = self.qvar.get().strip() or PROMPT_TEST_Q
+        if p.get("kind") == "jeu":
+            self.app.game_start(p.get("id", ""), override=dict(p, id=p.get("id") or "test"))
+            return self._status("🎮 Essai du jeu lancé dans Padawan (texte non enregistré utilisé tel quel).", "ok")
+        override = None if self.cur_id.startswith(PROMPT_LOCK_PREFIX) else p
+        if self.app._prompt_test(override, rid, q, name=p.get("name") or "prompt"):
+            self._status(f"🧪 Test lancé ({RoleRouter.ROLES[rid]['label']}) — la réponse s'écrit dans le chat "
+                         "de Padawan. Ton actif n'a pas changé.", "ok")
+        else:
+            self._status("🧪 Test impossible pour l'instant (Padawan occupé ou modèle pas prêt).", "warn")
+
+    def import_prompts(self):
+        path = filedialog.askopenfilename(
+            parent=self, title="Importer des prompts",
+            initialdir=os.path.join(os.path.expanduser("~"), "Documents"),
+            filetypes=[("Prompts (.json, .txt)", "*.json *.txt"), ("JSON", "*.json"), ("Texte", "*.txt"),
+                       ("Tous", "*.*")],
+        )
+        if not path:
+            return
+        try:
+            raw = open(path, "rb").read()
+            try:
+                s = raw.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                s = raw.decode("cp1252", errors="replace")
+            items: List[Dict[str, Any]] = []
+            if path.lower().endswith(".json"):
+                d = json.loads(s)
+                if isinstance(d, dict) and isinstance(d.get("prompts"), list):
+                    items = d["prompts"]
+                elif isinstance(d, list):
+                    items = d
+                elif isinstance(d, dict) and "text" in d:
+                    items = [d]
+            else:
+                stem = os.path.splitext(os.path.basename(path))[0]
+                items = [{"name": stem, "role": "tous", "mode": "ajouter", "keep_base": True, "text": s.strip()}]
+            have = {(p["name"], p["text"]) for p in self.store.all()}
+            added = []
+            for it in items:
+                q = self.store._norm_prompt(it)
+                if not q or not q["text"].strip() or (q["name"], q["text"]) in have:
+                    continue
+                q["id"] = PromptStore._new_id()
+                q["example"] = False
+                self.store.data["prompts"].insert(len(added), q)
+                have.add((q["name"], q["text"]))
+                added.append(q["id"])
+            if not added:
+                return self._status("📥 Rien de nouveau à importer (vide ou déjà présent).", "warn")
+            self.store.save()
+            self.fvar.set("")
+            self._fill_list()
+            self._select_id(added[0])
+            self._status(f"📥 {len(added)} prompt(s) importé(s) depuis {os.path.basename(path)}.", "ok")
+        except Exception as e:
+            self._status(f"⚠ Import impossible : {e}", "bad")
+
+    def export_prompts(self):
+        cur = self._item(self.cur_id) if self.cur_id else None
+        base_name = re.sub(r"[^\w\- ]+", "", (cur or {}).get("name", "prompt")).strip() or "prompt"
+        path = filedialog.asksaveasfilename(
+            parent=self, title="Exporter",
+            initialdir=os.path.join(os.path.expanduser("~"), "Documents"),
+            initialfile="mes_prompts_padawan.json", defaultextension=".json",
+            filetypes=[("Tous mes prompts (.json)", "*.json"), (f"Prompt affiché — {base_name} (.txt)", "*.txt")],
+        )
+        if not path:
+            return
+        try:
+            if path.lower().endswith(".txt"):
+                body = self.txt.get("1.0", "end-1c")
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(body)
+                self._status(f"📤 Prompt exporté : {path}", "ok")
+            else:
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump({"padawan_prompts": 1, "exported": now(), "prompts": self.store.all()},
+                              f, ensure_ascii=False, indent=2)
+                self._status(f"📤 {len(self.store.all())} prompt(s) exporté(s) : {path}", "ok")
+        except Exception as e:
+            self._status(f"⚠ Export impossible : {e}", "bad")
+
+    def _destroy(self):
+        try:
+            self.unbind_all("<MouseWheel>")
+        except Exception:
+            pass
+        try:
+            self.destroy()
+        except Exception:
+            pass
+        if getattr(self.app, "_prompts_win", None) is self:
+            self.app._prompts_win = None
+
+    def close(self):
+        if self._confirm_discard():
+            self._destroy()
 
 
 # ── Longueur des réponses / options génération (v39f) ─────────────────────────
@@ -2639,7 +6546,15 @@ def gen_options(temperature: Optional[float] = None) -> Dict[str, Any]:
     }
 
 
-def _build_messages(sys_msg: str, user: str, history: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
+def _build_messages(sys_msg: str, user: str, history: Optional[List[Dict[str, str]]],
+                    raw: bool = False) -> List[Dict[str, str]]:
+    if raw:  # v39.3: prompt personnalisé / jeu = système tel quel (pas de style ni « Pour aller plus loin »)
+        msgs = [{"role": "system", "content": sys_msg}]
+        for m in (history or []):
+            if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip():
+                msgs.append({"role": m["role"], "content": m["content"]})
+        msgs.append({"role": "user", "content": user})
+        return msgs
     msgs = [{"role": "system", "content": sys_msg + STYLE_VIVANT + LENGTH_INSTR[gen_level()]
              + " RAPPEL FINAL: réponse vivante et généreuse qui finit par **💡 Pour aller plus loin**; tutoie Marc (« tu », « ton », « toi »), JAMAIS « vous »; pas de phrases creuses."}]
     for m in (history or []):
@@ -2675,7 +6590,8 @@ def forme_vivante(q: str) -> str:
 
 
 def chat(model: str, user: str, system: str | None = None, cancel: Optional[threading.Event] = None,
-         history: Optional[List[Dict[str, str]]] = None) -> str:
+         history: Optional[List[Dict[str, str]]] = None, raw_system: bool = False,
+         options: Optional[Dict[str, Any]] = None) -> str:
     if not requests:
         raise RuntimeError("pip install requests")
     if cancel and cancel.is_set():
@@ -2688,8 +6604,8 @@ def chat(model: str, user: str, system: str | None = None, cancel: Optional[thre
             json_body={
                 "model": model,
                 "stream": False,
-                "options": gen_options(),
-                "messages": _build_messages(sys_msg, user, history),
+                "options": dict(gen_options(), **(options or {})),
+                "messages": _build_messages(sys_msg, user, history, raw=raw_system),
             },
             timeout=(OLLAMA_CONNECT, TIMEOUT),
             retries=OLLAMA_RETRY,
@@ -2707,6 +6623,8 @@ def chat_stream(
     on_token: Optional[Callable[[str], None]] = None,
     cancel: Optional[threading.Event] = None,
     history: Optional[List[Dict[str, str]]] = None,
+    raw_system: bool = False,
+    options: Optional[Dict[str, Any]] = None,
 ) -> str:
     if not requests:
         raise RuntimeError("pip install requests")
@@ -2720,8 +6638,8 @@ def chat_stream(
             json_body={
                 "model": model,
                 "stream": True,
-                "options": gen_options(),
-                "messages": _build_messages(sys_msg, user, history),
+                "options": dict(gen_options(), **(options or {})),
+                "messages": _build_messages(sys_msg, user, history, raw=raw_system),
             },
             timeout=(OLLAMA_CONNECT, TIMEOUT),
             stream=True,
@@ -2755,7 +6673,8 @@ def chat_stream(
         fr = ollama_err_fr(e, context="stream")
         log(f"stream fail, fallback: {fr}")
         try:
-            return chat(model, user, system=system, cancel=cancel, history=history)
+            return chat(model, user, system=system, cancel=cancel, history=history,
+                        raw_system=raw_system, options=options)
         except Exception as e2:
             return f"⚠ {ollama_err_fr(e2, context='chat')}"
 
@@ -2830,15 +6749,36 @@ class Padawan(tk.Tk):
             pick = self.mods[0] if self.mods else model_menu_label(MODEL, False)
         self.model = model_id_from_label(pick)
         role0 = self.cfg.get("role", "chercheur")
+        if self.cfg.get("startup_chercheur", True):  # v39.4: on commence sérieux : Chercheur + prompt d'origine
+            role0 = "chercheur"
         if role0 not in RoleRouter.ROLES:
             role0 = "chercheur"
-        self.router = RoleRouter(self.mem, active=role0)
+        try:
+            self.prompts = PromptStore()
+        except Exception as e:  # jamais bloquant: favoris en mémoire seulement
+            log(f"prompts init: {e}")
+            self.prompts = PromptStore.__new__(PromptStore)
+            self.prompts.path, self.prompts.bak_dir, self.prompts.error = PROMPTS_FILE, PROMPTS_BAK_DIR, str(e)
+            self.prompts.data = {"version": 1, "prompts": [], "active": {}, "seeded": True}
+        self._prompts_win = None
+        self._startup_note = ""
+        if self.cfg.get("startup_chercheur", True) and isinstance(self.prompts.data.get("active"), dict) \
+                and self.prompts.data["active"]:
+            names = [self.prompts.get(x)["name"] for x in self.prompts.data["active"].values() if self.prompts.get(x)]
+            self.prompts.data["active"] = {}
+            self.prompts.save()
+            if names:
+                self._startup_note = (f"🔎 Départ en mode Chercheur, prompt d'origine. Ton favori « {names[0]} » "
+                                      "reste à un clic (carte 📜 PROMPT à gauche).")
+        self.router = RoleRouter(self.mem, active=role0, prompts=self.prompts)
         if role0 in ROLE_TO_MODE:
             self.mode = ROLE_TO_MODE[role0]
         self.session = {"t": now(), "h": []}
         self.mem["sessions"].append({"start": self.session["t"], "history": self.session["h"]})
         self.bind("<Control-f>", lambda e: self.focus_hunt())
         self.bind("<Control-i>", lambda e: self.park())
+        self.bind("<Control-p>", lambda e: (self.show_prompts(), "break")[1])  # v39.2 📜 Prompts
+        self.bind("<Control-P>", lambda e: (self.show_prompts(), "break")[1])
         self.bind("<Control-l>", lambda e: (self.new_conversation(), "break")[1])
         self.bind("<Control-L>", lambda e: (self.new_conversation(), "break")[1])
         self.bind("<Control-Shift-N>", lambda e: (self.new_conversation(), "break")[1])
@@ -2867,6 +6807,7 @@ class Padawan(tk.Tk):
         self.after(120, self._apply_startup_window)
         self.after(250, self._setup_tray)
         self.after(400, self._sync_windows_startup)
+        self.after(700, self._game_boot)  # v39.3: reprend la partie en cours / note de migration
 
     def after0(self, fn: Callable, *a, **k):
         self.after(0, lambda: fn(*a, **k))
@@ -3021,6 +6962,7 @@ class Padawan(tk.Tk):
             r = self.router.current()
             tools = ", ".join(r["tools"]) if r["tools"] else "aucun"
             self.role_ind.config(text=f"{r['label']} · {tools}")
+        self._refresh_prompt_ui()
 
     def build(self):
         rail = tk.Frame(self, bg=C["bg"], width=164)
@@ -3104,9 +7046,43 @@ class Padawan(tk.Tk):
             b.bind("<Leave>", _leave)
             return b
 
+        # v39.2: prompt actif (clic = 📜 Prompts)
+        pcard = tk.Frame(self.rail_inner, bg=C["card"], highlightbackground=C["line"],
+                         highlightthickness=1, cursor="hand2")
+        pcard.pack(fill="x", pady=(0, 6))
+        self.prompt_ind_role = tk.Label(
+            pcard, text="📜 PROMPT", bg=C["card"], fg=C["dim"], font=("Segoe UI", 7, "bold"),
+            anchor="w", cursor="hand2",
+        )
+        self.prompt_ind_role.pack(fill="x", padx=8, pady=(4, 0))
+        self.prompt_ind = tk.Label(
+            pcard, text="Prompt : défaut", bg=C["card"], fg=C["dim"], font=("Segoe UI", 10, "bold"),
+            anchor="w", justify="left", wraplength=136, cursor="hand2",
+        )
+        self.prompt_ind.pack(fill="x", padx=8, pady=(0, 5))
+        for _w in (pcard, self.prompt_ind_role, self.prompt_ind):
+            _w.bind("<Button-1>", self._prompt_quick_menu)
+        self._tip(self.prompt_ind, "Prompt suivi par Padawan pour le rôle actif.\n"
+                                   "Clic : menu de tes favoris (activer en 1 clic) · Ctrl+P = gérer")
+        gplay = nav("🎮 Jouer", self._game_menu)
+        gplay.configure(fg=C["gold"], font=("Segoe UI", 10, "bold"))
+        gplay.bind("<Leave>", lambda e, b=gplay: b.configure(bg=C["card"], fg=C["gold"]), add="+")
+        gplay.pack(fill="x", pady=(0, 4))
+        self._tip(gplay, "Jeux de rôle textuels : Fallout québécois, polar Montréal 1947, donjon BBS…\n"
+                         "Choix cliquables, Pip-Boy, sauvegardes · ✨ créer ton propre jeu")
+        gnews = nav("📰 Nouvelles", self._news_menu)
+        gnews.configure(fg=C["cyan"], font=("Segoe UI", 10, "bold"))
+        gnews.bind("<Leave>", lambda e, b=gnews: b.configure(bg=C["card"], fg=C["cyan"]), add="+")
+        gnews.pack(fill="x", pady=(0, 4), before=gplay)
+        self._tip(gnews, "Briefings sourcés en un clic (vraie chasse web, sources datées) :\n"
+                         "🌍 Géopoliticologue du futur · 🔭 Découvertes & avancées\n"
+                         "24 h / semaine / ce qui a changé · gardés en .html dans briefings\\")
+
         nav("Gare l'idée  Ctrl+I", self.park).pack(fill="x", pady=1)
-        self.btn_inbox = nav(self._inbox_label(), self.show_inbox)
+        self.btn_inbox = nav(self._inbox_label(), self.show_prompts)
         self.btn_inbox.pack(fill="x", pady=1)
+        self._tip(self.btn_inbox, "📜 Prompts (Ctrl+P) : tes prompts favoris à activer en un clic\n"
+                                  "+ l'onglet 💡 Idées garées (ce que Ctrl+I met de côté)")
         nav("Tâches", self.show_tasks).pack(fill="x", pady=1)
         nav("Creuser", self.dig).pack(fill="x", pady=1)
         nav("Copier", self.copy_last).pack(fill="x", pady=1)
@@ -3165,6 +7141,7 @@ class Padawan(tk.Tk):
         self.sugg_bar.pack(fill="x", pady=(0, 2))
         act = tk.Frame(bar_wrap, bg=C["bg"])
         act.pack(fill="x", pady=(0, 2))
+        self._act_fr = act
         self.act_btns = {}
         nb = tk.Button(
             act, text="🧹 Nouvelle conversation", command=self.new_conversation,
@@ -3196,6 +7173,7 @@ class Padawan(tk.Tk):
             highlightbackground=C["line"], highlightcolor=C["gold"], highlightthickness=1,
         )
         bar.pack(fill="x")
+        self._input_bar = bar
         self.var = tk.StringVar()
         self.ent = self._make_entry(bar, self.var, font_size=13)
         self.ent.pack(side="left", fill="x", expand=True, ipady=8, padx=(8, 4), pady=3)
@@ -3209,6 +7187,7 @@ class Padawan(tk.Tk):
 
         chips = tk.Frame(mid, bg=C["bg"])
         chips.pack(side="bottom", fill="x", pady=(2, 0))
+        self._chips_fr = chips
         for lab, cmd in (("Creuser", self.dig), ("Contredire ça", self.flip), ("Garer ça", self.park)):
             tk.Button(
                 chips, text=lab, command=cmd, bg=C["card"], fg=C["fg"], relief="flat",
@@ -3221,6 +7200,7 @@ class Padawan(tk.Tk):
             highlightbackground=C["line"], highlightcolor=C["gold"], highlightthickness=1,
         )
         hunt.pack(fill="x", pady=(0, 3))
+        self._hunt_fr = hunt
         tk.Label(
             hunt, text="CHASSE", bg=C["input"], fg=C["gold"], font=("Segoe UI", 8, "bold"),
         ).pack(side="left", padx=(8, 6))
@@ -3237,6 +7217,7 @@ class Padawan(tk.Tk):
         # Chrome densifié: 2 rangées max (pouvoir/source/n + rôle/modèle/mode)
         chrome = tk.Frame(mid, bg=C["bg"])
         chrome.pack(fill="x", pady=(0, 2))
+        self._chrome_fr = chrome
 
         row0 = tk.Frame(chrome, bg=C["bg"])
         row0.pack(fill="x", pady=0)
@@ -3287,6 +7268,14 @@ class Padawan(tk.Tk):
             self.role_pills[key] = self.pill(row2, lab, key, "role")
         self.role_ind = tk.Label(row2, text="", bg=C["bg"], fg=C["dim"], font=("Segoe UI", 7))
         self.role_ind.pack(side="left", padx=(6, 8))
+        # v39.2: changer de prompt en 2 clics
+        self.prompt_quick = tk.Label(
+            row2, text="📜 défaut ▾", bg=C["card"], fg=C["fg"], font=("Segoe UI", 9, "bold"),
+            padx=10, pady=2, cursor="hand2", highlightthickness=1, highlightbackground=C["gold"],
+        )
+        self.prompt_quick.pack(side="left", padx=(0, 8))
+        self.prompt_quick.bind("<Button-1>", self._prompt_quick_menu)
+        self._tip(self.prompt_quick, "Activer un prompt favori en 1 clic (ou lancer un 🎮 jeu)\nCtrl+P = gérer mes prompts")
         _m0 = self.model
         _lab0 = next((lab for lab in self.mods if model_id_from_label(lab) == _m0), self.mods[0] if self.mods else _m0)
         self.mvar = tk.StringVar(value=_lab0)
@@ -3356,9 +7345,11 @@ class Padawan(tk.Tk):
         )
         # caché tant que viewport déjà en bas
         self._jump_bot_btn.place_forget()
+        self._build_game(mid)  # v39.3 🎮 (caché tant qu'aucun jeu n'est lancé)
 
         right = tk.Frame(self.split, bg=C["bg"], width=400)
         self.split.add(right, stretch="always", minsize=300)
+        self._right_pane = right
         self.nb = ttk.Notebook(right)
         self.nb.pack(fill="both", expand=True)
         self.tab_src, self.tab_read = tk.Frame(self.nb, bg=C["bg"]), tk.Frame(self.nb, bg=C["bg"])
@@ -3584,7 +7575,7 @@ class Padawan(tk.Tk):
 
     def _inbox_label(self) -> str:
         n = len(self.mem.get("inbox") or [])
-        return f"Inbox ({n})" if n else "Inbox"
+        return f"📜 Prompts  Ctrl+P  · 💡{n}" if n else "📜 Prompts  Ctrl+P"
 
     def _refresh_inbox_badge(self):
         btn = getattr(self, "btn_inbox", None)
@@ -3592,6 +7583,12 @@ class Padawan(tk.Tk):
             return
         try:
             btn.config(text=self._inbox_label())
+        except Exception:
+            pass
+        win = getattr(self, "_prompts_win", None)
+        try:
+            if win is not None and win.winfo_exists():
+                win._refresh_ideas()
         except Exception:
             pass
 
@@ -4198,7 +8195,8 @@ class Padawan(tk.Tk):
                 pass
             self.busy_lbl.config(text="")
             self.input_tip.config(
-                text="Écris ici… Entrée = envoyer · Échap = annuler  ·  Voyant modèle: gris=check, or=load, vert=prêt, rouge=off",
+                text=GAME_INPUT_TIP if getattr(self, "game", None) else
+                "Écris ici… Entrée = envoyer · Échap = annuler  ·  Voyant modèle: gris=check, or=load, vert=prêt, rouge=off",
                 fg=C["dim"],
             )
             self.cancel_btn.pack_forget()
@@ -4569,8 +8567,12 @@ class Padawan(tk.Tk):
         *,
         use_history: bool = True,
         hunt_query: Optional[str] = None,
+        override: Optional[Dict[str, Any]] = None,
+        question: Optional[str] = None,
+        options: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """Chat Ollama. use_history=False isole le brief de chasse (anti context-bleed)."""
+        """Chat Ollama. use_history=False isole le brief de chasse (anti context-bleed).
+        v39.4: override = prompt ponctuel (📰 briefing) sans changer le favori actif."""
         if self._cancel.is_set():
             return ""
         hist: List[Dict[str, str]] = []
@@ -4585,13 +8587,22 @@ class Padawan(tk.Tk):
                 role = {"you": "user", "ai": "assistant"}.get(x.get("who"))
                 if role:
                     hist.append({"role": role, "content": str(x.get("text") or "")[:4000]})
+        # v39.3: un prompt perso actif a priorité (Remplacer = système tel quel, sans le style par défaut)
+        ap = override or self.router.active_prompt()
+        if ap and hunt_query and not override:
+            user = (user + f"\n\n(PRIORITÉ : le prompt système personnalisé de Marc « {ap.get('name', '')} » "
+                    "a priorité sur le format demandé ci-dessus.)")
         # Isolation stricte si use_history=False: pas de last_a / chat ancien / parked / ADN
         return chat_stream(
             model_id_from_label(self.mvar.get()), user,
-            system=self.router.system_prompt(hunt_query=hunt_query),
+            system=self.router.system_prompt(hunt_query=hunt_query,
+                                             question=question or getattr(self, "last_q", "") or "",
+                                             override=override),
             on_token=on_token,
             cancel=self._cancel,
             history=hist,
+            raw_system=bool(ap and ap.get("mode") == "remplacer"),
+            options=options,
         )
 
     def _begin_stream(self) -> str:
@@ -4672,6 +8683,8 @@ class Padawan(tk.Tk):
         if self.busy or not self.last_q:
             return
         q = self.last_q
+        if getattr(self, "_last_kind", "chat") == "brief" and getattr(self, "_brief_ctx", None):
+            return self.news_regenerate()
         if getattr(self, "_last_kind", "chat") == "hunt":
             self._regen = True
             self.run_search(q, self.search_source)
@@ -4779,6 +8792,10 @@ class Padawan(tk.Tk):
             return
         q = self.var.get().strip()
         if not q:
+            return
+        if getattr(self, "game", None):  # v39.3 🎮 : la barre sert d'« Autre action… »
+            self.var.set("")
+            self._game_send(q)
             return
         self.var.set("")
         self.last_q = q
@@ -4937,7 +8954,8 @@ class Padawan(tk.Tk):
                 )
                 ans = postprocess_hunt_brief(ans, getattr(self, "hits", []) or [], q)
             else:
-                ans = self._ollama(f"{web}\n\n{extra}\n\nMarc: {q}" + forme_vivante(q), on_token=on_tok)
+                ans = self._ollama(f"{web}\n\n{extra}\n\nMarc: {q}"
+                                   + ("" if self.router.active_prompt() else forme_vivante(q)), on_token=on_tok)
             if want_web:
                 self.after0(self.mission_update, "brief", "done" if not self._cancel.is_set() else "fail", None)
             if self._cancel.is_set():
@@ -5268,80 +9286,8 @@ class Padawan(tk.Tk):
         self.say("sys", f"Garé. {len(self.mem['inbox'])} idée(s).")
 
     def show_inbox(self):
-        pop = tk.Toplevel(self)
-        pop.title("Inbox · Idées garées")
-        pop.configure(bg=C["bg"])
-        pop.geometry("600x480")
-        tk.Label(
-            pop, text="Idées garées — Relancer ou Supprimer.",
-            bg=C["bg"], fg=C["gold"], font=("Segoe UI", 9, "bold"),
-        ).pack(anchor="w", padx=10, pady=(8, 4))
-
-        wrap = tk.Frame(pop, bg=C["bg"])
-        wrap.pack(fill="both", expand=True, padx=8, pady=(0, 8))
-        canvas = tk.Canvas(wrap, bg=C["bg"], highlightthickness=0)
-        sb = ttk.Scrollbar(wrap, orient="vertical", command=canvas.yview, style="Gold.Vertical.TScrollbar")
-        inner = tk.Frame(canvas, bg=C["bg"])
-        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        win = canvas.create_window((0, 0), window=inner, anchor="nw")
-        canvas.configure(yscrollcommand=sb.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        sb.pack(side="right", fill="y")
-        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(win, width=max(200, e.width - 4)))
-
-        def _wheel(e):
-            if getattr(e, "num", None) == 4:
-                canvas.yview_scroll(-1, "units")
-            elif getattr(e, "num", None) == 5:
-                canvas.yview_scroll(1, "units")
-            else:
-                canvas.yview_scroll(int(-1 * ((e.delta or 0) / 120)), "units")
-
-        canvas.bind("<Enter>", lambda e: (canvas.bind_all("<MouseWheel>", _wheel), canvas.bind_all("<Button-4>", _wheel), canvas.bind_all("<Button-5>", _wheel)))
-        canvas.bind("<Leave>", lambda e: (canvas.unbind_all("<MouseWheel>"), canvas.unbind_all("<Button-4>"), canvas.unbind_all("<Button-5>")))
-
-        def refresh():
-            for w in inner.winfo_children():
-                w.destroy()
-            items = list(self.mem.get("inbox") or [])[:40]
-            if not items:
-                tk.Label(
-                    inner, text="Inbox vide — Gare l'idée (Ctrl+I) pour y mettre une question.",
-                    bg=C["bg"], fg=C["dim"], font=("Segoe UI", 10), wraplength=520, justify="left",
-                ).pack(anchor="w", padx=8, pady=20)
-                return
-            for idx, it in enumerate(items):
-                row = tk.Frame(inner, bg=C["card"], highlightbackground=C["line"], highlightthickness=1)
-                row.pack(fill="x", padx=4, pady=2)
-                stamp = (it.get("t") or "")[5:16]
-                txt = (it.get("text") or "")[:100]
-                tk.Label(
-                    row, text=f"{stamp}  {txt}", bg=C["card"], fg=C["fg"],
-                    font=("Segoe UI", 9), anchor="w", wraplength=380, justify="left",
-                ).pack(side="left", fill="x", expand=True, padx=7, pady=4)
-
-                def relancer(t=it.get("text", ""), p=pop):
-                    self._from_inbox(t, p)
-
-                def supprimer(i=idx):
-                    try:
-                        del self.mem["inbox"][i]
-                    except Exception:
-                        return
-                    savej(MEM_FILE, self.mem)
-                    self._refresh_inbox_badge()
-                    refresh()
-
-                tk.Button(
-                    row, text="Relancer", command=relancer, bg=C["gold"], fg="#1a1408",
-                    relief="flat", font=("Segoe UI", 8, "bold"), padx=7, pady=2, cursor="hand2",
-                ).pack(side="right", padx=(2, 5), pady=3)
-                tk.Button(
-                    row, text="Suppr.", command=supprimer, bg=C["card2"], fg=C["bad"],
-                    relief="flat", font=("Segoe UI", 8), padx=6, pady=2, cursor="hand2",
-                ).pack(side="right", padx=2, pady=3)
-
-        refresh()
+        """v39.2: l'Inbox vit maintenant dans 📜 Prompts → onglet 💡 Idées garées."""
+        self.show_prompts(tab="idees")
 
     def _from_inbox(self, text, pop):
         try:
@@ -5351,6 +9297,1354 @@ class Padawan(tk.Tk):
         self.hunt.set(text)
         self.var.set(text)
         self.ent.focus_set()
+
+    # ── v39.2: 📜 Prompts (favoris, actif par rôle, menu rapide, test) ─────────
+    def _theme_fix(self, w=None):
+        """Applique le thème padawan_themes courant aux widgets créés après coup."""
+        th = getattr(self, "_padawan_themer", None)
+        if th is None or getattr(th, "key", "original") == "original":
+            return
+        old = th.root
+        try:
+            if w is not None:
+                th.root = w
+            th.recolor(th.key)
+        except Exception:
+            pass
+        finally:
+            th.root = old
+
+    def show_prompts(self, tab: str = "prompts"):
+        w = getattr(self, "_prompts_win", None)
+        try:
+            if w is not None and w.winfo_exists():
+                w.deiconify()
+                w.lift()
+                w.focus_force()
+                w.select_tab(tab)
+                return
+        except Exception:
+            pass
+        try:
+            self._prompts_win = PromptsWindow(self, tab=tab)
+        except Exception as e:
+            log(f"prompts win: {e}")
+            self.say("sys", f"📜 Prompts : ouverture impossible ({e})")
+
+    def _prompt_name_for(self, role: Optional[str] = None) -> str:
+        role = role or self.router.active
+        st = getattr(self, "prompts", None)
+        p = st.active_for(role) if st else None
+        return p["name"] if p else ""
+
+    def _refresh_prompt_ui(self):
+        try:
+            role = self.router.active
+            name = self._prompt_name_for(role)
+            if getattr(self, "game", None):
+                name = "🎮 " + str(self.game.get("name", "Jeu")).lstrip("🎮 ")
+            lab = RoleRouter.ROLES[role]["label"]
+            if hasattr(self, "prompt_ind"):
+                self.prompt_ind_role.config(text=f"📜 PROMPT · {lab.upper()}")
+                self.prompt_ind.config(text=(f"⭐ {name}" if name else "Prompt : défaut"),
+                                       fg=C["gold"] if name else C["dim"])
+                self._theme_fix(self.prompt_ind.master)
+            if hasattr(self, "prompt_quick"):
+                short = name if len(name) <= 24 else name[:23] + "…"
+                self.prompt_quick.config(text=f"📜 {short or 'défaut'} ▾", fg=C["gold"] if name else C["fg"])
+                self._theme_fix(self.prompt_quick)
+            win = getattr(self, "_prompts_win", None)
+            if win is not None and win.winfo_exists():
+                win._refresh_from_app()
+        except Exception as e:
+            log(f"prompt ui: {e}")
+
+    def _prompt_set_active(self, pid: Optional[str], role: Optional[str], *, switch_role: bool = False) -> List[str]:
+        """pid=None → défaut (role=None: tous les rôles). Retourne les rôles touchés.
+        v39.3: un prompt propre à un rôle bascule Padawan sur ce rôle (switch_role) + confirmation claire."""
+        st = self.prompts
+        if pid is not None:
+            p = st.get(pid)
+            if p and p.get("kind") == "jeu":
+                self.game_start(pid)
+                return []
+            if p and p["role"] != "tous" and role not in (None, p["role"]):
+                role = p["role"]
+            if p and switch_role and p["role"] != "tous" and p["role"] != self.router.active:
+                self.set_role(p["role"])
+        if self.game and pid is not None:
+            self.game_quit()
+        if pid is None:
+            st.reset(role)
+            roles = [role] if role else list(RoleRouter_ROLE_IDS)
+            who = RoleRouter.ROLES[role]["label"] if role else "tous les rôles"
+            msg = f"📜 Prompt d'origine rétabli ({who})."
+        else:
+            roles = st.activate(pid, role)
+            p = st.get(pid) or {"name": "?"}
+            labs = ", ".join(RoleRouter.ROLES[r]["label"] for r in roles) or "aucun rôle"
+            msg = f"📜 Prompt activé : « {p['name']} » (rôle : {labs})."
+        ok = st.save()
+        self._refresh_prompt_ui()
+        self.say("sys", msg if ok else f"{msg} (⚠ {st.error})")
+        return roles
+
+    def _prompt_quick_menu(self, event=None):
+        role = self.router.active
+        lab = RoleRouter.ROLES[role]["label"]
+        st = self.prompts
+        cur = st.active_id(role) if st.active_for(role) else ""
+        m = tk.Menu(self, tearoff=0, bg=C["card"], fg=C["fg"], activebackground=C["gold"],
+                    activeforeground="#1a1408", font=("Segoe UI", 11), bd=0)
+        games = self._game_prompts()
+        gcur = (self.game or {}).get("pid", "")
+        if games:
+            m.add_command(label="🎮  JEUX — clic = jouer", state="disabled")
+            for p in games:
+                m.add_command(label=f"{'▶' if p['id'] == gcur else '    '}  {p['name']}",
+                              command=lambda pid=p["id"]: self.game_start(pid))
+            if self.game:
+                m.add_command(label="     ↩ Quitter le jeu", command=self.game_quit)
+            m.add_separator()
+        m.add_command(label=f"💬  PROMPTS — rôle actuel : {lab}", state="disabled")
+        m.add_command(label=f"{'⭐' if not cur and not self.game else '    '}  ↩ Défaut — {lab}",
+                      command=lambda: self._prompt_set_active(None, role))
+        normal = [p for p in st.all() if p.get("kind") != "jeu"]
+        if not normal:
+            m.add_command(label="     (aucun favori — Ctrl+P pour en créer)", state="disabled")
+        for p in normal:
+            star = "⭐" if p["id"] == cur else "    "
+            if p["role"] in ("tous", role):
+                tag = "" if p["role"] == "tous" else f"   · {PROMPT_ROLE_LABELS[p['role']]}"
+                m.add_command(label=f"{star}  {p['name']}{tag}",
+                              command=lambda pid=p["id"]: self._prompt_set_active(pid, role))
+            else:
+                m.add_command(label=f"{star}  {p['name']}   → passe en {PROMPT_ROLE_LABELS[p['role']]}",
+                              command=lambda pid=p["id"], r=p["role"]: self._prompt_set_active(pid, r, switch_role=True))
+        m.add_separator()
+        m.add_command(label="     ↩ Tout remettre par défaut (4 rôles)",
+                      command=lambda: self._prompt_set_active(None, None))
+        m.add_command(label="     ✨ Créer un jeu avec Padawan…", command=self.game_generate)
+        m.add_command(label="     📜 Gérer mes prompts…   Ctrl+P", command=self.show_prompts)
+        self._theme_fix(m)
+        if event is not None:
+            x, y = event.x_root, event.y_root
+        else:
+            x, y = self.winfo_pointerx(), self.winfo_pointery()
+        try:
+            m.tk_popup(x, y)
+        finally:
+            m.grab_release()
+
+    def _prompt_test(self, override, role_id: str, question: str, *, name: str = "prompt") -> bool:
+        """🧪 Pose une question test avec un prompt (même non enregistré) sans toucher l'actif ni l'historique."""
+        if self.busy:
+            self.say("sys", "🧪 Padawan est occupé — réessaie dans un instant (Échap = annuler).")
+            return False
+        if not self.ready or not self.model_ready:
+            if not self._ensure_model_ready_or_kick():
+                return False
+        q = (question or PROMPT_TEST_Q).strip()
+        rid = role_id if role_id in RoleRouter.ROLES else self.router.active
+        self.say("sys", f"🧪 Test du prompt « {name} » ({RoleRouter.ROLES[rid]['label']}) — question : {q}")
+        self.lock(True, "🧪 test du prompt…")
+        threading.Thread(target=self._prompt_test_worker, args=(override, rid, q), daemon=True).start()
+        return True
+
+    def _prompt_test_worker(self, override, rid: str, q: str):
+        try:
+            mark_holder: list = []
+            buf: list = []
+            self.after0(lambda: mark_holder.append(self._begin_stream()))
+            time.sleep(0.05)
+
+            def on_tok(t: str):
+                if mark_holder:
+                    self.after0(self._append_stream, mark_holder[0], t, buf)
+
+            system = self.router.system_prompt(question=q, override=override, role_id=rid,
+                                               use_default=override is None)
+            ans = chat_stream(
+                model_id_from_label(self.mvar.get()), q, system=system,
+                on_token=on_tok, cancel=self._cancel, history=[],
+            )
+            if self._cancel.is_set():
+                self.after0(self.say, "sys", "🧪 Test annulé.")
+                return
+            self.after0(self._prompt_test_finish, mark_holder[0] if mark_holder else "", ans)
+        except Exception as e:
+            self.after0(self.say, "sys", f"🧪 Test : {e}")
+        finally:
+            self.after0(self.lock, False, "● prêt")
+
+    def _prompt_test_finish(self, mark: str, full: str):
+        full = clean(full or "") or "(réponse vide)"
+        self.chat.configure(state="normal")
+        try:
+            if mark:
+                self.chat.delete(mark, "end")
+        except Exception:
+            pass
+        self._insert_linked(self.chat, full + "\n\n", "ai")
+        self.chat.configure(state="disabled")
+        self._chat_follow_end(force=True)
+
+    # ══ v39.3 : 🎮 MODE JEU ═══════════════════════════════════════════════════
+    def _build_game(self, mid):
+        G = GAME_COLORS
+        self.game = None
+        self._game_compact = self.winfo_screenheight() < 860
+        self._game_dice = bool(self.cfg.get("game_dice", True))
+        self._game_sound = bool(self.cfg.get("game_sound", False))
+        self.game_wrap = tk.Frame(mid, bg=G["bg"], highlightbackground=G["line"], highlightthickness=1)
+        hdr = tk.Frame(self.game_wrap, bg=G["bg"])
+        hdr.pack(side="top", fill="x", padx=6, pady=(5, 3))
+        self.game_title = tk.Label(hdr, text="🎮", bg=G["bg"], fg=G["amber"], font=("Consolas", 13, "bold"),
+                                   anchor="w")
+        self.game_title.pack(side="left", fill="x", expand=True)
+        self.game_btns = {}
+
+        def gbtn(key, text, cmd, tip):
+            b = tk.Button(hdr, text=text, command=cmd, bg=G["btn"], fg=G["fg"], relief="flat",
+                          font=("Segoe UI", 9, "bold"), padx=8, pady=3, cursor="hand2",
+                          activebackground=G["green"], activeforeground="#021006", bd=0)
+            b.bind("<Enter>", lambda e, w=b: w.configure(bg=G["btnh"]))
+            b.bind("<Leave>", lambda e, w=b: w.configure(bg=G["btn"]))
+            self._tip(b, tip)
+            self.game_btns[key] = b
+            return b
+
+        for key, text, cmd, tip in (
+            ("quit", "↩ Quitter", self.game_quit, "Quitter le jeu (la partie est sauvegardée automatiquement)\n"
+                                                    "Padawan reprend son prompt et son rôle d'avant."),
+            ("sound", "", self._game_toggle_sound, "Petits bips façon Pip-Boy à chaque tour (désactivés par défaut)"),
+            ("dice", "", self._game_toggle_dice, "Dés réels : Padawan lance un vrai d20 local à chaque tour\n"
+                                                   "et l'envoie au maître du jeu ([JET d20 = N])."),
+            ("export", "📜 Exporter", self.game_export, "Exporter l'aventure en .html (joli) ou .txt"),
+            ("load", "📂 Charger", self.game_load, "Charger une partie sauvegardée"),
+            ("save", "💾 Sauver", self.game_save, "Sauvegarder la partie dans un fichier"),
+            ("new", "🆕 Nouvelle", self.game_new, "🆕 Nouvelle partie : recommencer à zéro (confirmation)"),
+        ):
+            gbtn(key, text, cmd, tip).pack(side="right", padx=2)
+        self._game_paint_toggles()
+
+        self.game_choices = tk.Frame(self.game_wrap, bg=G["bg"])
+        self.game_choices.pack(side="bottom", fill="x", padx=6, pady=(2, 4))
+        self.game_hint = tk.Label(
+            self.game_wrap, text="", bg=G["bg"], fg=G["dim"], font=("Segoe UI", 9, "italic"), anchor="w")
+        self.game_hint.pack(side="bottom", fill="x", padx=8)
+
+        body = tk.Frame(self.game_wrap, bg=G["bg"])
+        body.pack(side="top", fill="both", expand=True, padx=6)
+        # ☢ Pip-Boy (panneau de droite)
+        self.pip = tk.Frame(body, bg=G["pip"], width=280, highlightbackground=G["green"], highlightthickness=1)
+        self.pip.pack(side="right", fill="y", padx=(6, 0))
+        self.pip.pack_propagate(False)
+        self.pip_title = tk.Label(self.pip, text="▓▓ PIP-BOY 3000 ▓▓", bg=G["pip"], fg=G["green"],
+                                  font=("Consolas", 12, "bold"))
+        self.pip_title.pack(fill="x", pady=(6, 2))
+        self.pip_bars = tk.Canvas(self.pip, bg=G["pip"], highlightthickness=0, height=10)
+        self.pip_bars.pack(fill="x", padx=8)
+        self.pip_txt = tk.Text(self.pip, bg=G["pip"], fg=G["fg"], relief="flat", bd=0, wrap="word",
+                               font=("Consolas", 9), padx=8, pady=4, highlightthickness=0, cursor="arrow",
+                               state="disabled")
+        self.pip_txt.pack(fill="both", expand=True)
+        self.pip_txt.tag_configure("h", foreground=G["green"], font=("Consolas", 10, "bold"), spacing1=6)
+        self.pip_txt.tag_configure("k", foreground=G["dim"])
+        self.pip_txt.tag_configure("v", foreground=G["fg"])
+        self.pip_txt.tag_configure("cur", foreground=G["amber"], font=("Consolas", 9, "bold"))
+        self.pip_txt.tag_configure("old", foreground=G["dim"], overstrike=True)
+        self.pip_bars.bind("<Configure>", lambda e: self._game_draw_bars())
+
+        tw = tk.Frame(body, bg=G["panel"])
+        tw.pack(side="left", fill="both", expand=True)
+        self.game_txt = tk.Text(
+            tw, wrap="word", bg=G["panel"], fg=G["fg"], relief="flat", bd=0, padx=14, pady=10,
+            font=("Segoe UI", 12), highlightthickness=0, cursor="arrow", spacing1=1, spacing3=3,
+            insertbackground=G["green"], selectbackground=G["btnh"],
+        )
+        gsb = ttk.Scrollbar(tw, orient="vertical", command=self.game_txt.yview)
+        self.game_txt.configure(yscrollcommand=gsb.set, state="disabled")
+        self.game_txt.pack(side="left", fill="both", expand=True)
+        gsb.pack(side="right", fill="y")
+        T = self.game_txt
+        T.tag_configure("title", foreground=G["amber"], font=("Consolas", 16, "bold"), spacing1=10, spacing3=6)
+        T.tag_configure("art", foreground=G["green"], background=G["art"], font=("Consolas", 11),
+                        lmargin1=18, lmargin2=18, spacing1=0, spacing3=0, wrap="none")
+        T.tag_configure("status", foreground=G["green"], background=G["pip"], font=("Consolas", 10),
+                        lmargin1=18, lmargin2=18, spacing1=0, spacing3=0, wrap="none")
+        T.tag_configure("narr", foreground=G["fg"], font=("Segoe UI", 12))
+        T.tag_configure("bold", font=("Segoe UI", 12, "bold"), foreground="#ffffff")
+        T.tag_configure("dlg", foreground=G["amber"])
+        T.tag_configure("check", foreground=G["cyan"], font=("Consolas", 11, "bold"))
+        T.tag_configure("ask", foreground=G["amber"], font=("Consolas", 12, "bold"), spacing1=8)
+        T.tag_configure("choice", foreground=G["green"], font=("Segoe UI", 12, "bold"), lmargin1=12, lmargin2=34)
+        T.tag_configure("choice_hot", background=G["btnh"])
+        T.tag_configure("you", foreground=G["amber"], font=("Consolas", 11, "bold"), spacing1=10)
+        T.tag_configure("sys", foreground=G["dim"], font=("Segoe UI", 9, "italic"))
+        T.tag_configure("stream", foreground=G["dim"], font=("Consolas", 10))
+        T.tag_bind("choice", "<Enter>", lambda e: T.configure(cursor="hand2"))
+        T.tag_bind("choice", "<Leave>", lambda e: T.configure(cursor="arrow"))
+        T.tag_bind("choice", "<Button-1>", self._game_click_choice)
+        self.ent.bind("<KeyPress>", self._game_key_ent, add="+")
+        self.bind("<KeyPress>", self._game_key_any, add="+")
+
+    def _game_paint_toggles(self):
+        b = getattr(self, "game_btns", {})
+        if "dice" in b:
+            b["dice"].configure(text="🎲 Dés : OUI" if self._game_dice else "🎲 Dés : NON")
+        if "sound" in b:
+            b["sound"].configure(text="🔊 Sons : OUI" if self._game_sound else "🔈 Sons : NON")
+
+    def _game_toggle_dice(self):
+        self._game_dice = not self._game_dice
+        self.cfg["game_dice"] = self._game_dice
+        self._game_paint_toggles()
+
+    def _game_toggle_sound(self):
+        self._game_sound = not self._game_sound
+        self.cfg["game_sound"] = self._game_sound
+        self._game_paint_toggles()
+        if self._game_sound:
+            self._game_beep("on")
+
+    def _game_beep(self, kind: str = "turn"):
+        if not getattr(self, "_game_sound", False):
+            return
+        seq = {"turn": [(1200, 40), (1600, 40)], "on": [(900, 60), (1300, 60), (1700, 80)],
+               "pick": [(1500, 25)]}.get(kind, [(1200, 40)])
+
+        def run():
+            try:
+                import winsound
+                for f, d in seq:
+                    winsound.Beep(f, d)
+            except Exception:
+                pass
+        threading.Thread(target=run, daemon=True).start()
+
+    # ---- état / fichiers
+    def _game_prompts(self) -> List[Dict[str, Any]]:
+        return [p for p in self.prompts.all() if p.get("kind") == "jeu"]
+
+    @staticmethod
+    def _game_slug(st: Dict[str, Any]) -> str:
+        base = st.get("builtin") or st.get("pid") or "partie"
+        return re.sub(r"[^A-Za-z0-9_\-]+", "_", str(base))[:40] or "partie"
+
+    def _game_auto_path(self, st: Dict[str, Any]) -> str:
+        return os.path.join(GAME_PARTIES_DIR, f"_encours_{self._game_slug(st)}.json")
+
+    def _game_write(self, st: Dict[str, Any], path: str) -> bool:
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            st["updated"] = now()
+            tmp = path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(st, f, ensure_ascii=False, indent=1)
+            os.replace(tmp, path)
+            return True
+        except Exception as e:
+            log(f"game write: {e}")
+            return False
+
+    def _game_autosave(self):
+        st = getattr(self, "game", None)
+        if st:
+            self._game_write(st, self._game_auto_path(st))
+
+    @staticmethod
+    def _game_read(path: str) -> Optional[Dict[str, Any]]:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                st = json.load(f)
+            if not isinstance(st, dict) or not isinstance(st.get("log"), list):
+                return None
+            st.setdefault("msgs", [])
+            st.setdefault("chronicle", [])
+            st.setdefault("quests", [])
+            st.setdefault("choices", [])
+            st.setdefault("status", "")
+            st.setdefault("turn", 0)
+            st.setdefault("phase", "play")
+            return st
+        except Exception as e:
+            log(f"game read: {e}")
+            return None
+
+    def _game_new_state(self, p: Dict[str, Any]) -> Dict[str, Any]:
+        return {"v": 1, "pid": p["id"], "name": p["name"], "builtin": p.get("builtin", ""),
+                "created": now(), "updated": now(), "turn": 0, "phase": "intro" if p.get("builtin") in GAME_META else "play",
+                "msgs": [], "log": [], "status": "", "chronicle": [], "quests": [], "choices": []}
+
+    # ---- entrée / sortie
+    def _game_boot(self):
+        note = getattr(self.prompts, "migrated_note", "")
+        gid = self.prompts.data.get("game") or ""
+        if note:
+            self.say("sys", note)
+        if getattr(self, "_startup_note", ""):
+            self.say("sys", self._startup_note)
+        # v39.4: Padawan démarre sérieux (Chercheur). La partie reste sauvegardée : 🎮 Jouer la reprend.
+        if gid and self.prompts.get(gid) and self.cfg.get("game_resume_on_start", False):
+            self.game_start(gid, ask=False)
+
+    def game_start(self, pid: str, ask: bool = True, override: Optional[Dict[str, Any]] = None):
+        p = override or self.prompts.get(pid)
+        if not p or p.get("kind") != "jeu":
+            return
+        if self.busy:
+            self.say("sys", "🎮 Padawan est occupé — réessaie dans un instant (Échap = annuler).")
+            return
+        if self.game:
+            self._game_autosave()
+        st = None
+        auto = self._game_auto_path({"builtin": p.get("builtin", ""), "pid": p["id"]})
+        if os.path.isfile(auto):
+            old = self._game_read(auto)
+            if old and old.get("log"):
+                r = True
+                if ask:
+                    r = messagebox.askyesnocancel(
+                        "🎮 " + p["name"],
+                        f"Une partie est en cours ({old.get('turn', 0)} tour(s), {str(old.get('updated', ''))[:16]}).\n\n"
+                        "Oui = la reprendre\nNon = nouvelle partie\nAnnuler = rien faire", parent=self)
+                if r is None:
+                    return
+                if r:
+                    st = old
+        if st is None:
+            st = self._game_new_state(p)
+        st["pid"], st["name"] = p["id"], p["name"]
+        st["builtin"] = p.get("builtin", "") or st.get("builtin", "")
+        self._game_override = override
+        self.game = st
+        if not override:
+            self.prompts.data["game"] = p["id"]
+            self.prompts.save()
+        self._game_enter_ui()
+        self._game_rerender()
+        if not st["log"]:
+            if st["phase"] == "intro":
+                self._game_intro()
+            else:
+                st["phase"] = "play"
+                self._game_send("Commence la partie.", display="▶ Commence la partie")
+        self._game_beep("on")
+        self.say("sys", f"🎮 Prompt activé : « {p['name']} » — mode Jeu (clique un choix ou tape 1 à 9).")
+        self._refresh_prompt_ui()
+
+    def _game_enter_ui(self):
+        if getattr(self, "_game_ui_on", False):
+            self._game_paint_header()
+            return
+        self._game_ui_on = True
+        self._game_saved_pack = {}
+        for key in ("_chips_fr", "_hunt_fr", "_chrome_fr", "_act_fr"):
+            w = getattr(self, key, None)
+            if w is not None and w.winfo_manager() == "pack":
+                info = w.pack_info()
+                info.pop("in", None)
+                self._game_saved_pack[key] = info
+                w.pack_forget()
+        self._chat_wrap.pack_forget()
+        self.game_wrap.pack(fill="both", expand=True)
+        try:
+            self._right_pane_on = str(self._right_pane) in [str(x) for x in self.split.panes()]
+            if self._right_pane_on:
+                self.split.forget(self._right_pane)
+        except Exception as e:
+            log(f"game panes: {e}")
+        self._game_paint_header()
+        self.input_tip.config(text=GAME_INPUT_TIP)
+        self.ent.focus_set()
+
+    def _game_exit_ui(self):
+        if not getattr(self, "_game_ui_on", False):
+            return
+        self._game_ui_on = False
+        self.game_wrap.pack_forget()
+        sp = getattr(self, "_game_saved_pack", {})
+        if "_hunt_fr" in sp:
+            self._hunt_fr.pack(**sp["_hunt_fr"])
+        if "_chrome_fr" in sp:
+            self._chrome_fr.pack(**sp["_chrome_fr"])
+        self._chat_wrap.pack(fill="both", expand=True)
+        if "_chips_fr" in sp:
+            self._chips_fr.pack(before=self._hunt_fr, **sp["_chips_fr"])
+        if "_act_fr" in sp:
+            self._act_fr.pack(before=self._input_bar, **sp["_act_fr"])
+        try:
+            if getattr(self, "_right_pane_on", True):
+                self.split.add(self._right_pane, stretch="always", minsize=300)
+                self.after(60, lambda: self.split.sash_place(0, max(480, min(820, self.split.winfo_width() - 320)), 0))
+        except Exception as e:
+            log(f"game panes back: {e}")
+        self.lock(self.busy, "")
+
+    def _game_paint_header(self):
+        st = self.game or {}
+        meta = GAME_META.get(st.get("builtin", ""), {})
+        t = meta.get("title") or str(st.get("name", "🎮")).lstrip("🎮🕵️🧙 ").upper()
+        self.game_title.config(text=f"☢ {t}   ·   TOUR {st.get('turn', 0)}")
+
+    def game_quit(self):
+        if not self.game:
+            return
+        if self.busy:
+            self.cancel_job()
+        self._game_autosave()
+        name = self.game.get("name", "")
+        self.game = None
+        self._game_override = None
+        self.prompts.data["game"] = ""
+        self.prompts.save()
+        self._game_exit_ui()
+        self._refresh_prompt_ui()
+        self.say("sys", f"🎮 « {name} » mis sur pause (sauvegarde auto). Padawan reprend son prompt et son rôle "
+                        f"d'avant — rejoue quand tu veux : 🎮 Jouer.")
+
+    def game_new(self):
+        st = self.game
+        if not st or self.busy:
+            return
+        if st.get("log") and not messagebox.askyesno(
+                "🆕 Nouvelle partie", "Recommencer à zéro ?\n\nLa partie actuelle est perdue "
+                                     "(sauf si tu l'as 💾 sauvegardée).", parent=self):
+            return
+        p = self._game_override or self.prompts.get(st["pid"]) or {"id": st["pid"], "name": st["name"],
+                                                                  "builtin": st.get("builtin", "")}
+        self.game = self._game_new_state(p)
+        self._game_rerender()
+        if self.game["phase"] == "intro":
+            self._game_intro()
+        else:
+            self._game_send("Commence la partie.", display="▶ Commence la partie")
+        self._game_autosave()
+
+    def game_save(self):
+        st = self.game
+        if not st:
+            return
+        os.makedirs(GAME_PARTIES_DIR, exist_ok=True)
+        path = filedialog.asksaveasfilename(
+            parent=self, title="💾 Sauvegarder la partie", initialdir=GAME_PARTIES_DIR,
+            initialfile=f"{self._game_slug(st)}_{time.strftime('%Y%m%d-%H%M')}.json",
+            defaultextension=".json", filetypes=[("Partie Padawan", "*.json")])
+        if not path:
+            return
+        ok = self._game_write(dict(st), path)
+        self._game_sys(f"💾 Partie sauvegardée : {path}" if ok else "⚠ Sauvegarde impossible.")
+
+    def game_load(self):
+        if self.busy:
+            return
+        os.makedirs(GAME_PARTIES_DIR, exist_ok=True)
+        path = filedialog.askopenfilename(parent=self, title="📂 Charger une partie", initialdir=GAME_PARTIES_DIR,
+                                          filetypes=[("Partie Padawan", "*.json")])
+        if not path:
+            return
+        st = self._game_read(path)
+        if not st:
+            messagebox.showwarning("📂 Charger", "Ce fichier n'est pas une partie Padawan lisible.", parent=self)
+            return
+        p = self.prompts.get(st.get("pid", ""))
+        if not p and st.get("builtin"):
+            p = next((q for q in self._game_prompts() if q.get("builtin") == st["builtin"]), None)
+        if not p:
+            messagebox.showwarning("📂 Charger", "Le prompt de jeu de cette partie n'existe plus dans 📜 Prompts.",
+                                   parent=self)
+            return
+        st["pid"], st["name"] = p["id"], p["name"]
+        self.game = st
+        self._game_override = None
+        self.prompts.data["game"] = p["id"]
+        self.prompts.save()
+        self._game_enter_ui()
+        self._game_rerender()
+        self._game_sys(f"📂 Partie chargée : {os.path.basename(path)}")
+        self._game_autosave()
+
+    def game_export(self):
+        st = self.game
+        if not st or not st.get("log"):
+            return
+        os.makedirs(GAME_PARTIES_DIR, exist_ok=True)
+        path = filedialog.asksaveasfilename(
+            parent=self, title="📜 Exporter l'aventure", initialdir=GAME_PARTIES_DIR,
+            initialfile=f"{self._game_slug(st)}_{time.strftime('%Y%m%d-%H%M')}.html",
+            defaultextension=".html", filetypes=[("Page web", "*.html"), ("Texte", "*.txt")])
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(game_export_html(st) if path.lower().endswith((".html", ".htm")) else game_export_txt(st))
+            self._game_sys(f"📜 Aventure exportée : {path}")
+        except Exception as e:
+            self._game_sys(f"⚠ Export impossible : {e}")
+
+    # ---- rendu
+    def _game_w(self, text: str, *tags):
+        T = self.game_txt
+        T.configure(state="normal")
+        T.insert("end", text, tags)
+        T.configure(state="disabled")
+
+    def _game_sys(self, text: str):
+        self._game_w(text + "\n", "sys")
+        self.game_txt.see("end")
+
+    def _game_block(self, body: str, tag: str):
+        lines = (body or "").replace("\t", "    ").split("\n")
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        if not lines:
+            return
+        w = max(len(l) for l in lines)
+        out = "\n".join(" " + l.ljust(w) + " " for l in [""] + lines + [""])
+        self._game_w(out + "\n", tag)
+        self._game_w("\n", "narr")
+
+    def _game_inline(self, line: str, base: str = "narr"):
+        for seg, col in ansi_segments(line):
+            extra = ()
+            if col:
+                tg = "ansi_" + col[1:]
+                self.game_txt.tag_configure(tg, foreground=col)
+                extra = (tg,)
+            pos = 0
+            for m in re.finditer(r"\*\*(.+?)\*\*|(\[[^\]\n]{2,90}\])|(«[^»\n]{1,500}»|“[^”\n]{1,500}”)", seg):
+                if m.start() > pos:
+                    self._game_w(seg[pos:m.start()], base, *extra)
+                if m.group(1):
+                    self._game_w(m.group(1), base, "bold", *extra)
+                elif m.group(2):
+                    self._game_w(m.group(2), "check", *extra)
+                else:
+                    self._game_w(m.group(3), base, "dlg", *extra)
+                pos = m.end()
+            if pos < len(seg):
+                self._game_w(seg[pos:], base, *extra)
+
+    def _game_render_reply(self, text: str, status: str = ""):
+        st = self.game or {}
+        bi = st.get("builtin", "")
+        g = game_parse(text)
+        ch_set = {(n, lab) for n, lab in g["choices"]}
+        art_key, art = game_art_for(bi, g["scene"], (g["title"] + " " + text[:600])) if bi else ("", "")
+        art_done = False
+        blocks = game_split_blocks(text)
+        fenced_status = any(k == "fence" and game_is_status(b) for k, b in blocks)
+        for kind, body in blocks:
+            if kind == "fence":
+                if game_is_status(body):
+                    if self._game_compact:  # petit écran : le statut complet est dans le Pip-Boy à droite
+                        self._game_w(" ▓▓ statut mis à jour → Pip-Boy à droite ▓▓\n\n", "check")
+                    else:
+                        self._game_block(status or body, "status")
+                elif art and not art_done:
+                    self._game_block(art, "art")
+                    art_done = True
+                elif not art:
+                    self._game_block(body, "art")
+                continue
+            lines = body.split("\n")
+            i = 0
+            while i < len(lines):
+                line = lines[i]
+                s = line.strip()
+                if "▓▓" in s and not fenced_status:
+                    j = game_status_span(lines, i)
+                    blk = [line] + [x for x in lines[i + 1:j] if x.strip()]
+                    if len(blk) >= 3:
+                        if self._game_compact:
+                            self._game_w(" ▓▓ statut mis à jour → Pip-Boy à droite ▓▓\n\n", "check")
+                        else:
+                            self._game_block(status or "\n".join(blk), "status")
+                        i = j
+                        continue
+                mt = re.match(r"^\s*#{1,4}\s*(.+)$", line)
+                if mt:
+                    self._game_w(_strip_md(mt.group(1)) + "\n", "title")
+                    if art and not art_done:
+                        self._game_block(art, "art")
+                        art_done = True
+                    i += 1
+                    continue
+                if _SCENE_RE.match(line):
+                    if art and not art_done:
+                        self._game_block(art, "art")
+                        art_done = True
+                    i += 1
+                    continue
+                if re.match(r"^\s*\**\s*QUE FAIS[- ]TU", s, re.I):
+                    self._game_w(_strip_md(s) + "\n", "ask")
+                    i += 1
+                    continue
+                mc = _CHOICE_RE.match(line)
+                if mc and (int(mc.group(1)), _strip_md(mc.group(2))) in ch_set:
+                    n = int(mc.group(1))
+                    lab = dict(g["choices"]).get(n, _strip_md(mc.group(2)))
+                    tg = f"ch{n}"
+                    self.game_txt.tag_configure(tg)
+                    self._game_w(f"  {n}.  {lab}\n", "choice", tg)
+                    i += 1
+                    while i < len(lines) and lines[i][:1] in (" ", "\t") and lines[i].strip() and not _CHOICE_RE.match(lines[i]):
+                        i += 1  # suite déjà fusionnée dans le libellé
+                    continue
+                if game_is_art_line(line) and not s.startswith("["):
+                    blk = [line]
+                    j = i + 1
+                    while j < len(lines) and game_is_art_line(lines[j]):
+                        blk.append(lines[j])
+                        j += 1
+                    if len(blk) >= 3:
+                        if not art_done:
+                            self._game_block(art if art else "\n".join(blk), "art")
+                            art_done = True
+                        i = j
+                        continue
+                self._game_inline(line)
+                self._game_w("\n", "narr")
+                i += 1
+        if art and not art_done:  # pas de titre ni de SCÈNE: on montre quand même l'image
+            self._game_block(art, "art")
+        self._game_w("\n", "narr")
+
+    def _game_rerender(self):
+        T = self.game_txt
+        T.configure(state="normal")
+        T.delete("1.0", "end")
+        T.configure(state="disabled")
+        st = self.game or {}
+        for e in st.get("log", []):
+            who, text = e.get("who"), e.get("text", "")
+            if who == "you":
+                self._game_w(f"▶ {text}\n", "you")
+            elif who == "mj":
+                self._game_render_reply(text, e.get("status", ""))
+            elif who == "fx":
+                self._game_w(text + "\n\n", "check")
+            elif who == "intro":
+                self._game_render_intro(intro_only=True)
+            else:
+                self._game_w(text + "\n", "sys")
+        r = T.tag_prevrange("you", "end")
+        self._game_scroll_to(r[0] if r else "1.0")
+        self._game_update_pip()
+        self._game_set_choices(st.get("choices") or [])
+        self._game_paint_header()
+
+    def _game_scroll_to(self, idx: str):
+        """Montre le début de la nouvelle scène (titre + image) plutôt que la fin."""
+        def go():
+            try:
+                self.game_txt.see("end")
+                self.game_txt.yview(idx)
+            except Exception:
+                pass
+        self.after(30, go)
+
+    def _game_click_choice(self, e):
+        idx = self.game_txt.index(f"@{e.x},{e.y}")
+        for tg in self.game_txt.tag_names(idx):
+            if tg.startswith("ch") and tg[2:].isdigit():
+                n = int(tg[2:])
+                ch = dict((self.game or {}).get("choices") or [])
+                # seul le dernier menu est jouable
+                if n in ch and self._game_is_last_menu(idx):
+                    self._game_pick(n)
+                return "break"
+
+    def _game_is_last_menu(self, idx: str) -> bool:
+        """Seul le dernier menu de choix est cliquable (pas ceux des tours passés)."""
+        r = self.game_txt.tag_prevrange("you", "end")
+        return not r or self.game_txt.compare(idx, ">", r[0])
+
+    def _game_set_choices(self, choices):
+        G = GAME_COLORS
+        for w in self.game_choices.winfo_children():
+            w.destroy()
+        st = self.game or {}
+        if not st:
+            return
+        width = max(300, self.game_choices.winfo_width(), self.game_wrap.winfo_width() - 16,
+                    self.split.winfo_width() - 20 if not getattr(self, "_game_ui_on", False) else 0)
+        grid = tk.Frame(self.game_choices, bg=G["bg"])
+        grid.pack(fill="x")
+        two = len(choices) >= 4 and width > 700
+        for k, (n, lab) in enumerate(choices[:9]):
+            b = tk.Button(
+                grid, text=f" {n} ▸ {lab}", anchor="w", justify="left", command=lambda n=n: self._game_pick(n),
+                bg=G["btn"], fg=G["fg"], activebackground=G["green"], activeforeground="#021006",
+                relief="flat", bd=0, font=("Segoe UI", 11, "bold"), padx=10, pady=5, cursor="hand2",
+                wraplength=(width // 2 - 40) if two else (width - 40), highlightthickness=1,
+                highlightbackground=G["line"],
+            )
+            b.bind("<Enter>", lambda e, w=b: w.configure(bg=G["btnh"], fg="#ffffff"))
+            b.bind("<Leave>", lambda e, w=b: w.configure(bg=G["btn"], fg=G["fg"]))
+            if two:
+                b.grid(row=k // 2, column=k % 2, sticky="ew", padx=2, pady=2)
+            else:
+                b.grid(row=k, column=0, sticky="ew", padx=2, pady=2)
+        grid.columnconfigure(0, weight=1)
+        if two:
+            grid.columnconfigure(1, weight=1)
+        if not choices and st.get("log") and not self.busy:
+            tk.Button(grid, text="🔁 Le maître du jeu a oublié les choix — les redemander",
+                      command=lambda: self._game_send(
+                          "(Hors jeu : redonne-moi le statut et 3 à 5 choix numérotés pour cette scène, au bon format.)",
+                          display="🔁 Choix demandés", count=False),
+                      bg=G["btn"], fg=G["amber"], relief="flat", font=("Segoe UI", 10, "bold"), padx=10, pady=4,
+                      cursor="hand2").grid(row=0, column=0, sticky="w", padx=2, pady=2)
+        hint = ("✍ Autre action : écris-la dans la barre du bas puis Entrée  ·  touches 1–"
+                f"{min(9, len(choices))} = choisir" if choices else "✍ Écris ton action dans la barre du bas puis Entrée")
+        self.game_hint.config(text=hint)
+
+    def _game_key_ent(self, e):
+        if not self.game or self.var.get():
+            return None
+        return self._game_key(e)
+
+    def _game_key_any(self, e):
+        if not self.game:
+            return None
+        f = self.focus_get()
+        if f is self.ent or isinstance(f, (tk.Entry, ttk.Entry, tk.Spinbox, ttk.Combobox)) or (
+                isinstance(f, tk.Text) and f is not self.game_txt):
+            return None
+        return self._game_key(e)
+
+    def _game_key(self, e):
+        ch = e.char or ""
+        if e.keysym.startswith("KP_") and e.keysym[3:].isdigit():
+            ch = e.keysym[3:]
+        if len(ch) == 1 and ch in "123456789" and not (e.state & 0x4):
+            n = int(ch)
+            if n in dict((self.game or {}).get("choices") or []):
+                self._game_pick(n)
+                return "break"
+        return None
+
+    def _game_pick(self, n: int):
+        st = self.game
+        if not st or self.busy:
+            return
+        ch = dict(st.get("choices") or [])
+        if n not in ch:
+            return
+        self._game_beep("pick")
+        if st.get("phase") == "intro":
+            return self._game_intro_pick(n)
+        self._game_send(f"Je choisis {n}. {ch[n]}", display=f"{n}. {ch[n]}")
+
+    # ---- création du personnage (locale, fiable)
+    def _game_render_intro(self, intro_only: bool = False):
+        st = self.game or {}
+        meta = GAME_META.get(st.get("builtin", ""), {})
+        if not meta:
+            return
+        self._game_w(meta["title"] + "\n", "title")
+        k, art = game_art_for(st.get("builtin", ""), meta.get("art", ""))
+        if art:
+            self._game_block(art, "art")
+        for para in meta["intro"].split("\n"):
+            self._game_inline(para)
+            self._game_w("\n", "narr")
+        self._game_w("\n" + meta.get("ask", "Qui es-tu ?").upper() + "\n", "ask")
+        for i, a in enumerate(meta["archetypes"], 1):
+            self.game_txt.tag_configure(f"ch{i}")
+            self._game_w(f"  {i}.  {a['label']} — {a['desc']}\n", "choice", f"ch{i}")
+            self._game_w(f"        {a['special']}  ·  {a['inv']}\n", "sys")
+        n = len(meta["archetypes"]) + 1
+        self.game_txt.tag_configure(f"ch{n}")
+        self._game_w(f"  {n}.  {meta['custom']}\n\n", "choice", f"ch{n}")
+
+    def _game_intro(self):
+        st = self.game
+        meta = GAME_META.get(st.get("builtin", ""), {})
+        st["phase"] = "intro"
+        st["log"].append({"who": "intro", "text": ""})
+        st["choices"] = [(i, a["label"]) for i, a in enumerate(meta["archetypes"], 1)]
+        st["choices"].append((len(meta["archetypes"]) + 1, meta["custom"]))
+        self._game_rerender()
+
+    def _game_intro_pick(self, n: int, custom_text: str = ""):
+        from tkinter import simpledialog
+        st = self.game
+        meta = GAME_META.get(st.get("builtin", ""), {})
+        arch = meta.get("archetypes", [])
+        if 1 <= n <= len(arch) and not custom_text:
+            a = arch[n - 1]
+            name = simpledialog.askstring("🎮 " + a["label"], f"Nom de ton personnage ({a['label']}) :",
+                                          initialvalue=a["name"], parent=self)
+            if name is None:
+                return
+            name = name.strip()[:40] or a["name"]
+            msg = meta["start"].format(**dict(a, name=name))
+            if meta.get("status0"):  # Pip-Boy rempli dès le départ (même si le modèle oublie le statut)
+                st["status"] = meta["status0"].format(**dict(a, name=name))
+                self._game_update_pip()
+            disp = f"{n}. {a['label']} — {name}"
+        else:
+            desc = custom_text or simpledialog.askstring(
+                "🎮 " + meta.get("custom", "Mon personnage"),
+                "Décris ton personnage (nom, style, forces, faiblesses…) :", parent=self)
+            if not desc or not desc.strip():
+                return
+            msg = ("Commence la partie. Je crée mon propre personnage : " + desc.strip()[:600]
+                   + ". Déduis ses statistiques de départ de cette description (total équilibré).")
+            disp = "✍ " + desc.strip()[:120]
+        st["phase"] = "play"
+        st["choices"] = []
+        self._game_send(msg, display=disp)
+
+    # ---- tours de jeu
+    def _game_send(self, text: str, display: Optional[str] = None, count: bool = True):
+        st = self.game
+        if not st or self.busy:
+            return
+        if st.get("phase") == "intro":
+            return self._game_intro_pick(0, custom_text=text)
+        if not self.ready or not self.model_ready:
+            if not self._ensure_model_ready_or_kick():
+                return
+        dice = random.randint(1, 20) if self._game_dice else 0
+        st["_dice"] = dice
+        user_core = text + game_dice_hint(dice)
+        st["log"].append({"who": "you", "text": display or text})
+        self._game_w(f"▶ {display or text}\n", "you")
+        if dice:
+            self._game_w(f"🎲 d20 lancé par Padawan : {dice}\n", "sys")
+        self._game_set_choices([])
+        T = self.game_txt
+        T.configure(state="normal")
+        mark = T.index("end-1c")
+        T.mark_set("game_stream", mark)
+        T.mark_gravity("game_stream", "left")
+        T.insert("end", "⌛ le maître du jeu écrit…\n", "sys")
+        T.configure(state="disabled")
+        T.see("end")
+        self.game_hint.config(text="⌛ Le maître du jeu écrit… (Échap = annuler)")
+        self.lock(True, "🎮 le maître du jeu écrit…")
+        hist, memo = game_trim_history(st)
+        user = (memo + user_core) + game_state_line(st.get("status", "")) + game_reminder(st.get("builtin", ""))
+        threading.Thread(target=self._game_worker, args=(user, user_core, hist, display or text, count),
+                         daemon=True).start()
+
+    def _game_worker(self, user: str, user_core: str, hist, display: str, count: bool):
+        st = self.game
+        try:
+            p = self._game_override or self.prompts.get(st["pid"]) or {}
+            system = self.router.system_prompt(override=p) if p else GAME_ADN_LINE
+            first = [True]
+            acc: List[str] = []
+            stop = _GameStop(self._cancel)
+
+            def on_tok(t: str):
+                acc.append(t)
+                if not stop.stop and "\n" in t and game_turn_complete("".join(acc)):
+                    stop.stop = True  # scène complète : on n'attend pas une 2e scène inventée
+                def ui():
+                    T = self.game_txt
+                    T.configure(state="normal")
+                    if first[0]:
+                        T.delete("game_stream", "end")
+                        first[0] = False
+                    T.insert("end", t, "stream")
+                    T.configure(state="disabled")
+                    T.see("end")
+                self.after0(ui)
+
+            ans = chat_stream(
+                model_id_from_label(self.mvar.get()), user, system=system, on_token=on_tok,
+                cancel=stop, history=hist, raw_system=True, options=dict(GAME_GEN_OPTIONS),
+            )
+            self.after0(self._game_finish, st, ans, user_core, display, count)
+        except Exception as e:
+            self.after0(self._game_fail, st, str(e))
+        finally:
+            self.after0(self.lock, False, "● prêt")
+
+    def _game_fail(self, st, err: str):
+        if st is not self.game:
+            return
+        T = self.game_txt
+        T.configure(state="normal")
+        try:
+            T.delete("game_stream", "end")
+        except Exception:
+            pass
+        T.configure(state="disabled")
+        if st["log"] and st["log"][-1].get("who") == "you":
+            st["log"].pop()
+        self._game_sys(f"⚠ {err}")
+        self._game_set_choices(st.get("choices") or [])
+
+    def _game_finish(self, st, ans: str, user_core: str, display: str, count: bool):
+        if st is not self.game:
+            return
+        T = self.game_txt
+        T.configure(state="normal")
+        try:
+            T.delete("game_stream", "end")
+        except Exception:
+            pass
+        T.configure(state="disabled")
+        if self._cancel.is_set() or not (ans or "").strip() or ans.startswith("⚠") or ans == "(annulé)":
+            if st["log"] and st["log"][-1].get("who") == "you":
+                st["log"].pop()
+            self._game_rerender()
+            self._game_sys("Tour annulé." if self._cancel.is_set() or ans == "(annulé)" else f"{ans or '(réponse vide)'}")
+            return
+        ans = game_strip_template(game_clean_reply(clean(ans)))
+        st["msgs"].append({"role": "user", "content": user_core})
+        st["msgs"].append({"role": "assistant", "content": ans})
+        st["log"].append({"who": "mj", "text": ans})
+        if count:
+            st["turn"] = int(st.get("turn", 0)) + 1
+            st["chronicle"].append(f"T{st['turn']} · {display}"[:140])
+            st["chronicle"] = st["chronicle"][-60:]
+        g = game_parse(ans)
+        # v39.4: moteur d'état — statut tolérant + inventaire / jauges déduits de la narration
+        try:
+            res = game_apply_turn(st.get("status", ""), ans, dice=int(st.pop("_dice", 0) or 0), tick=count)
+        except Exception as e:
+            log(f"game_apply_turn: {e}")
+            res = {"status": game_merge_status(st.get("status", ""), g["status"]), "gained": [], "lost": [],
+                   "stat_changes": [], "quest": "", "notes": []}
+        if res["status"] and (st.get("status") or g["status"]):
+            st["status"] = res["status"]
+            st["log"][-1]["status"] = res["status"]
+        st["inv_new"] = res["gained"]
+        qv = (res.get("quest") or "").strip()
+        if not qv:
+            for k, v in game_parse_status(st.get("status", ""))["fields"]:
+                if game_norm_key(k) in ("QUÊTE", "PISTE"):
+                    qv = v.strip()
+        if qv and qv.strip(" .-").lower() not in ("n/a", "aucune", "?"):
+            if not st["quests"] or st["quests"][-1] != qv:
+                st["quests"] = [q for q in st["quests"] if q != qv] + [qv]
+                st["quests"] = st["quests"][-20:]
+        fx = []
+        if res["gained"]:
+            fx.append("+" + ", +".join(res["gained"]))
+        if res["lost"]:
+            fx.append("−" + ", −".join(res["lost"]))
+        fx += res["stat_changes"] + res["notes"]
+        st["choices"] = g["choices"]
+        start = self.game_txt.index("end-1c")
+        self._game_render_reply(ans, st["log"][-1].get("status", ""))
+        if fx:
+            line = "🎒 Pip-Boy : " + " · ".join(fx)
+            st["log"].append({"who": "fx", "text": line})
+            self._game_w(line + "\n\n", "check")
+        self._game_scroll_to(start)
+        self._game_update_pip()
+        self._game_set_choices(g["choices"])
+        self._game_paint_header()
+        self._game_autosave()
+        self._game_beep("turn")
+        self.ent.focus_set()
+
+    # ---- ☢ Pip-Boy
+    def _game_update_pip(self):
+        st = self.game or {}
+        info = game_parse_status(st.get("status", "")) if st.get("status") else {"title": "", "fields": [], "bars": []}
+        self._pip_info = info
+        self.pip_title.config(text=f"▓▓ {info['title'] or 'PIP-BOY 3000'} ▓▓"[:34])
+        self._game_draw_bars()
+        P = self.pip_txt
+        P.configure(state="normal")
+        P.delete("1.0", "end")
+        barred = {b[0] for b in info["bars"]}
+        if not info["fields"]:
+            P.insert("end", "En attente du premier statut…\n", "k")
+        for k, v in info["fields"]:
+            if k in barred:
+                continue
+            if k.startswith("INVENTAIRE") or k.startswith("INDICES"):
+                P.insert("end", f"\n{k}\n", "h")
+                newk = {" ".join(game_item_words(x)) for x in (st.get("inv_new") or [])}
+                for it in [x.strip() for x in re.split(r",|;", v) if x.strip()][:20]:
+                    if " ".join(game_item_words(it)) in newk or any(
+                            game_item_match([(1, it)], x) == 0 for x in (st.get("inv_new") or [])):
+                        P.insert("end", f" ✚ {it}  NOUVEAU\n", "cur")
+                    else:
+                        P.insert("end", f" • {it}\n", "v")
+                continue
+            P.insert("end", f"{k}: ", "k")
+            P.insert("end", f"{v}\n", "v")
+        if st.get("quests"):
+            P.insert("end", "\n📓 JOURNAL DE QUÊTES\n", "h")
+            qs = st["quests"]
+            for i, q in enumerate(qs[-8:]):
+                last = i == len(qs[-8:]) - 1
+                P.insert("end", (" ▶ " if last else " ✓ ") + q + "\n", "cur" if last else "old")
+        if st.get("chronicle"):
+            P.insert("end", "\n🧭 CHRONIQUE\n", "h")
+            for c in st["chronicle"][-10:]:
+                P.insert("end", f" {c}\n", "k")
+        P.configure(state="disabled")
+
+    def _game_draw_bars(self):
+        G = GAME_COLORS
+        cv = self.pip_bars
+        cv.delete("all")
+        bars = (getattr(self, "_pip_info", None) or {}).get("bars", [])
+        w = max(120, cv.winfo_width() or 250)
+        y = 4
+        for k, v, mx in bars[:6]:
+            r = max(0.0, min(1.0, v / mx if mx else 0))
+            bad_high = k.startswith(("RAD", "FAIM", "SOIF"))
+            danger = r if bad_high else 1 - r
+            col = G["green"] if danger < 0.4 else (G["amber"] if danger < 0.7 else G["bad"])
+            cv.create_text(2, y + 7, text=k[:6], anchor="w", fill=G["fg"], font=("Consolas", 9, "bold"))
+            x0, x1 = 58, w - 64
+            cv.create_rectangle(x0, y + 1, x1, y + 13, outline=G["line"], fill=G["art"])
+            if r > 0:
+                cv.create_rectangle(x0 + 1, y + 2, x0 + 1 + (x1 - x0 - 2) * r, y + 12, outline="", fill=col)
+            cv.create_text(w - 2, y + 7, text=f"{v}/{mx}", anchor="e", fill=G["fg"], font=("Consolas", 9))
+            y += 18
+        cv.configure(height=max(6, y))
+
+    # ---- ✨ Générer un jeu avec Padawan
+    def game_generate(self, parent=None):
+        from tkinter import simpledialog
+        if self.busy:
+            self.say("sys", "✨ Padawan est occupé — réessaie dans un instant.")
+            return
+        idea = simpledialog.askstring(
+            "✨ Générer un jeu avec Padawan",
+            "Ton idée en une ligne (ex. « survie dans une cabane à sucre hantée », « pirates du Saint-Laurent ») :",
+            parent=parent or self)
+        if not idea or not idea.strip():
+            return
+        if not self.ready or not self.model_ready:
+            if not self._ensure_model_ready_or_kick():
+                return
+        self.say("sys", f"✨ Padawan écrit un prompt de jeu pour : {idea.strip()}…")
+        self.lock(True, "✨ génération du prompt de jeu…")
+        threading.Thread(target=self._game_generate_worker, args=(idea.strip(), parent), daemon=True).start()
+
+    def _game_generate_worker(self, idea: str, parent):
+        try:
+            txt = chat(model_id_from_label(self.mvar.get()), GAME_GEN_ASK.replace("{idee}", idea),
+                       system=GAME_GEN_SYSTEM, cancel=self._cancel, raw_system=True,
+                       options={"num_predict": 1600, "temperature": 0.8})
+            self.after0(self._game_generate_done, idea, txt, parent)
+        except Exception as e:
+            self.after0(self.say, "sys", f"✨ Génération impossible : {e}")
+        finally:
+            self.after0(self.lock, False, "● prêt")
+
+    def _game_generate_done(self, idea: str, txt: str, parent):
+        if self._cancel.is_set() or not (txt or "").strip() or txt.startswith("⚠"):
+            self.say("sys", "✨ Génération annulée ou vide.")
+            return
+        text = game_fix_generated(txt)
+        name = "🎮 " + (idea[:1].upper() + idea[1:])[:60]
+        q = self.prompts.upsert({"id": PromptStore._new_id(), "name": name, "role": "tous", "mode": "remplacer",
+                                 "kind": "jeu", "keep_base": True, "text": text})
+        self.prompts.save()
+        self._refresh_prompt_ui()
+        win = getattr(self, "_prompts_win", None)
+        if win is not None and win.winfo_exists():
+            win._fill_list()
+            win._select_id(q["id"])
+        self.say("sys", f"✨ Nouveau jeu « {name} » créé dans 📜 Prompts ({len(text)} caractères).")
+        if messagebox.askyesno("✨ " + name, "Le prompt de jeu est prêt.\n\nJouer tout de suite ?",
+                               parent=parent if parent is not None and parent.winfo_exists() else self):
+            self.game_start(q["id"], ask=False)
+
+    def _game_toggle_resume(self):
+        self.cfg["game_resume_on_start"] = bool(self._game_resume_var.get())
+        savej(CFG_FILE, self.cfg)
+        self.say("sys", "🎮 Au démarrage : " + ("Padawan rouvre ta dernière partie." if self.cfg["game_resume_on_start"]
+                                                 else "Chercheur (sérieux d'abord). 🎮 Jouer reprend ta partie."))
+
+    def _game_menu(self, event=None):
+        m = tk.Menu(self, tearoff=0, bg=C["card"], fg=C["fg"], activebackground=C["gold"],
+                    activeforeground="#1a1408", font=("Segoe UI", 11), bd=0)
+        cur = (self.game or {}).get("pid", "")
+        games = self._game_prompts()
+        if not games:
+            m.add_command(label="     (aucun jeu — ✨ en créer un)", state="disabled")
+        for p in games:
+            m.add_command(label=f"{'▶' if p['id'] == cur else '   '}  {p['name']}",
+                          command=lambda pid=p["id"]: self.game_start(pid))
+        m.add_separator()
+        m.add_command(label="     ✨ Créer un jeu avec Padawan…", command=self.game_generate)
+        self._game_resume_var = tk.BooleanVar(value=bool(self.cfg.get("game_resume_on_start", False)))
+        m.add_checkbutton(label="     Rouvrir la dernière partie au démarrage", variable=self._game_resume_var,
+                          command=self._game_toggle_resume)
+        if self.game:
+            m.add_command(label="     ↩ Quitter le jeu", command=self.game_quit)
+        m.add_command(label="     📜 Gérer mes prompts…   Ctrl+P", command=self.show_prompts)
+        self._theme_fix(m)
+        x, y = (event.x_root, event.y_root) if event is not None else (self.winfo_pointerx(), self.winfo_pointery())
+        try:
+            m.tk_popup(x, y)
+        finally:
+            m.grab_release()
+
+    # ── v39.4: 📰 Nouvelles (briefings sourcés, un clic) ─────────────────────────
+    def _news_prompt(self, kind: str) -> Dict[str, Any]:
+        p = self.prompts.get("n_" + kind) if getattr(self, "prompts", None) else None
+        if not p:
+            seed = next(s for s in NEWS_SEEDS if s["builtin"] == kind)
+            p = dict(seed, id="n_" + kind)
+        return p
+
+    def _news_menu(self, event=None):
+        m = tk.Menu(self, tearoff=0, bg=C["card"], fg=C["fg"], activebackground=C["gold"],
+                    activeforeground="#1a1408", font=("Segoe UI", 11), bd=0)
+        for kind, icon, lab in (("geo_futur", "🌍", "Géopolitique (vue de 2077)"), ("decouvertes", "🔭", "Découvertes & avancées")):
+            m.add_command(label=f"{icon}  {lab} — dernières 24 h", command=lambda k=kind: self.news_brief(k, "d"))
+            m.add_command(label=f"{icon}  {lab} — cette semaine", command=lambda k=kind: self.news_brief(k, "w"))
+            last = news_last(kind)
+            m.add_command(label=f"{icon}  Ce qui a changé depuis le dernier briefing"
+                                + (f"  ({last['date']})" if last else "  (aucun encore)"),
+                          command=lambda k=kind: self.news_brief(k, "auto", changes=True),
+                          state="normal" if last else "disabled")
+            m.add_command(label=f"{icon}  🎯 Cibler un sujet…", command=lambda k=kind: self._news_ask_focus(k))
+            m.add_separator()
+        m.add_command(label="🔁  Régénérer le dernier briefing", command=self.news_regenerate,
+                      state="normal" if getattr(self, "_brief_ctx", None) else "disabled")
+        m.add_command(label="📂  Ouvrir le dossier des briefings", command=self.news_open_dir)
+        m.add_command(label="📜  Modifier ces prompts…   Ctrl+P", command=self.show_prompts)
+        self._theme_fix(m)
+        x, y = (event.x_root, event.y_root) if event is not None else (self.winfo_pointerx(), self.winfo_pointery())
+        try:
+            m.tk_popup(x, y)
+        finally:
+            m.grab_release()
+
+    def _news_ask_focus(self, kind: str):
+        from tkinter import simpledialog
+        ex = "ex. Arctique, Iran, Taïwan, Sahel…" if kind == "geo_futur" else \
+            "ex. médecine régénératrice, fusion, archéologie maya, IA…"
+        q = simpledialog.askstring(NEWS_KINDS[kind]["label"], f"Quel sujet ou domaine ? ({ex})", parent=self)
+        if q and q.strip():
+            self.news_brief(kind, "w", question=q.strip()[:80])
+
+    def news_open_dir(self):
+        try:
+            os.makedirs(BRIEF_DIR, exist_ok=True)
+            os.startfile(BRIEF_DIR)  # type: ignore[attr-defined]
+        except Exception as e:
+            self.say("sys", f"Dossier des briefings : {BRIEF_DIR} ({e})")
+
+    def news_regenerate(self):
+        ctx = getattr(self, "_brief_ctx", None)
+        if ctx:
+            self.news_brief(*ctx, nocache=True)
+
+    def news_brief(self, kind: str, period: str = "d", changes: bool = False, question: str = "",
+                   nocache: bool = False):
+        """Briefing sourcé en un clic : vraie chasse web (news datées, FR + EN) puis le prompt favori 🌍 / 🔭.
+        N'active PAS le prompt : le Chercheur garde son prompt habituel ensuite."""
+        if kind not in NEWS_KINDS:
+            return
+        if self.busy:
+            self.say("sys", "📰 Padawan est occupé — réessaie dans un instant (Échap = annuler).")
+            return
+        if self.game:
+            self.game_quit()
+        prev = news_last(kind) if changes else None
+        if changes and not prev:
+            self.say("sys", "📰 Pas encore de briefing précédent : je fais celui de la semaine.")
+            changes, period = False, "w"
+        if period == "auto":
+            age = time.time() - float((prev or {}).get("t") or 0)
+            period = "d" if age < 36 * 3600 else ("w" if age < 8 * 86400 else "m")
+        p = self._news_prompt(kind)
+        spec = NEWS_KINDS[kind]
+        label = f"{spec['label']} — {NEWS_PERIODS.get(period, period)}" + (f" · {question}" if question else "") + \
+            (" · 🔄 ce qui a changé" if changes else "")
+        self._brief_ctx = (kind, period if not changes else "auto", changes, question)
+        self.clear_hunt_context(wipe_role_hist=True, reason=f"briefing · {kind}")
+        self.last_q = label
+        self._last_kind = "brief"
+        if self.router.active != "chercheur":
+            self.set_role("chercheur", sync_mode=True)
+        self.say("you", "📰 " + label, force_scroll=True, anchor=True)
+        self.lock(True, f"📰 {spec['label']}…")
+        self.mission_start()
+        threading.Thread(target=self._news_job, args=(kind, period, changes, question, p, prev, label),
+                         daemon=True).start()
+
+    def _news_job(self, kind, period, changes, question, p, prev, label):
+        try:
+            if not ollama_up():
+                self.after0(self._ui_status, "Ollama : absent → démarrage…", C["gold"])
+                ok_boot, detail = ensure_ollama_running(cancel=self._cancel, allow_install=False)
+                if ok_boot:
+                    self.ready = True
+            self.after0(self.mission_update, "formuler", "done", f"{len(NEWS_KINDS[kind]['queries'])} requêtes FR + EN")
+            self.after0(self.mission_update, "moteurs", "running", "actualités datées…")
+
+            def prog(msg):
+                self.after0(self.mission_update, "moteurs", "running", msg)
+            t0 = time.time()
+            items, meta = news_collect(kind, period, question, cancel=self._cancel, on_progress=prog)
+            self.after0(self.mission_update, "moteurs", "done", f"{len(items)} sources · {int(time.time() - t0)} s")
+            self.after0(self.mission_update, "filtrer", "done", "dédoublonné · trié par date")
+            self.after0(self.mission_update, "enrichir", "done", "pages lues")
+            if self._cancel.is_set():
+                self.after0(self.say, "sys", "Briefing annulé.")
+                return
+            if not items:
+                err = _summarize_ddgs_errors(meta.get("errors") or [])
+                self.after0(self.mission_update, "brief", "fail", "aucune source")
+                self.after0(self.say, "sys", f"📰 Aucune nouvelle trouvée (hors ligne ?) — {err}. "
+                                             "Je n'invente rien : réessaie dans un moment.")
+                return
+            self.hits = items
+            self.after0(self.draw_sources)
+            if meta.get("widened"):
+                self.after0(self.say, "sys", "📰 Peu de nouvelles en 24 h : élargi à la semaine.")
+            if not self.model_ready and not self._wait_model_ready():
+                raise RuntimeError("Modèle pas chargé — voyant rouge.")
+            self.after0(self.mission_update, "brief", "running", f"briefing · {len(items)} sources")
+            mark_holder: list = []
+            token_buf: list = []
+            self.after0(lambda: mark_holder.append(self._begin_stream()))
+            time.sleep(0.05)
+
+            def on_tok(t: str):
+                if mark_holder:
+                    self.after0(self._append_stream, mark_holder[0], t, token_buf)
+            user = news_user_msg(kind, items, period, question, prev=prev, widened=bool(meta.get("widened")),
+                                 fmt=news_format_part(p.get("text", "")))
+            ans = self._ollama(user, on_token=on_tok, use_history=False, override=p,
+                               question=question or NEWS_KINDS[kind]["default_q"], options=dict(NEWS_GEN_OPTIONS))
+            if self._cancel.is_set():
+                self.after0(self.mission_update, "brief", "fail", "annulé")
+                self.after0(self.say, "sys", "Briefing annulé.")
+                return
+            ans, cited = news_postprocess(ans, items)
+            self.last_a = ans
+            if mark_holder:
+                self.after0(self._finish_stream, mark_holder[0], ans)
+            else:
+                self.after0(self.say, "ai", ans)
+            self.after0(self.say_links)
+            self.after0(self.mission_update, "brief", "done", f"{len(cited)} sources citées")
+            try:
+                md, htm = news_save(kind, ans, period, question)
+                self.after0(self.say, "sys", f"📰 Briefing gardé : {htm}  ·  🔁 Régénérer / 🔄 Ce qui a changé : menu 📰 Nouvelles")
+            except Exception as e:
+                log(f"news_save: {e}")
+            self.after0(self.notify_done, "Padawan — 📰", f"{label} prêt")
+        except Exception as e:
+            self.after0(self.mission_update, "brief", "fail", str(e)[:60])
+            self.after0(self.say, "sys", f"📰 Briefing raté : {e}")
+        finally:
+            self.after0(self.lock, False, "● prêt")
+
 
     def show_tasks(self):
         """Éditeur Tâches simple (ADN léger) — liste scrollable."""

@@ -1,6 +1,6 @@
 ﻿; Projet Padawan - installateur Inno Setup (par utilisateur, sans admin)
-#define MyVer "2026.11.11"
-#define MyLabel "1.3.0"
+#define MyVer "2026.11.17"
+#define MyLabel "1.4.0"
 [Setup]
 AppId={{6F4C2A71-9B3E-4D8A-A5C1-50DA0A7A2310}
 AppName=Projet Padawan
