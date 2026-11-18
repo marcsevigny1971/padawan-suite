@@ -1,5 +1,16 @@
 # Journal des versions — Padawan Suite
 
+## v1.5.0 — 2026.11.18 — 💻 Atelier du programmeur
+- Padawan v39.6 → v40.0.
+- 💻 **Atelier** (`Ctrl+K`, module `padawan_atelier.py`) : mode programmeur plein écran. Chat à gauche (le modèle de code `qwen2.5-coder` s'active le temps de l'Atelier, puis le modèle d'avant revient), éditeur à droite : onglets, numéros de ligne, coloration HTML/CSS/JS/Python/PHP/Arduino/JSON, recherche/remplacement, annuler/rétablir propres, mini-carte.
+- Aperçu : page HTML dans le navigateur avec rechargement automatique (petit serveur 127.0.0.1 seulement), Python exécuté dans un panneau, PHP via `php -S` local s'il est présent. 🩺 « Corriger l'erreur » renvoie la trace au modèle.
+- Le code proposé par l'IA passe par un **diff** (accepter/rejeter morceau par morceau) ; toute écriture fait d'abord une copie `.bak`.
+- Déploiement : dossier Python, dossier Web local, ou serveur FTP / FTPS / SFTP (mot de passe chiffré par Windows, empreinte du serveur vérifiée). Projets, modèles de départ, snippets, outils. Réglages privés dans `atelier.json` / `atelier_projets.json` (jamais dans le setup).
+- 📋 **Copier/coller partout** : bouton « 📋 Copier le code » et « 💻 Ouvrir dans l'Atelier » sous chaque bloc de code des réponses, menu clic droit (couper, copier, coller, tout sélectionner) dans les zones de texte, collage multiligne sans envoi accidentel. Le Chercheur suggère l'Atelier quand une demande ressemble à du code.
+- 🧠 **Gestionnaire de modèles** (`Ctrl+M`, module `padawan_modeles.py`, v39.6–39.7) : diagnostic de la machine (carte graphique et VRAM, RAM, processeur, disque), mes modèles (activer, effacer), catalogue intégré (mise à jour facultative depuis ollama.com), installation en un clic avec progression et annulation, banc d'essai côte à côte (temps, jetons/s). Recommandations cliquables (⬇ Installer / ⭐ Activer) et bouton par ligne au catalogue. Un prompt ou un jeu peut avoir son propre modèle.
+- 🎮 Correctifs du chargement des modèles (v39.8) : un clic dans un jeu n'est plus jamais perdu pendant le chargement (file d'attente, repli sur dolphin3), gemma2 ne se charge plus deux fois (même taille de contexte), statut de chargement chronométré, la Mission est vidée en mode jeu, compatibilité des modèles recalibrée sur des mesures réelles.
+- Tableau de bord 1.5.0 (suite 1.5.0, 2026.11.18). La construction du setup refuse aussi les réglages de l'Atelier et du gestionnaire de modèles.
+
 ## v1.4.0 — 2026.11.17 — Padawan : prompts, jeux et briefings
 - Padawan v39.3 → v39.5.
 - 📜 Panneau Prompts (`Ctrl+P`) : favoris modifiables, un prompt actif par rôle, en mode « remplacer » ou « ajouter » ; copie de sécurité avant chaque écriture.

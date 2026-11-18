@@ -141,12 +141,21 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.4.0) | SHA256 |
+| Fichier (version 1.5.0) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `266C0500AE41ED0235BBA2CF82EF65E004F5B562DAFEEF252AEC33359ED55EDE` |
-| `Padawan-Projet.zip` | `2CF165D83F742B71429F4FCD5A20F3541AB713D3CBCE536D152FE9FD26EB059B` |
+| `Padawan-Setup.exe` | `E0E95C85995BA044C18F60D46EBB1A457035E622B9F73181FB9558110E241C36` |
+| `Padawan-Projet.zip` | `EA09FBAF9064F5DE714372A051B7795E52F2332D9B2A9BCE9D4BE1F46F3D5BE5` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.5.0 : l'Atelier du programmeur (18 novembre 2026)
+- 💻 **Atelier** (`Ctrl+K`) : un vrai coin de programmeur dans Padawan. Le chat à gauche, l'éditeur de code à droite (onglets, numéros de ligne, couleurs pour HTML, CSS, JavaScript, Python, PHP, Arduino, JSON). Le modèle de code s'active tout seul le temps de l'Atelier.
+- 👀 **Aperçu en direct** : ta page web se recharge toute seule dans le navigateur, ton Python s'exécute dans un panneau, et 🩺 « Corriger l'erreur » envoie l'erreur à l'IA.
+- 🔀 **Rien n'est écrasé sans ton accord** : les changements proposés par l'IA s'affichent en diff (accepter ou rejeter morceau par morceau), avec une copie `.bak` avant chaque écriture.
+- 🚀 **Déploiement** vers un dossier Python, un dossier Web local ou ton serveur FTP / FTPS / SFTP (mot de passe chiffré par Windows). Projets, modèles de départ et snippets.
+- 📋 **Copier/coller partout** : bouton « 📋 Copier le code » sous chaque bloc de code, clic droit dans les zones de texte, collage de plusieurs lignes sans envoi accidentel.
+- 🧠 **Gestionnaire de modèles** (`Ctrl+M`) : ce que ton PC peut faire tourner, tes modèles, un catalogue, l'installation en un clic et un banc d'essai pour comparer les modèles. Un prompt ou un jeu peut avoir son propre modèle.
+- 🎮 Jeux plus fiables pendant le chargement du modèle : plus de clic perdu, gemma2 ne se charge plus deux fois.
 
 ## ✨ Nouveautés v1.4.0 : prompts, jeux et briefings sourcés (17 novembre 2026)
 - 📜 **Panneau Prompts** (`Ctrl+P`) : tes prompts favoris, modifiables, avec un prompt actif par rôle.

@@ -18,3 +18,12 @@ messager_config.*
 web_sources/
 grimoire.db
 **/PERSO/
+
+# Atelier / gestionnaire de modeles (v1.5.0) : reglages prives
+modeles.json
+atelier.json
+atelier_projets.json
+atelier_known_hosts
+.atelier_chat.json
+prompts.json
+memory.json

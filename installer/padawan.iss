@@ -1,6 +1,6 @@
 ﻿; Projet Padawan - installateur Inno Setup (par utilisateur, sans admin)
-#define MyVer "2026.11.17"
-#define MyLabel "1.4.0"
+#define MyVer "2026.11.18"
+#define MyLabel "1.5.0"
 [Setup]
 AppId={{6F4C2A71-9B3E-4D8A-A5C1-50DA0A7A2310}
 AppName=Projet Padawan
@@ -48,7 +48,7 @@ fr.StatusRunProgram=Préparation de la suite (Python, modules, raccourcis)… un
 [Tasks]
 Name: "ollama"; Description: "Installer aussi l'IA locale Ollama + le modèle d'IA (environ 6 Go à télécharger)"; Flags: unchecked
 [Files]
-Source: "stage\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "config.json,arsenal.json,tasks.json,search_cache.json,archiveur_config.json"
+Source: "stage\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "config.json,arsenal.json,tasks.json,search_cache.json,archiveur_config.json,memory.json,prompts.json,modeles.json,atelier.json,atelier_projets.json,atelier_known_hosts,.atelier_chat.json"
 Source: "stage\app\config.json"; DestDir: "{app}"; Flags: onlyifdoesntexist skipifsourcedoesntexist
 Source: "stage\installer_padawan.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "stage\LISEZMOI.txt"; DestDir: "{app}"; DestName: "LISEZMOI-INSTALLATION.txt"; Flags: ignoreversion

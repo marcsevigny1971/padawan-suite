@@ -65,6 +65,14 @@ except ImportError:
     plyer_notification = None
 # Tray / auto-start / gestionnaire : module visible padawan_tray (+ alias systemtray)
 import padawan_tray
+try:  # v39.6 🧠 gestionnaire de modèles (facultatif : Padawan marche sans)
+    import padawan_modeles as _PM
+except Exception:  # pragma: no cover
+    _PM = None
+try:  # v40.0 💻 Atelier (facultatif aussi)
+    import padawan_atelier as _PA
+except Exception:  # pragma: no cover
+    _PA = None
 from padawan_tray import (
     TRAY_AVAILABLE,
     ensure_windows_startup,
@@ -108,10 +116,11 @@ UNCENSORED_MODELS = (
     "qwen2.5:7b",                        # 4,7 Go - recommandé: français riche, structure
     "mistral-nemo:12b",                  # 7,1 Go - plus profond, un peu plus lent
 )
+PROMPT_MODEL_DEFAULT = "(modèle courant)"  # v39.6
 MODEL_DL_MARK = " (à télécharger)"
 APP_NAME = "Padawan"
 APP_FILE_VER = 39  # v39.1: 🧹 Nouvelle conversation (Ctrl+L / Ctrl+Shift+N), Historique
-APP_SUB_VER = "39.5"  # v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
+APP_SUB_VER = "40.0"  # v40.0: 💻 Atelier (mode programmeur : chat + éditeur à onglets coloré, aperçu HTML auto-rechargé, Python exécuté, 🩺 corriger l'erreur, diff accepter/rejeter, déploiement Python/Web/FTP-SFTP avec .bak, projets, modèles, snippets) + copier/coller partout (📋 sur les blocs de code, clic droit, collage multiligne). v39.8: jeu — un clic n'est jamais perdu (file d'attente pendant le chargement du modèle, repli dolphin3), statut de chargement chronométré, Mission vidée en mode jeu. v39.7: 🧠 recommandés cliquables (⬇ Installer / ⭐ Activer) + bouton par ligne au catalogue. v39.6: 🧠 Modèles (diagnostic machine, catalogue, installation, banc d'essai) + modèle par prompt. v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
 _APP_FILE_VER_OLD = 39  # version fichier seulement — jamais affichée comme titre produit
 ROLE_HIST_CAP = 80
 CACHE_TTL = 3 * 3600
@@ -755,9 +764,11 @@ def ensure_model(name: str, cancel: Optional[threading.Event] = None) -> Tuple[b
                 "prompt": " ",
                 "stream": False,
                 "keep_alive": "30m",
+                # v39.8 : même contexte que les réponses → un seul chargement (avant : 4096 puis 8192 = 2 chargements)
+                "options": {"num_ctx": int(GEN.get("num_ctx") or 0) or _detect_num_ctx()},
             },
             timeout=(OLLAMA_CONNECT, 300),
-            retries=3,
+            retries=1,
             cancel=cancel,
         )
         if cancel and cancel.is_set():
@@ -2568,6 +2579,7 @@ class PromptStore:
             "example": bool(p.get("example", False)),
             "kind": kind,
             "builtin": str(p.get("builtin") or "")[:40],
+            "model": str(p.get("model") or "").strip()[:120],  # v39.6: modèle Ollama propre au prompt ("" = courant)
             "created": str(p.get("created") or now()),
             "updated": str(p.get("updated") or now()),
         }
@@ -5587,10 +5599,22 @@ class PromptsWindow(tk.Toplevel):
         self._tip(self.kind_rbs[0], "💬 Normal : modifie la façon dont Padawan répond (avec ou sans le défaut du rôle).")
         self._tip(self.kind_rbs[1], "🎮 Jeu : prompt système PUR pour un jeu de rôle (pas de règles de Chercheur,\n"
                                     "pas de chasse web). Activer = lancer la partie avec choix cliquables et Pip-Boy.")
+        # v39.6 : modèle propre à ce prompt (facultatif)
+        tk.Label(kf, text="🧠", bg=C["bg"], fg=C["gold"], font=("Segoe UI", 12, "bold")).pack(side="left", padx=(8, 2))
+        self.modelvar = tk.StringVar(value=PROMPT_MODEL_DEFAULT)
+        self.model_cb = ttk.Combobox(kf, textvariable=self.modelvar, state="readonly", width=24,
+                                     style="Prompts.TCombobox", font=("Segoe UI", 10),
+                                     values=self._model_choices(), postcommand=self._model_cb_refresh)
+        self.model_cb.pack(side="left")
+        self.model_cb.bind("<<ComboboxSelected>>", lambda e: self._changed())
+        self._tip(self.model_cb, "Modèle à utiliser avec ce prompt (facultatif).\n"
+                                 "Activer le prompt ou lancer le jeu bascule sur ce modèle;\n"
+                                 "↩ Quitter / revenir au défaut remet le modèle d'avant.\n"
+                                 "« modèle courant » = ne rien changer. 🧠 Modèles (Ctrl+M) pour en installer.")
 
         self._lbl(form, "Rôle", size=11).grid(row=1, column=0, sticky="w", pady=3)
         rf = tk.Frame(form, bg=C["bg"])
-        rf.grid(row=1, column=1, sticky="ew", padx=(10, 0), pady=3)
+        rf.grid(row=1, column=1, columnspan=2, sticky="ew", padx=(10, 0), pady=3)  # v39.6: place pour le 🧠 Modèle
         self.rvar = tk.StringVar(value="Tous")
         self.role_cb = ttk.Combobox(rf, textvariable=self.rvar, state="readonly", width=14,
                                     style="Prompts.TCombobox", font=("Segoe UI", 11),
@@ -6003,6 +6027,20 @@ class PromptsWindow(tk.Toplevel):
         self.filter_ent.focus_set()
         self.filter_ent.select_range(0, "end")
 
+    # ── v39.6 : modèle par prompt ────────────────────────────────────────────
+    def _model_choices(self) -> List[str]:
+        mods = [model_id_from_label(m) for m in (getattr(self.app, "mods", None) or []) if MODEL_DL_MARK not in m]
+        cur = (self.modelvar.get() if hasattr(self, "modelvar") else "") or ""
+        if cur and cur != PROMPT_MODEL_DEFAULT and cur not in mods:
+            mods.append(cur)
+        return [PROMPT_MODEL_DEFAULT] + mods
+
+    def _model_cb_refresh(self):
+        try:
+            self.model_cb.configure(values=self._model_choices())
+        except Exception:
+            pass
+
     # ── éditeur ──────────────────────────────────────────────────────────────
     def _load(self, pid: str):
         p = self._item(pid)
@@ -6018,6 +6056,8 @@ class PromptsWindow(tk.Toplevel):
             self.mvar.set(p["mode"])
             self.kvar.set(bool(p.get("keep_base", True)))
             self.kindvar.set("jeu" if p.get("kind") == "jeu" else "normal")
+            self.modelvar.set((p.get("model") or "").strip() or PROMPT_MODEL_DEFAULT)
+            self.model_cb.configure(state="disabled" if locked else "readonly")
             self.txt.configure(state="normal")
             self.txt.delete("1.0", "end")
             self.txt.insert("1.0", p.get("text", ""))
@@ -6115,6 +6155,7 @@ class PromptsWindow(tk.Toplevel):
             "mode": "remplacer" if jeu else self.mvar.get(),
             "keep_base": bool(self.kvar.get()), "text": self.txt.get("1.0", "end-1c"),
             "kind": "jeu" if jeu else "normal", "builtin": old.get("builtin", ""),
+            "model": "" if self.modelvar.get() == PROMPT_MODEL_DEFAULT else model_id_from_label(self.modelvar.get()),
         }
 
     def _update_counts(self):
@@ -6777,6 +6818,10 @@ class Padawan(tk.Tk):
         self.mem["sessions"].append({"start": self.session["t"], "history": self.session["h"]})
         self.bind("<Control-f>", lambda e: self.focus_hunt())
         self.bind("<Control-i>", lambda e: self.park())
+        self.bind("<Control-m>", lambda e: (self.show_models(), "break")[1])  # v39.6 🧠 Modèles
+        self.bind("<Control-M>", lambda e: (self.show_models(), "break")[1])
+        self.bind("<Control-k>", lambda e: (self.show_atelier(), "break")[1])  # v40.0 💻 Atelier
+        self.bind("<Control-K>", lambda e: (self.show_atelier(), "break")[1])
         self.bind("<Control-p>", lambda e: (self.show_prompts(), "break")[1])  # v39.2 📜 Prompts
         self.bind("<Control-P>", lambda e: (self.show_prompts(), "break")[1])
         self.bind("<Control-l>", lambda e: (self.new_conversation(), "break")[1])
@@ -6794,6 +6839,10 @@ class Padawan(tk.Tk):
         self.bind("<Escape>", lambda e: self.cancel_job())
         self._style()
         self.build()
+        try:
+            self._install_clipboard()  # v40.0 copier/coller partout
+        except Exception as e:
+            log(f"clipboard: {e}")
         self.after(80, lambda: self.split.sash_place(0, 820, 0))
         self.set_pill("mode", self.mode)
         self.set_role(self.router.active, sync_mode=False)
@@ -7078,6 +7127,20 @@ class Padawan(tk.Tk):
                          "🌍 Géopoliticologue du futur · 🔭 Découvertes & avancées\n"
                          "24 h / semaine / ce qui a changé · gardés en .html dans briefings\\")
 
+        gmods = nav("🧠 Modèles  Ctrl+M", self.show_models)  # v39.6
+        gmods.configure(fg=C["ok"], font=("Segoe UI", 10, "bold"))
+        gmods.bind("<Leave>", lambda e, b=gmods: b.configure(bg=C["card"], fg=C["ok"]), add="+")
+        gmods.pack(fill="x", pady=(0, 4), after=gplay)
+        self._tip(gmods, "🧠 Modèles (Ctrl+M) : ce que ton PC peut faire tourner,\n"
+                         "tes modèles (activer / effacer), catalogue avec pastilles 🟢🟡🔴,\n"
+                         "installation en un clic et banc d'essai côte à côte")
+        gatl = nav("💻 Atelier  Ctrl+K", self.show_atelier)  # v40.0
+        gatl.configure(fg=C["gold"], font=("Segoe UI", 10, "bold"))
+        gatl.bind("<Leave>", lambda e, b=gatl: b.configure(bg=C["card"], fg=C["gold"]), add="+")
+        gatl.pack(fill="x", pady=(0, 4), after=gmods)
+        self._tip(gatl, "💻 Atelier (Ctrl+K) : mode programmeur avec qwen2.5-coder\n"
+                         "chat à gauche, éditeur coloré à droite · 👁 aperçu · 🩺 corriger l'erreur\n"
+                         "🚀 déployer (C:\\py, Web local, FTP/SFTP) · projets, modèles, snippets")
         nav("Gare l'idée  Ctrl+I", self.park).pack(fill="x", pady=1)
         self.btn_inbox = nav(self._inbox_label(), self.show_prompts)
         self.btn_inbox.pack(fill="x", pady=1)
@@ -7280,8 +7343,13 @@ class Padawan(tk.Tk):
         _lab0 = next((lab for lab in self.mods if model_id_from_label(lab) == _m0), self.mods[0] if self.mods else _m0)
         self.mvar = tk.StringVar(value=_lab0)
         self.model_combo = ttk.Combobox(
-            row2, textvariable=self.mvar, values=self.mods, state="readonly", width=28,
+            row2, textvariable=self.mvar, values=self.mods, state="readonly", width=24,
         )
+        # v39.7 : 🧠 AVANT le sélecteur (avant il était coupé au bout de la rangée)
+        _mb = tk.Label(row2, text="🧠", bg=C["bg"], fg=C["ok"], font=("Segoe UI", 11, "bold"), cursor="hand2")
+        _mb.pack(side="left", padx=(0, 2))
+        _mb.bind("<Button-1>", lambda e: self.show_models())
+        self._tip(_mb, "🧠 Modèles (Ctrl+M) : diagnostic du PC, installer / comparer des modèles")
         self.model_combo.pack(side="left", padx=(0, 4))
         self.model_combo.bind("<<ComboboxSelected>>", self.on_model_chosen)
         self.model_dot = tk.Label(
@@ -7959,14 +8027,21 @@ class Padawan(tk.Tk):
             return
         self._md_tags(widget)
         in_code = False
+        code_buf: List[str] = []
+        code_lang = ""
         lines = text.split("\n")
         for k, line in enumerate(lines):
             nl = "\n" if k < len(lines) - 1 else ""
             st = line.strip()
             if st.startswith("```"):
+                if not in_code:
+                    code_buf, code_lang = [], st.strip("`").strip()
+                else:
+                    self._code_block_btns(widget, "\n".join(code_buf), code_lang)  # v40.0 📋
                 in_code = not in_code
                 continue
             if in_code:
+                code_buf.append(line)
                 widget.insert("end", line + nl, (base, "md_pre"))
                 continue
             mh = re.match(r"^(#{1,6})\s+(.*)$", st)
@@ -8267,13 +8342,23 @@ class Padawan(tk.Tk):
                 else f"Téléchargement…"
             )
 
+        # v39.8 : mémorise l'état (file d'attente du jeu, chrono, repli)
+        prev = getattr(self, "_model_state", "")
+        self._model_state, self._model_detail = state, detail
+        if state == "loading" and prev != "loading":
+            self._model_load_t0 = time.time()
+            self._model_slow_said = False
+            self.after0(self._model_load_tick)
+        elif state != "loading":
+            self._model_load_t0 = 0.0
+
         def apply():
             if hasattr(self, "model_dot"):
                 self.model_dot.config(fg=color)
             if hasattr(self, "model_lbl"):
                 self.model_lbl.config(text=text, fg=color)
-            if hasattr(self, "ollama_phase"):
-                self.ollama_phase.config(text=phase_txt, fg=phase_fg)
+            if hasattr(self, "ollama_phase"):  # v39.8 : ligne fine = QUEL modèle (le gros libellé dit l'état)
+                self.ollama_phase.config(text=self._phase_line(), fg=phase_fg)
             if state == "ready":
                 if not self.busy:
                     self.status.config(text="● Modèle : prêt", fg=C["ok"])
@@ -8292,6 +8377,47 @@ class Padawan(tk.Tk):
 
         self.after0(apply)
 
+    # ── v39.8 : chrono de chargement du modèle ──────────────────────────────
+    MODEL_SLOW_S = 60  # au-delà : on propose le repli (dolphin3:8b)
+
+    def _phase_line(self) -> str:
+        name = self.current_model() if hasattr(self, "mvar") else (self.model or MODEL)
+        st = getattr(self, "_model_state", "")
+        t0 = getattr(self, "_model_load_t0", 0.0)
+        if st == "loading" and t0:
+            return f"🧠 {name} · {int(time.time() - t0)} s"
+        if st == "error":
+            return f"🧠 {name} · {(getattr(self, '_model_detail', '') or 'échec')[:40]}"
+        if st == "down":
+            return "Ollama arrêté"
+        return f"🧠 {name}"
+
+    def _model_load_tick(self):
+        t0 = getattr(self, "_model_load_t0", 0.0)
+        if not t0 or getattr(self, "_model_state", "") != "loading":
+            return
+        sec = int(time.time() - t0)
+        try:
+            self.ollama_phase.config(text=self._phase_line())
+            detail = getattr(self, "_model_detail", "") or ""
+            if not self.busy and "télécharg" not in detail.lower():
+                self.status.config(text=f"● Modèle : chargement… {sec} s", fg=C["gold"])
+        except Exception:
+            pass
+        if sec >= self.MODEL_SLOW_S and not getattr(self, "_model_slow_said", False):
+            self._model_slow_said = True
+            name = self.current_model()
+            if not self.game and not self._same_model_id(name, MODEL):
+                self.say("sys", f"⏳ {name} met plus de {self.MODEL_SLOW_S} s à se charger : il déborde sans doute de "
+                                f"ta carte graphique (lent). Tu peux attendre, ou repasser à {MODEL} dans le sélecteur "
+                                "(🧠 Modèles, Ctrl+M, pour comparer).")
+        self.after(1000, self._model_load_tick)
+
+    @staticmethod
+    def _same_model_id(a: str, b: str) -> bool:
+        f = lambda x: (x or "").strip().lower() if ":" in (x or "") else (x or "").strip().lower() + ":latest"
+        return f(a) == f(b)
+
     def on_length_chosen(self, *_):
         """Réglage Style de réponse: Court / Équilibré / Développé (persisté)."""
         lab = self.lenvar.get()
@@ -8307,6 +8433,7 @@ class Padawan(tk.Tk):
     def on_model_chosen(self, *_):
         raw = self.mvar.get()
         name = model_id_from_label(raw)
+        self._model_before = None  # v39.6 : choix manuel = nouveau modèle par défaut
         self.model = name
         self.cfg["model"] = name
         savej(CFG_FILE, self.cfg)
@@ -8333,8 +8460,9 @@ class Padawan(tk.Tk):
                     clean.startswith("Ollama")
                     or clean.startswith("Modèle")
                     or clean.startswith("Téléchargement")
-                ):
-                    self.ollama_phase.config(text=clean, fg=color)
+                ):  # v39.8 : la ligne fine dit QUEL modèle (avant : même texte en double)
+                    self.ollama_phase.config(
+                        text=clean if clean.startswith("Téléchargement") else self._phase_line(), fg=color)
             except Exception:
                 pass
 
@@ -8811,6 +8939,7 @@ class Padawan(tk.Tk):
             return
 
         if self.mode == "chercher" or self.router.active == "chercheur":
+            self._atelier_suggest(q)  # v40.0 : « 💻 Ouvrir dans l'Atelier » si ça ressemble à du code
             self.run_search(q, self.search_source)
             return
         if not self.ready or not self.model_ready:
@@ -9331,6 +9460,407 @@ class Padawan(tk.Tk):
             log(f"prompts win: {e}")
             self.say("sys", f"📜 Prompts : ouverture impossible ({e})")
 
+    # ── v40.0 💻 Atelier ─────────────────────────────────────────────────────
+    def show_atelier(self, prefill: str = "", autosend: bool = False):
+        if _PA is None:
+            self.say("sys", "💻 Atelier : module padawan_atelier.py introuvable à côté de padawan39.py.")
+            return
+        if getattr(self, "game", None):
+            self.say("sys", "💻 Quitte d'abord le jeu en cours (bouton Quitter du jeu), puis Ctrl+K.")
+            return
+        a = getattr(self, "_atelier", None)
+        try:
+            if a is None or not a.winfo_exists():
+                hooks = {"models": self._atelier_models, "current": self.current_model,
+                         "switch": self._atelier_switch, "leave": self._atelier_left,
+                         "gen_opts": self.gen_opts, "ready": lambda: bool(self.ready and self.model_ready)}
+                a = self._atelier = _PA.Atelier(self, C, PRIVATE_DIR, base=OLLAMA, log=log, hooks=hooks)
+            a.enter(prefill=prefill, autosend=autosend)
+            self._ui_status("💻 Atelier", C["gold"])
+        except Exception as e:
+            log(f"atelier: {e}")
+            self.say("sys", f"💻 Atelier : ouverture impossible ({e})")
+
+    def _atelier_models(self) -> List[str]:
+        out = []
+        for lab in self.mods:
+            if MODEL_DL_MARK in lab:
+                continue
+            out.append(model_id_from_label(lab))
+        return out
+
+    def _atelier_switch(self, name: str) -> None:
+        """Bascule temporaire (jamais sauvée : _persist_cfg garde _model_before)."""
+        try:
+            name = self._model_local_id(name) or name
+            cur = self.current_model()
+            if not name or self._same_model_id(name, cur):
+                return
+            if getattr(self, "_model_before", None) is None:
+                self._model_before = cur
+            self._model_label_set(name)
+            self.model, self.model_ready = name, False
+            self._model_state = ""
+            threading.Thread(target=self.warm_model, args=(name,), daemon=True).start()
+        except Exception as e:
+            log(f"atelier switch: {e}")
+
+    def _atelier_left(self) -> None:
+        self._model_sync_prompt()  # retour au modèle d'avant (ou à celui du prompt actif)
+        try:
+            self.ent.focus_set()
+        except Exception:
+            pass
+        self._ui_status("Retour de l'Atelier.", C["dim"])
+
+    def _atelier_suggest(self, q: str) -> None:
+        if _PA is None:
+            return
+        try:
+            if not _PA.looks_like_code_request(q):
+                return
+            self.chat.configure(state="normal")
+            self.chat.insert("end", f"·  {clock()}\n💻 Ça ressemble à du code : l'Atelier (qwen2.5-coder, éditeur, aperçu) "
+                                    "fait ça bien mieux que la chasse web.  ", "sys")
+            b = tk.Button(self.chat, text="💻 Ouvrir dans l'Atelier avec cette demande", font=("Segoe UI", 9, "bold"),
+                          bg=C["gold"], fg="#1a1408", relief="flat", cursor="hand2", padx=8,
+                          command=lambda: (self.cancel_job() if self.busy else None,
+                                           self.show_atelier(prefill=q, autosend=True)))
+            self.chat.window_create("end", window=b)
+            self.chat.insert("end", "\n\n", "sys")
+            self.chat.configure(state="disabled")
+        except Exception as e:
+            log(f"atelier suggest: {e}")
+
+    def _code_block_btns(self, widget, code: str, lang: str = "") -> None:
+        """v40.0 : 📋 Copier (et 💻 Atelier) sous chaque bloc de code des réponses."""
+        if not code.strip():
+            return
+        try:
+            row = tk.Frame(widget, bg=C["panel"])
+            tk.Button(row, text="📋 Copier le code", font=("Segoe UI", 8), bg=C["card"], fg=C["fg"], relief="flat",
+                      cursor="hand2", padx=6, command=lambda: self._copy_text(code, "Code copié")).pack(side="left")
+            if _PA is not None:
+                tk.Button(row, text="💻 Ouvrir dans l'Atelier", font=("Segoe UI", 8), bg=C["card"], fg=C["gold"],
+                          relief="flat", cursor="hand2", padx=6,
+                          command=lambda: self._code_to_atelier(code, lang)).pack(side="left", padx=4)
+            widget.window_create("end", window=row)
+            widget.insert("end", "\n", "ai")
+        except Exception as e:
+            log(f"code btns: {e}")
+
+    def _copy_text(self, text: str, msg: str = "Copié") -> None:
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        self._ui_status(f"📋 {msg} ({len(text.splitlines())} lignes)", C["ok"])
+
+    def _code_to_atelier(self, code: str, lang: str = "") -> None:
+        self.show_atelier()
+        a = getattr(self, "_atelier", None)
+        if a is not None and a.winfo_exists() and not getattr(self, "game", None):
+            blk = (_PA.extract_blocks(f"```{lang}\n{code}\n```") or [{"lang": "text", "name": "", "code": code}])[0]
+            a._apply_block(blk, None)
+
+    # ── v40.0 copier / coller partout ────────────────────────────────────────
+    def _install_clipboard(self) -> None:
+        """Clic droit Couper/Copier/Coller/Tout sélectionner sur tous les Text/Entry, Ctrl+A,
+        Ctrl+C sur une zone en lecture seule (chat), Maj-lock compris."""
+        self._last_text_w = None
+
+        def remember(e):
+            self._last_text_w = e.widget
+        for cls in ("Text", "Entry", "TEntry", "TCombobox"):
+            self.bind_class(cls, "<Button-3>", self._ctx_menu, add="+")
+        self.bind_class("Text", "<ButtonRelease-1>", remember, add="+")
+        self.bind_class("Text", "<Control-a>", self._sel_all)
+        self.bind_class("Text", "<Control-A>", self._sel_all)
+        self.bind_class("Entry", "<Control-a>", self._sel_all)
+        self.bind_class("Entry", "<Control-A>", self._sel_all)
+        for cls in ("Text", "Entry"):
+            self.bind_class(cls, "<Control-C>", lambda e: (e.widget.event_generate("<<Copy>>"), "break")[1])
+            self.bind_class(cls, "<Control-X>", lambda e: (e.widget.event_generate("<<Cut>>"), "break")[1])
+            self.bind_class(cls, "<Control-V>", lambda e: (e.widget.event_generate("<<Paste>>"), "break")[1])
+        self.bind_all("<Control-c>", self._copy_fallback, add="+")
+        try:
+            self.ent.bind("<<Paste>>", self._ent_paste)
+            self.ent.bind("<Shift-Return>", lambda e: (self._composer(self.var.get()), "break")[1])
+        except Exception:
+            pass
+
+    def _sel_all(self, e):
+        w = e.widget
+        try:
+            if isinstance(w, tk.Text):
+                w.tag_add("sel", "1.0", "end-1c")
+            else:
+                w.select_range(0, "end")
+                w.icursor("end")
+        except Exception:
+            pass
+        return "break"
+
+    def _copy_fallback(self, e):
+        """Ctrl+C alors que le focus est ailleurs : copie la sélection de la dernière zone cliquée (chat)."""
+        try:
+            f = self.focus_get()
+            if f is not None:
+                try:
+                    if isinstance(f, tk.Text) and f.tag_ranges("sel"):
+                        return
+                    if isinstance(f, tk.Entry) and f.selection_present():
+                        return
+                except Exception:
+                    pass
+            w = getattr(self, "_last_text_w", None)
+            if w is not None and w.winfo_exists() and w.tag_ranges("sel"):
+                self._copy_text(w.get("sel.first", "sel.last"), "Sélection copiée")
+        except Exception:
+            pass
+
+    def _ctx_menu(self, e):
+        w = e.widget
+        try:
+            if isinstance(w, tk.Text):
+                idx = w.index(f"@{e.x},{e.y}")
+                for tg in w.tag_names(idx):
+                    if w.tag_bind(tg, "<Button-3>"):
+                        return  # lien : son propre clic droit (ouvrir dans le navigateur)
+            if str(w.bindtags()).find("AtelierKeys") >= 0 and isinstance(w, tk.Text) and w.bind("<Button-3>"):
+                return
+        except Exception:
+            pass
+        ro = False
+        try:
+            ro = str(w.cget("state")) in ("disabled", "readonly")
+        except Exception:
+            pass
+        m = tk.Menu(self, tearoff=0)
+        if not ro:
+            m.add_command(label="Couper", accelerator="Ctrl+X", command=lambda: w.event_generate("<<Cut>>"))
+        m.add_command(label="Copier", accelerator="Ctrl+C", command=lambda: self._ctx_copy(w))
+        if not ro:
+            m.add_command(label="Coller", accelerator="Ctrl+V", command=lambda: w.event_generate("<<Paste>>"))
+        m.add_separator()
+        m.add_command(label="Tout sélectionner", accelerator="Ctrl+A",
+                      command=lambda: self._sel_all(type("E", (), {"widget": w})()))
+        if isinstance(w, tk.Text):
+            m.add_command(label="📋 Copier tout", command=lambda: self._copy_text(w.get("1.0", "end-1c"), "Tout copié"))
+        try:
+            m.tk_popup(e.x_root, e.y_root)
+        finally:
+            m.grab_release()
+
+    def _ctx_copy(self, w):
+        try:
+            if isinstance(w, tk.Text):
+                if w.tag_ranges("sel"):
+                    self._copy_text(w.get("sel.first", "sel.last"), "Sélection copiée")
+            else:
+                w.event_generate("<<Copy>>")
+        except Exception:
+            pass
+
+    def _ent_paste(self, e):
+        """Collage de plusieurs lignes dans la barre : ouvre l'éditeur multiligne (rien n'est envoyé)."""
+        try:
+            clip = self.clipboard_get()
+        except Exception:
+            return None
+        if "\n" not in clip.strip("\r\n"):
+            return None
+        cur = self.var.get()
+        try:
+            if self.ent.selection_present():
+                a, b = self.ent.index("sel.first"), self.ent.index("sel.last")
+                cur = cur[:a] + cur[b:]
+                pos = a
+            else:
+                pos = self.ent.index("insert")
+        except Exception:
+            pos = len(cur)
+        self._composer(cur[:pos] + clip.replace("\r\n", "\n") + cur[pos:])
+        return "break"
+
+    def _composer(self, initial: str = "") -> None:
+        """Zone de saisie multiligne : Entrée = envoyer, Maj+Entrée = nouvelle ligne."""
+        d = tk.Toplevel(self)
+        d.title("✍ Message sur plusieurs lignes")
+        d.configure(bg=C["bg"])
+        d.transient(self)
+        w, h = 760, 380
+        try:
+            x = self.winfo_rootx() + (self.winfo_width() - w) // 2
+            y = self.winfo_rooty() + self.winfo_height() - h - 80
+            d.geometry(f"{w}x{h}+{max(0, x)}+{max(0, y)}")
+        except Exception:
+            d.geometry(f"{w}x{h}")
+        bar = tk.Frame(d, bg=C["bg"])
+        bar.pack(side="bottom", fill="x", padx=10, pady=8)
+        t = tk.Text(d, wrap="word", bg=C["input"], fg=C["fg"], insertbackground=C["cursor"], font=("Segoe UI", 11),
+                    relief="flat", padx=8, pady=6, undo=True)
+        t.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+        t.insert("1.0", initial)
+        t.focus_set()
+        t.mark_set("insert", "end-1c")
+
+        def go(e=None):
+            txt = t.get("1.0", "end-1c").strip()
+            d.destroy()
+            if txt:
+                self.var.set(txt)
+                self.send()
+            return "break"
+
+        def keep():
+            self.var.set(t.get("1.0", "end-1c").replace("\n", " ⏎ ").strip())
+            d.destroy()
+        t.bind("<Return>", go)
+        t.bind("<KP_Enter>", go)
+        t.bind("<Shift-Return>", lambda e: None)
+        d.bind("<Escape>", lambda e: d.destroy())
+        tk.Button(bar, text="Envoyer  (Entrée)", command=go, bg=C["gold"], fg="#1a1408", relief="flat",
+                  font=("Segoe UI", 10, "bold"), padx=14, pady=4, cursor="hand2").pack(side="right")
+        tk.Button(bar, text="Annuler", command=d.destroy, bg=C["card"], fg=C["fg"], relief="flat",
+                  font=("Segoe UI", 10), padx=10, pady=4, cursor="hand2").pack(side="right", padx=6)
+        if _PA is not None:
+            tk.Button(bar, text="💻 Envoyer à l'Atelier", command=lambda: (d.destroy(), self.show_atelier(
+                prefill=t.get("1.0", "end-1c").strip(), autosend=True)) if t.get("1.0", "end-1c").strip() else None,
+                      bg=C["card"], fg=C["gold"], relief="flat", font=("Segoe UI", 10), padx=10, pady=4,
+                      cursor="hand2").pack(side="left")
+        tk.Label(bar, text="Maj+Entrée = nouvelle ligne · Échap = fermer", bg=C["bg"], fg=C["dim"],
+                 font=("Segoe UI", 8)).pack(side="left", padx=8)
+
+    # ── v39.6 🧠 Modèles ─────────────────────────────────────────────────────
+    def show_models(self, tab: str = "machine"):
+        if _PM is None:
+            self.say("sys", "🧠 Modèles : module padawan_modeles.py introuvable.")
+            return
+        w = getattr(self, "_models_win", None)
+        try:
+            if w is not None and w.winfo_exists():
+                w.deiconify()
+                w.lift()
+                w.focus_force()
+                w.select_tab(tab)
+                return
+        except Exception:
+            pass
+        try:
+            self._models_win = _PM.ModelsWindow(self, C, os.path.join(PRIVATE_DIR, "modeles.json"),
+                                                tab=tab, base=OLLAMA, log=log)
+        except Exception as e:
+            log(f"models win: {e}")
+            self.say("sys", f"🧠 Modèles : ouverture impossible ({e})")
+
+    def current_model(self) -> str:
+        try:
+            return model_id_from_label(self.mvar.get())
+        except Exception:
+            return self.model
+
+    def gen_opts(self) -> Dict[str, Any]:
+        return gen_options()
+
+    def _model_label_set(self, name: str) -> None:
+        for lab in self.mods:
+            if model_id_from_label(lab) == name and MODEL_DL_MARK not in lab:
+                self.mvar.set(lab)
+                return
+        self.mods = [name] + [m for m in self.mods if model_id_from_label(m) != name]
+        try:
+            self.model_combo.config(values=self.mods)
+        except Exception:
+            pass
+        self.mvar.set(name)
+
+    def _model_local_id(self, name: str) -> str:
+        """Id exact du sélecteur correspondant à name (« dolphin-mistral » ↔ « dolphin-mistral:latest »), "" si absent."""
+        n = (name or "").strip().lower()
+        n2 = n if ":" in n else n + ":latest"
+        for lab in self.mods:
+            if MODEL_DL_MARK in lab:
+                continue
+            i = model_id_from_label(lab)
+            l = i.lower()
+            if l in (n, n2) or (l if ":" in l else l + ":latest") == n2:
+                return i
+        return ""
+
+    def _model_is_local(self, name: str) -> bool:
+        return bool(self._model_local_id(name))
+
+    def models_refresh_selector(self, select: Optional[str] = None) -> None:
+        """Relit /api/tags (thread) et met à jour le sélecteur (+ éditeur de prompts)."""
+        def work():
+            mods = models()
+            def apply():
+                cur = self.current_model()
+                self.mods = mods
+                try:
+                    self.model_combo.config(values=mods)
+                except Exception:
+                    pass
+                target = select or cur
+                for lab in mods:
+                    if model_id_from_label(lab) == target:
+                        self.mvar.set(lab)
+                        break
+                win = getattr(self, "_prompts_win", None)
+                try:
+                    if win is not None and win.winfo_exists():
+                        win._model_cb_refresh()
+                except Exception:
+                    pass
+            self.after0(apply)
+        threading.Thread(target=work, daemon=True).start()
+
+    def model_activate(self, name: str) -> None:
+        """⭐ Activer (panneau 🧠) : devient le modèle par défaut (sauvé dans la config)."""
+        self._model_label_set(name)
+        self.on_model_chosen()
+
+    def _model_target(self) -> str:
+        """Modèle voulu par le jeu en cours ou le prompt actif du rôle ("" = aucun)."""
+        try:
+            if self.game:
+                p = getattr(self, "_game_override", None) or self.prompts.get(self.game.get("pid", "")) or {}
+                return (p.get("model") or "").strip()
+            p = self.prompts.active_for(self.router.active)
+            return ((p or {}).get("model") or "").strip()
+        except Exception:
+            return ""
+
+    def _model_sync_prompt(self) -> None:
+        """v39.6 : bascule temporaire vers le modèle du prompt/jeu, ou retour au modèle d'avant.
+        Jamais sauvé dans la config : au prochain lancement, Chercheur + modèle par défaut."""
+        try:
+            want = self._model_target()
+            before = getattr(self, "_model_before", None)
+            cur = self.current_model()
+            if want:
+                want = self._model_local_id(want) or model_id_from_label(want)
+                if want == cur:
+                    return
+                if not self._model_is_local(want):
+                    self.say("sys", f"🧠 Le modèle « {want} » de ce prompt n'est pas installé — je garde {cur}. "
+                                    "Installe-le dans 🧠 Modèles (Ctrl+M).")
+                    return
+                if before is None:
+                    self._model_before = cur
+                self._model_label_set(want)
+                self.model, self.model_ready = want, False
+                threading.Thread(target=self.warm_model, args=(want,), daemon=True).start()
+                self.say("sys", f"🧠 Modèle du prompt : {want} (retour à {self._model_before} en quittant).")
+            elif before:
+                self._model_before = None
+                if before != cur:
+                    self._model_label_set(before)
+                    self.model, self.model_ready = before, False
+                    threading.Thread(target=self.warm_model, args=(before,), daemon=True).start()
+                    self.say("sys", f"🧠 Retour au modèle {before}.")
+        except Exception as e:
+            log(f"model sync: {e}")
+
     def _prompt_name_for(self, role: Optional[str] = None) -> str:
         role = role or self.router.active
         st = getattr(self, "prompts", None)
@@ -9387,6 +9917,7 @@ class Padawan(tk.Tk):
         ok = st.save()
         self._refresh_prompt_ui()
         self.say("sys", msg if ok else f"{msg} (⚠ {st.error})")
+        self._model_sync_prompt()  # v39.6 : modèle propre au prompt (ou retour au modèle d'avant)
         return roles
 
     def _prompt_quick_menu(self, event=None):
@@ -9719,6 +10250,7 @@ class Padawan(tk.Tk):
         st["builtin"] = p.get("builtin", "") or st.get("builtin", "")
         self._game_override = override
         self.game = st
+        self._model_sync_prompt()  # v39.6 : le jeu peut avoir son propre modèle
         if not override:
             self.prompts.data["game"] = p["id"]
             self.prompts.save()
@@ -9757,6 +10289,11 @@ class Padawan(tk.Tk):
             log(f"game panes: {e}")
         self._game_paint_header()
         self.input_tip.config(text=GAME_INPUT_TIP)
+        try:  # v39.8 : pas d'étapes de chasse périmées pendant un jeu
+            self.mission_clear()
+            self.mission_live.config(text="🎮 Mode jeu : pas de chasse web")
+        except Exception:
+            pass
         self.ent.focus_set()
 
     def _game_exit_ui(self):
@@ -9764,6 +10301,10 @@ class Padawan(tk.Tk):
             return
         self._game_ui_on = False
         self.game_wrap.pack_forget()
+        try:
+            self.mission_live.config(text="")
+        except Exception:
+            pass
         sp = getattr(self, "_game_saved_pack", {})
         if "_hunt_fr" in sp:
             self._hunt_fr.pack(**sp["_hunt_fr"])
@@ -9795,12 +10336,14 @@ class Padawan(tk.Tk):
             self.cancel_job()
         self._game_autosave()
         name = self.game.get("name", "")
+        self._game_pending = None  # v39.8
         self.game = None
         self._game_override = None
         self.prompts.data["game"] = ""
         self.prompts.save()
         self._game_exit_ui()
         self._refresh_prompt_ui()
+        self._model_sync_prompt()  # v39.6 : retour au modèle d'avant le jeu
         self.say("sys", f"🎮 « {name} » mis sur pause (sauvegarde auto). Padawan reprend son prompt et son rôle "
                         f"d'avant — rejoue quand tu veux : 🎮 Jouer.")
 
@@ -10056,6 +10599,8 @@ class Padawan(tk.Tk):
                 # seul le dernier menu est jouable
                 if n in ch and self._game_is_last_menu(idx):
                     self._game_pick(n)
+                else:  # v39.8 : jamais de clic muet
+                    self._game_flash("Ce choix n'est plus jouable (menu d'un tour passé) — utilise les boutons du bas.")
                 return "break"
 
     def _game_is_last_menu(self, idx: str) -> bool:
@@ -10128,13 +10673,26 @@ class Padawan(tk.Tk):
                 return "break"
         return None
 
+    def _game_flash(self, text: str, color: Optional[str] = None):
+        """v39.8 : retour visible quand un clic/touche ne peut pas être joué tout de suite."""
+        try:
+            self.game_hint.config(text="⚠ " + text, fg=color or GAME_COLORS["amber"])
+            self.after(6000, lambda: self.game_hint.config(fg=GAME_COLORS["dim"]))
+        except Exception:
+            pass
+
     def _game_pick(self, n: int):
         st = self.game
-        if not st or self.busy:
+        if not st:
             return
+        if getattr(self, "_game_pending", None):
+            return self._game_flash("Un choix attend déjà le modèle — patiente ou « ✖ Annuler ce choix ».")
+        if self.busy:
+            return self._game_flash("Le maître du jeu écrit encore… attends la fin (Échap = annuler).")
         ch = dict(st.get("choices") or [])
         if n not in ch:
-            return
+            self._game_set_choices(st.get("choices") or [])  # boutons périmés → on remet les bons
+            return self._game_flash(f"Le choix {n} n'est pas disponible à ce tour.")
         self._game_beep("pick")
         if st.get("phase") == "intro":
             return self._game_intro_pick(n)
@@ -10202,15 +10760,138 @@ class Padawan(tk.Tk):
         self._game_send(msg, display=disp)
 
     # ---- tours de jeu
+    # ── v39.8 : file d'attente pendant le chargement du modèle ───────────────
+    def _game_queue(self, text: str, display: Optional[str], count: bool):
+        self._game_pending = (text, display, count, time.time())
+        if not self._model_warming:
+            threading.Thread(target=self.warm_model, kwargs={"force_boot": not self.ready}, daemon=True).start()
+        self._game_wait_ui()
+        self.after(800, self._game_pending_poll)
+
+    def _game_wait_ui(self):
+        pend = getattr(self, "_game_pending", None)
+        if not pend or not self.game:
+            return
+        G = GAME_COLORS
+        name = self.current_model()
+        sec = int(time.time() - pend[3])
+        state = getattr(self, "_model_state", "")
+        fb = self._game_fallback_model()
+        bad = state in ("error", "down")
+        key = (name, bad, sec >= self.MODEL_SLOW_S, fb, pend[3])
+        lbl = getattr(self, "_game_wait_lbl", None)
+        if bad:
+            msg = f"✖ Le modèle {name} n'a pas pu se charger : {(getattr(self, '_model_detail', '') or 'échec')[:80]}"
+            col = G["bad"]
+        else:
+            msg = f"⏳ Le modèle {name} se charge… {sec} s — ton choix « {(pend[1] or pend[0])[:50]} » part dès qu'il est prêt."
+            if sec >= self.MODEL_SLOW_S:
+                msg += "  C'est long : ce modèle déborde sans doute de ta carte graphique."
+            col = G["amber"]
+        self.game_hint.config(text=f"⏳ En attente du modèle {name} ({sec} s)", fg=G["amber"])
+        try:  # même disposition → on ne met à jour que le texte (pas de clignotement des boutons)
+            if lbl is not None and lbl.winfo_exists() and getattr(self, "_game_wait_key", None) == key:
+                lbl.config(text=msg, fg=col)
+                return
+        except Exception:
+            pass
+        self._game_wait_key = key
+        for w in self.game_choices.winfo_children():
+            w.destroy()
+        bar = tk.Frame(self.game_choices, bg=G["bg"])
+        bar.pack(fill="x")
+        if state == "error" or (state == "down"):
+            msg = f"✖ Le modèle {name} n'a pas pu se charger : {(getattr(self, '_model_detail', '') or 'échec')[:80]}"
+            col = G["bad"]
+        else:
+            msg = f"⏳ Le modèle {name} se charge… {sec} s — ton choix « {(pend[1] or pend[0])[:50]} » part dès qu'il est prêt."
+            if sec >= self.MODEL_SLOW_S:
+                msg += "  C'est long : ce modèle déborde sans doute de ta carte graphique."
+            col = G["amber"]
+        self._game_wait_lbl = tk.Label(bar, text=msg, bg=G["bg"], fg=col, font=("Segoe UI", 11, "bold"), anchor="w",
+                                       justify="left", wraplength=max(400, self.game_wrap.winfo_width() - 40))
+        self._game_wait_lbl.pack(fill="x", padx=4, pady=(2, 4))
+        row = tk.Frame(bar, bg=G["bg"])
+        row.pack(fill="x")
+
+        def gb(text, cmd, tip, fg=None):
+            b = tk.Button(row, text=text, command=cmd, bg=G["btn"], fg=fg or G["fg"], activebackground=G["green"],
+                          activeforeground="#021006", relief="flat", bd=0, font=("Segoe UI", 11, "bold"),
+                          padx=12, pady=5, cursor="hand2", highlightthickness=1, highlightbackground=G["line"])
+            b.bind("<Enter>", lambda e, w=b: w.configure(bg=G["btnh"]))
+            b.bind("<Leave>", lambda e, w=b: w.configure(bg=G["btn"]))
+            self._tip(b, tip)
+            b.pack(side="left", padx=2, pady=2)
+            return b
+
+        if fb and (sec >= self.MODEL_SLOW_S or bad):
+            gb(f"⚡ Jouer avec {fb} (rapide)", lambda: self._game_use_fallback(fb),
+               f"Passer à {fb} pour ce jeu seulement — ton modèle par défaut revient en quittant le jeu.", G["green"])
+        if bad:
+            gb("🔁 Réessayer", lambda: threading.Thread(target=self.warm_model, kwargs={"force_boot": True},
+                                                       daemon=True).start(), "Relancer le chargement du modèle")
+        gb("✖ Annuler ce choix", self._game_cancel_pending, "Ne pas envoyer ce choix (tu pourras en refaire un)", G["amber"])
+
+    def _game_pending_poll(self):
+        pend = getattr(self, "_game_pending", None)
+        if not pend:
+            return
+        if not self.game:
+            self._game_pending = None
+            return
+        if self.ready and self.model_ready and not self.busy:
+            self._game_pending = None
+            self._game_wait_key = None
+            self.game_hint.config(fg=GAME_COLORS["dim"])
+            return self._game_send(pend[0], pend[1], pend[2])
+        self._game_wait_ui()
+        self.after(1000, self._game_pending_poll)
+
+    def _game_cancel_pending(self):
+        pend = getattr(self, "_game_pending", None)
+        self._game_pending = None
+        self._game_wait_key = None
+        st = self.game
+        if not st:
+            return
+        if not any(x.get("who") in ("you", "mj") for x in st.get("log") or []) and st.get("builtin") in GAME_META:
+            # rien n'a encore été joué : retour au choix du personnage
+            meta = GAME_META[st["builtin"]]
+            st["phase"], st["status"] = "intro", ""
+            st["choices"] = [(i, a["label"]) for i, a in enumerate(meta["archetypes"], 1)]
+            st["choices"].append((len(meta["archetypes"]) + 1, meta["custom"]))
+            self._game_update_pip()
+        self._game_set_choices(st.get("choices") or [])
+        self._game_flash("Choix annulé — rien n'a été envoyé.", GAME_COLORS["dim"])
+
+    def _game_fallback_model(self) -> str:
+        cur = self.current_model()
+        if self._same_model_id(cur, MODEL):
+            return ""
+        return self._model_local_id(MODEL)
+
+    def _game_use_fallback(self, name: str):
+        """Repli pour CE jeu : bascule temporaire (le modèle par défaut revient en quittant le jeu)."""
+        cur = self.current_model()
+        if getattr(self, "_model_before", None) is None:
+            self._model_before = cur
+        self._model_label_set(name)
+        self.model, self.model_ready = name, False
+        self._model_state = ""
+        threading.Thread(target=self.warm_model, args=(name,), daemon=True).start()
+        self._game_sys(f"⚡ Ce jeu passe à {name} (rapide). {self._model_before} revient quand tu quittes le jeu.")
+        self._game_wait_ui()
+
     def _game_send(self, text: str, display: Optional[str] = None, count: bool = True):
         st = self.game
-        if not st or self.busy:
+        if not st:
             return
+        if self.busy:
+            return self._game_flash("Le maître du jeu écrit encore… attends la fin (Échap = annuler).")
         if st.get("phase") == "intro":
             return self._game_intro_pick(0, custom_text=text)
         if not self.ready or not self.model_ready:
-            if not self._ensure_model_ready_or_kick():
-                return
+            return self._game_queue(text, display, count)  # v39.8 : le choix part dès que le modèle est prêt
         dice = random.randint(1, 20) if self._game_dice else 0
         st["_dice"] = dice
         user_core = text + game_dice_hint(dice)
@@ -11050,7 +11731,7 @@ class Padawan(tk.Tk):
 
     def _persist_cfg(self, *, light: bool = False):
         try:
-            self.cfg["model"] = model_id_from_label(self.mvar.get())
+            self.cfg["model"] = getattr(self, "_model_before", None) or model_id_from_label(self.mvar.get())
             self.cfg["role"] = self.router.active
             self.cfg["hunt_mode"] = self.hunt_mode
             self.cfg["search_source"] = getattr(self, "search_source", "web")
@@ -11087,6 +11768,11 @@ class Padawan(tk.Tk):
         self._stop_pulse()
         self._stop_mission_pulse()
         self._stop_mission_elapsed()
+        try:  # v40.0 : arrête les programmes / serveurs d'aperçu lancés par l'Atelier
+            if getattr(self, "_atelier", None) is not None:
+                self._atelier.shutdown()
+        except Exception:
+            pass
         self._persist_cfg(light=False)
         stop_tray(self)
         try:
@@ -11116,6 +11802,16 @@ if __name__ == "__main__":
         _pt.install(app, "padawan", C, roles={"fg": "TEXT"})
     except Exception:
         pass
+    try:  # v39.6 : entrée « 🧠 Modèles » dans la barre de menus
+        _mn = app.cget("menu")
+        _mb = app.nametowidget(_mn) if _mn else None
+        if _mb is None:
+            _mb = tk.Menu(app)
+            app.config(menu=_mb)
+        _mb.add_command(label="🧠 Modèles (Ctrl+M)", command=app.show_models)
+        _mb.add_command(label="💻 Atelier (Ctrl+K)", command=app.show_atelier)  # v40.0
+    except Exception as _e:
+        log(f"menu modeles: {_e}")
     try:
         app.mainloop()
     except Exception as e:

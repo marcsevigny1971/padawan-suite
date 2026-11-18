@@ -63,7 +63,7 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
 
 <header class="hero">
  <div class="wrap">
-  <span class="badge">Projet Padawan · Suite 1.4.0 (2026.11.17) · Fait au Québec</span>
+  <span class="badge">Projet Padawan · Suite 1.5.0 (2026.11.18) · Fait au Québec</span>
   <h1>Padawan Suite</h1>
   <p class="lead">Une seule icône près de l'horloge. Derrière elle : un assistant IA 100&nbsp;% local, un archiveur de vidéos et de pages web, un carnet de recherche, un journal de bord privé, un tiroir de 669 outils Windows, une messagerie d'équipe, des serveurs web à la demande, une machine à remonter le temps (C64, DOS, Win98)… et tout ça <b>gratuit, en français, sans compte et sans droits d'administrateur</b>.</p>
   <div class="cta"><a class="btn main" href="#telecharger">⬇ Télécharger</a><a class="btn" href="#outils">Voir les 12 outils</a><a class="btn" href="#pourquoi">Pourquoi c'est un must</a></div>
@@ -179,6 +179,8 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
     <li>Conclusions structurées « En bref / À retenir / Sources » avec liens cliquables.</li>
     <li>Mémoire, tâches et missions ; notifications Windows ; défilement intelligent.</li>
     <li>Thèmes Norton / Sombre / Clair, plein écran ; <kbd>Échap</kbd> ou X = cacher dans le tray.</li>
+    <li><b>💻 Atelier</b> (<kbd>Ctrl</kbd>+<kbd>K</kbd>) : mode programmeur avec éditeur à onglets coloré, aperçu web auto-rechargé, Python exécuté, diff avant d'écraser (+ .bak) et déploiement dossier / FTP / SFTP. 📋 Copier/coller partout.</li>
+    <li><b>🧠 Modèles</b> (<kbd>Ctrl</kbd>+<kbd>M</kbd>) : diagnostic du PC, catalogue, installation en un clic et banc d'essai des modèles Ollama.</li>
    </ul></div>
    <div><h4>Cas d'usage</h4><ul class="uc">
     <li>Rédiger ou reformuler un courriel délicat sans coller de contenu confidentiel dans un service en ligne.</li>
@@ -446,9 +448,9 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
  <p class="sub" style="margin-top:18px">Désinstallation : <code>Desinstaller.bat</code> retire raccourcis et démarrage automatique sans toucher à tes données. Configuration conseillée : Windows 10/11, 8 Go de RAM (16 Go pour l'IA locale confortable).</p>
  <div id="verifier" class="sub" style="margin-top:14px"><b>🛡️ Vérifier le fichier avant de l'ouvrir (bon réflexe !)</b><br>
  🔍 Dépose-le sur <a href="https://www.virustotal.com/">VirusTotal</a> pour le faire analyser par des dizaines d'antivirus.<br>
- 🔑 Dans PowerShell : <code>Get-FileHash .\Padawan-Setup.exe</code>, puis compare l'empreinte SHA256 (version 1.4.0) :<br>
- <code>Padawan-Setup.exe</code> : <code style="word-break:break-all">266c0500ae41ed0235bba2cf82ef65e004f5b562dafeef252aec33359ed55ede</code><br>
- <code>Padawan-Projet.zip</code> : <code style="word-break:break-all">2cf165d83f742b71429f4fcd5a20f3541ab713d3cbce536d152fe9fd26eb059b</code><br>
+ 🔑 Dans PowerShell : <code>Get-FileHash .\Padawan-Setup.exe</code>, puis compare l'empreinte SHA256 (version 1.5.0) :<br>
+ <code>Padawan-Setup.exe</code> : <code style="word-break:break-all">e0e95c85995ba044c18f60d46ebb1a457035e622b9f73181fb9558110e241c36</code><br>
+ <code>Padawan-Projet.zip</code> : <code style="word-break:break-all">ea09fbaf9064f5de714372a051b7795e52f2332d9b2a9bce9d4be1f46f3d5be5</code><br>
  📖 Le code de l'installateur est ouvert et lisible <a href="https://github.com/marcsevigny1971/padawan-suite">sur GitHub</a>.</div>
 </section>
 
@@ -471,8 +473,8 @@ footer{padding:50px 0;text-align:center;color:var(--mut);border-top:1px solid va
 <section id="telecharger">
  <h2><small>Téléchargement</small>Prends-la maintenant</h2>
  <div class="grid">
-  <div class="mini" style="border-color:var(--teal)"><span class="ico">⬇️</span><h3>Padawan-Setup.exe <span class="pill">recommandé</span></h3><p>Installateur Windows, par utilisateur, sans droits admin.<br>3,43 Mo (3 593 864 octets) · version du 24 oct. 2026</p><p style="margin-top:12px"><a class="btn main" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Setup.exe" download>Télécharger l'installateur</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : ED3916E2C45EC85018235A4214C92E14E9A65D8E4DAB61F4F4A9A48F961F2EBF</p></div>
-  <div class="mini"><span class="ico">🗜️</span><h3>Padawan-Projet.zip <span class="pill">secours</span></h3><p>Même contenu : « Extraire tout » puis <code>INSTALLER.bat</code>.<br>1,48 Mo (1 555 634 octets) · version du 24 oct. 2026</p><p style="margin-top:12px"><a class="btn" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Projet.zip" download>Télécharger le ZIP</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : DAD0DE02B9A98CA611A1552799ACF24504BE1DF2798BD67AD390E6B46C7CC929</p></div>
+  <div class="mini" style="border-color:var(--teal)"><span class="ico">⬇️</span><h3>Padawan-Setup.exe <span class="pill">recommandé</span></h3><p>Installateur Windows, par utilisateur, sans droits admin.<br>3,78 Mo (3 960 218 octets) · version 1.5.0 du 18 nov. 2026</p><p style="margin-top:12px"><a class="btn main" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Setup.exe" download>Télécharger l'installateur</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : E0E95C85995BA044C18F60D46EBB1A457035E622B9F73181FB9558110E241C36</p></div>
+  <div class="mini"><span class="ico">🗜️</span><h3>Padawan-Projet.zip <span class="pill">secours</span></h3><p>Même contenu : « Extraire tout » puis <code>INSTALLER.bat</code>.<br>1,84 Mo (1 928 529 octets) · version 1.5.0 du 18 nov. 2026</p><p style="margin-top:12px"><a class="btn" href="https://github.com/marcsevigny1971/padawan-suite/releases/latest/download/Padawan-Projet.zip" download>Télécharger le ZIP</a></p><p style="font-size:.75rem;word-break:break-all;margin-top:10px">SHA256 : EA09FBAF9064F5DE714372A051B7795E52F2332D9B2A9BCE9D4BE1F46F3D5BE5</p></div>
   <div class="mini"><span class="ico">🌐</span><h3>Le site</h3><p>Tout le reste des projets est sur <a href="https://marcsevigny.ca/">marcsevigny.ca</a>. La suite Padawan se trouve <b>tout en bas de la page, dans la section Padawan</b>.</p><p style="margin-top:12px"><a class="btn" href="https://marcsevigny.ca/">Visiter marcsevigny.ca</a></p></div>
  </div>
  <p class="sub" style="margin-top:14px">Les mêmes fichiers sont aussi offerts sur <a href="https://marcsevigny.ca/FTP_HOME/SECTION%20PYTHON/Projet%20Padawan/PRESENTATION-PADAWAN.html">marcsevigny.ca</a>.<!--mirror--></p>
