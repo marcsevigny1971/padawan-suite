@@ -472,6 +472,19 @@ class _ArchiveurAppPartie2:
                 continue
             if not re.match(r"^https?://", u, re.I):
                 u = "https://" + u
+            u0 = u
+            u, note = resolve_media_url(u)  # v5.1
+            if note:
+                self.log("🔎 " + note)
+                try:
+                    self.status.set("🔎 " + note)
+                    if not self._url_ph:
+                        cur = self.url_text.get("1.0", "end-1c")
+                        if u0 in cur or u0.replace("https://", "", 1) in cur:
+                            self.url_text.delete("1.0", "end")
+                            self.url_text.insert("1.0", cur.replace(u0, u))
+                except Exception:
+                    pass
             k = normalize_url(u)
             self._clip_seen.add(k)
             if k in seen:

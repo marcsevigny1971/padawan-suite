@@ -596,6 +596,9 @@ class _ArchiveurAppPartie1:
             ("online", "▶ Lecteur en ligne", self.embed_play, False,
              "Lecteur OFFICIEL de la plateforme (YouTube, Vimeo, TikTok, Spotify, SoundCloud, Twitch…) dans une\n"
              "petite fenêtre propre — Ctrl+L. Contenu protégé (Tubi, Netflix…) : ouvre le site officiel."),
+            ("embed", "🧩 Embed ▾", lambda: self._post_menu(self._act_btns["embed"], self._build_embed_menu()), False,
+             "Intégrer la vidéo dans une page web :\n• code iframe YouTube officiel (copié)\n"
+             "• lecteur local lecteur.html (la vidéo archivée) + code à copier"),
             ("rec", "🎥 Enregistrer", self.record_screen, True,
              "Enregistrer l'écran (CaptureScreen) — Ctrl+Maj+E.\n"
              "Tout l'écran, une fenêtre ou une zone, avec le son, le micro, la webcam, le dessin à l'écran…\n"
@@ -971,11 +974,13 @@ class _ArchiveurAppPartie1:
             os.makedirs(self.archive_root_path(), exist_ok=True)
         except Exception as e:
             self.log(f"Racine inaccessible: {e}")
-        self.log(f"Archiveur v{APP_FILE_VER} — racine: {self.archive_root_path()}")
+        self.log(f"Archiveur v{APP_SUB_VER} — racine: {self.archive_root_path()}")
         ff = find_ffmpeg()
         self.log(f"ffmpeg: {ff if ff else 'non trouvé'}")
         if not self._smoke:
             ensure_ytdlp(self.log, ask_install=bool(self.cfg.get("ask_ytdlp_install", True)), parent=self)
+            threading.Thread(target=lambda: ytdlp_auto_update(lambda m: self.ui(lambda mm=m: self.log(mm))),
+                             daemon=True).start()  # v5.1 : yt-dlp à jour 1×/semaine (YouTube change souvent)
 
         def _ff_job():
             ok = ensure_ffmpeg(self.log, ask_install=False, parent=None,

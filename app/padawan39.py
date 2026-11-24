@@ -73,6 +73,14 @@ try:  # v40.0 💻 Atelier (facultatif aussi)
     import padawan_atelier as _PA
 except Exception:  # pragma: no cover
     _PA = None
+try:  # v41.0 🎨 Studio d'images (facultatif : sans lui, pas de Studio ni d'images générées dans les jeux)
+    import padawan_studio as _PS
+except Exception:
+    _PS = None
+try:  # v40.2 🖼 illustrations ANSI des jeux (facultatif : sans lui, les jeux gardent l'art ASCII)
+    import padawan_ansi as _ANSI
+except Exception:  # pragma: no cover
+    _ANSI = None
 from padawan_tray import (
     TRAY_AVAILABLE,
     ensure_windows_startup,
@@ -120,7 +128,7 @@ PROMPT_MODEL_DEFAULT = "(modèle courant)"  # v39.6
 MODEL_DL_MARK = " (à télécharger)"
 APP_NAME = "Padawan"
 APP_FILE_VER = 39  # v39.1: 🧹 Nouvelle conversation (Ctrl+L / Ctrl+Shift+N), Historique
-APP_SUB_VER = "40.0"  # v40.0: 💻 Atelier (mode programmeur : chat + éditeur à onglets coloré, aperçu HTML auto-rechargé, Python exécuté, 🩺 corriger l'erreur, diff accepter/rejeter, déploiement Python/Web/FTP-SFTP avec .bak, projets, modèles, snippets) + copier/coller partout (📋 sur les blocs de code, clic droit, collage multiligne). v39.8: jeu — un clic n'est jamais perdu (file d'attente pendant le chargement du modèle, repli dolphin3), statut de chargement chronométré, Mission vidée en mode jeu. v39.7: 🧠 recommandés cliquables (⬇ Installer / ⭐ Activer) + bouton par ligne au catalogue. v39.6: 🧠 Modèles (diagnostic machine, catalogue, installation, banc d'essai) + modèle par prompt. v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
+APP_SUB_VER = "41.2"  # v41.2: 💻 Atelier / 🎨 Studio s'ouvrent aussi en plein jeu (le jeu est mis sur pause, modèle d'avant rétabli) ; Atelier : 📎 Insérer un fichier (Ctrl+I, glisser-déposer). v41.1: v41.1: jeux — jamais avec un modèle « coder » (bascule temporaire dolphin3:8b, retour en quittant, jamais sauvé) ; réponse sans choix ou coupée → relance auto « termine et propose des choix », sinon ▶ Continuer + choix de secours. v41.0: 🎨 Studio d'images (ComfyUI local + SD-Turbo, démarré à la demande sur 127.0.0.1 : idée FR → prompt EN par le modèle courant, 6 styles en un clic, graine, variations, image + art ANSI côte à côte, .png/.ans/.html, galerie, jonglage mémoire graphique avec Ollama, module padawan_studio.py) + jeux 🖼 Images : Banque / Générées / Fixes / NON (scène dessinée en arrière-plan, cache par scène, repli banque). v40.2: 🖼 illustrations ANSI originales dans les jeux (31 scènes : Fallout Pip-Boy vert, Donjon 16 couleurs DOS, Polar film noir ; détection de scène, effet CRT, clic = agrandir, bascule 🖼 Images, export HTML). v40.1: 🖼→ANSI dans l'Atelier (image → art ANSI/ASCII : 16 couleurs DOS ▀▄, truecolor, ASCII, Pip-Boy, ░▒▓█ ; .ans + SAUCE, .txt, HTML rétro, insérer dans l'onglet, vraie console ; module padawan_ansi.py, API image_to_ansi() pour les jeux). v40.0: 💻 Atelier (mode programmeur : chat + éditeur à onglets coloré, aperçu HTML auto-rechargé, Python exécuté, 🩺 corriger l'erreur, diff accepter/rejeter, déploiement Python/Web/FTP-SFTP avec .bak, projets, modèles, snippets) + copier/coller partout (📋 sur les blocs de code, clic droit, collage multiligne). v39.8: jeu — un clic n'est jamais perdu (file d'attente pendant le chargement du modèle, repli dolphin3), statut de chargement chronométré, Mission vidée en mode jeu. v39.7: 🧠 recommandés cliquables (⬇ Installer / ⭐ Activer) + bouton par ligne au catalogue. v39.6: 🧠 Modèles (diagnostic machine, catalogue, installation, banc d'essai) + modèle par prompt. v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
 _APP_FILE_VER_OLD = 39  # version fichier seulement — jamais affichée comme titre produit
 ROLE_HIST_CAP = 80
 CACHE_TTL = 3 * 3600
@@ -3406,7 +3414,9 @@ _ART_ALIAS = {"vault": "abri", "ruins": "ruines", "ruin": "ruines", "ville": "ru
               "butin": "coffre", "bridge": "pont", "office": "bureau", "alley": "ruelle", "club": "jazz",
               "bar": "taverne", "phone": "telephone", "car": "voiture", "auto": "voiture", "corps": "cadavre",
               "quai": "port", "dragon": "monstre", "skeleton": "squelette", "treasure": "tresor",
-              "door": "porte", "stairs": "escalier", "salle": "couloir", "auberge": "taverne", "bbs": "connexion"}
+              "door": "porte", "stairs": "escalier", "salle": "couloir", "auberge": "taverne", "bbs": "connexion",
+              "lac": "barrage", "riviere": "barrage", "cabane": "foret", "sucre": "foret", "erabliere": "foret",
+              "entree": "porte", "interrogatoire": "police", "chest_dj": "tresor"}
 
 
 def _art_norm(s: str) -> str:
@@ -3422,8 +3432,185 @@ GAME_ADN_LINE = (
 )
 FENCE = "`" * 3
 
+_SCENE_EXTRA = {"fallout": ("lac", "cabane"), "donjon": ("coffre",), "polar": ()}  # v40.2 : scènes illustrées
+
+
 def _scene_words(fam: str) -> str:
-    return ", ".join(GAME_ART.get(fam, {}).keys())
+    keys = list(GAME_ART.get(fam, {}).keys())
+    keys += [k for k in _SCENE_EXTRA.get(fam, ()) if k not in keys]
+    return ", ".join(keys)
+
+
+# ── v40.2 : 🖼 illustrations ANSI originales (banque padawan_jeux_images.json.gz, à côté de padawan39.py) ──
+# Images originales (style rétro, aucune image de franchise) converties par padawan_ansi : Pip-Boy vert (Fallout),
+# 16 couleurs DOS (Donjon), film noir gris + accents (Polar). Le choix de l'image : mot-clé SCÈNE:, titre,
+# LIEU du Pip-Boy et mots de la narration (FR + un peu d'anglais). Pas de répétition tant que la scène ne change pas.
+GAME_IMG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "padawan_jeux_images.json.gz")
+GAME_IMG_ALIAS: Dict[str, Dict[str, str]] = {
+    "fallout": {"vault": "abri", "bunker": "abri", "pillard": "combat", "raider": "combat", "fight": "combat",
+                "radio": "ruines", "chateau": "ruines", "ville": "ruines", "city": "ruines", "ruins": "ruines",
+                "ruin": "ruines", "orignal": "foret", "moose": "foret", "forest": "foret", "bois": "foret",
+                "barrage": "lac", "dam": "lac", "pont": "lac", "bridge": "lac", "riviere": "lac", "river": "lac",
+                "lake": "lac", "fleuve": "lac", "nuka": "marche", "market": "marche", "stade": "marche",
+                "marchand": "marche", "caravane": "marche", "camp": "campement", "feu": "campement",
+                "subway": "metro", "tunnel": "metro", "cave": "metro", "egout": "metro", "ghoul": "goule",
+                "road": "route", "desert": "route", "autoroute": "route", "sucre": "cabane", "erabliere": "cabane",
+                "coffre": "", "butin": "", "chest": ""},
+    "polar": {"taverne": "jazz", "bar": "jazz", "club": "jazz", "cabaret": "jazz", "telephone": "bureau",
+              "phone": "bureau", "office": "bureau", "alley": "ruelle", "car": "voiture", "auto": "voiture",
+              "corps": "cadavre", "crime": "cadavre", "quai": "port", "docks": "port",
+              "interrogatoire": "police", "poste": "police"},
+    "donjon": {"connexion": "titre", "bbs": "titre", "modem": "titre", "entree": "porte", "door": "porte",
+               "salle": "couloir", "dragon": "monstre", "skeleton": "squelette", "treasure": "tresor",
+               "chest": "coffre", "stairs": "escalier", "auberge": "taverne"},
+}
+# (clé, motif) — appliqués sur un texte en minuscules SANS accents
+GAME_IMG_RULES: Dict[str, Tuple[Tuple[str, str], ...]] = {
+    "fallout": (
+        ("abri", r"\babri\b|\bvault|porte (blindee|de l.abri|d.acier)|bunker|refuge souterrain"),
+        ("cabane", r"cabane a sucre|erabl|sirop|tire sur la neige|sucrerie|maple"),
+        ("goule", r"\bgoules?\b|ghoul|zombie|chair (pourrie|decomposee)"),
+        ("mutant", r"super.?mutant|\bmutants?\b|\bbrutes?\b|colosse"),
+        ("robot", r"\brobots?\b|androide|\bdroide|protectron|tourelle|automate"),
+        ("marche", r"marchand|caravane|commer[cs]|\btroc|\bvend(eur|euse|re|s|u)?\b|boutique|\bmarche\b|trader|merchant"),
+        ("campement", r"campement|feu de camp|bivouac|\bcamp\b|\btentes?\b|autour du feu"),
+        ("metro", r"\bmetro|tunnel|egout|souterrain|\bcaves?\b|grotte|caverne|\bstation\b|subway|sewer"),
+        ("combat", r"\bcombat|attaqu|\btir(e|es|ent|ez)?\b|coup de feu|degats|\bfrapp|esquiv|\bvats\b|"
+                   r"ennemi|pillard|raider|ripost|\bballes?\b|\bfight|shoot|\bpv -|initiative"),
+        ("lac", r"\blacs?\b|riviere|fleuve|saint-laurent|\brive\b|berge|canot|barrage|\bpont\b|lake|river"),
+        ("foret", r"\bforet|\bbois\b|\barbres?\b|epinette|\bsapins?\b|laurentide|forest|\btrees?\b|orignal|moose"),
+        ("ruines", r"\bruine|decombre|immeuble|centre-ville|downtown|gratte-ciel|eglise|clocher|\brue\b|"
+                   r"sherbrooke|montreal|\bquebec\b|\bville\b|\bcity\b|ruins|quartier"),
+        ("route", r"\broute|autoroute|desert|\bplaine|\bchemin\b|highway|\broad\b|wasteland|terres desolees|poussiere|"
+                  r"\bdehors\b|exterieur|\bsurface\b|\bnature\b|horizon|\bsoleil\b"),
+    ),
+    "polar": (
+        ("cadavre", r"cadavre|\bcorps\b|victime|meurtr|scene (du|de) crime|assassin|\bmorte?\b|body|murder"),
+        ("police", r"\bpolice|\bflics?\b|poste de|interrogatoire|inspecteur|sergent|cellule|\bsuspect|\bcops?\b"),
+        ("jazz", r"\bjazz|\bclub\b|cabaret|\bbar\b|taverne|chanteuse|saxo|barman|comptoir|nightclub"),
+        ("voiture", r"voiture|\bauto\b|automobile|\bford\b|chevrolet|berline|\bphares\b|\bvolant\b|\btaxi|filature"),
+        ("port", r"\bport\b|\bquais?\b|\bdocks?\b|cargo|navire|bateau|entrepot|\bsilos?\b|harbou?r"),
+        ("bureau", r"\bbureau|agence|dossier|machine a ecrire|telephone|\bclient|\boffice\b|store venitien"),
+        ("ruelle", r"ruelle|\bpluie|averse|trottoir|\brue\b|alley|\brain\b|lampadaire|escalier de secours"),
+    ),
+    "donjon": (
+        ("monstre", r"dragon|monstre|\btrolls?\b|\borcs?\b|\bogres?\b|gobelin|araignee|\bbete|wyrm|monster|goblin"),
+        ("squelette", r"squelette|mort.vivant|zombie|crypte|\btombe|ossement|liche|skeleton|undead|crypt"),
+        ("tresor", r"tresor|pieces? d.or|\bor\b|gemme|joyau|couronne|treasure|\bgold\b|\bloot"),
+        ("coffre", r"\bcoffre|serrure|cadenas|crochet|\bchest\b|\block"),
+        ("taverne", r"taverne|auberge|aubergiste|biere|hydromel|tavern|\binn\b"),
+        ("escalier", r"escalier|\bdescend|niveau inferieur|\bstairs"),
+        ("porte", r"\bentree|\bportes?\b|portail|\bgrille|\bseuil|entrance|\bgate|\bdoor"),
+        ("couloir", r"couloir|corridor|galerie|passage|\bsalle|labyrinthe|\bhall\b"),
+    ),
+}
+# scènes « fortes » (créature, lieu très typé) : un seul mot de la narration suffit
+GAME_IMG_STRONG = {"abri", "cabane", "goule", "mutant", "robot", "marche", "monstre", "squelette", "tresor", "coffre",
+                   "taverne", "cadavre", "jazz", "police", "port"}
+_IMG_RX: Dict[str, List[Tuple[str, Any]]] = {}
+
+
+def _img_fold(t: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFKD", (t or "").lower())
+    return "".join(c for c in t if not unicodedata.combining(c)).replace("’", "'")
+
+
+def game_img_bank() -> Optional[Dict[str, Any]]:
+    """La banque d'images (None si padawan_ansi ou le fichier manque)."""
+    if _ANSI is None or not os.path.isfile(GAME_IMG_FILE):
+        return None
+    try:
+        b = _ANSI.load_bank(GAME_IMG_FILE)
+    except Exception as e:  # pragma: no cover
+        log(f"game_img_bank: {e}")
+        return None
+    return b if b.get("games") else None
+
+
+def game_img_family(builtin: str) -> str:
+    fam = GAME_ART_FAMILY.get(builtin or "", "")
+    b = game_img_bank()
+    return fam if (b and fam in b["games"]) else ""
+
+
+def game_img_pick(builtin: str, scene: str = "", title: str = "", text: str = "", lieu: str = "", prev: str = "") -> str:
+    """Clé d'image pour une réponse du MJ ("" si rien de clair). Poids : SCÈNE: 6, titre 3, LIEU 3, narration 1-2.
+    Les petits modèles répètent souvent le même mot SCÈNE: : s'il est identique à l'image précédente (prev),
+    il ne pèse plus que 2 et la narration peut l'emporter."""
+    fam = game_img_family(builtin)
+    if not fam:
+        return ""
+    scenes = game_img_bank()["games"][fam].get("scenes", {})
+    score: Dict[str, float] = {}
+    k = _art_norm(scene)
+    if k:
+        k2 = k if k in scenes else GAME_IMG_ALIAS.get(fam, {}).get(k, "")
+        if not k2 and len(k) >= 4:
+            k2 = next((kk for kk in scenes if kk != "titre" and (kk in k or k in kk or kk[:4] == k[:4])), "")
+        if k2 in scenes and k2 != "titre":
+            score[k2] = 2.0 if (prev and k2 == prev) else 6.0
+    rx = _IMG_RX.get(fam)
+    if rx is None:
+        rx = _IMG_RX[fam] = [(kk, re.compile(p)) for kk, p in GAME_IMG_RULES.get(fam, ()) if kk in scenes]
+    body = _img_fold(re.sub(r"(?m)^\s*\d+\s*[.)].*$", " ", text or "")[:1400])  # sans les choix proposés
+    t_title, t_lieu = _img_fold(title), _img_fold(lieu)
+    for kk, r in rx:
+        sc = (3.0 * len(r.findall(t_title)) + 3.0 * min(2, len(r.findall(t_lieu)))
+              + (2.0 if kk in GAME_IMG_STRONG else 1.0) * min(4, len(r.findall(body))))
+        if sc:
+            score[kk] = score.get(kk, 0.0) + sc
+    if not score:
+        return ""
+    best = max(score.items(), key=lambda kv: kv[1])
+    return best[0] if best[1] >= 2 else ""
+
+
+def game_img_plan(st: Dict[str, Any], cache: Optional[Dict[Any, str]] = None) -> Dict[int, str]:
+    """{index du journal: clé d'image} — l'image change seulement quand la scène change (ou un nouveau LIEU
+    après quelques tours). -1 = image-titre en tête quand la partie n'a pas d'écran d'intro."""
+    bi = st.get("builtin", "")
+    fam = game_img_family(bi)
+    if not fam:
+        return {}
+    g = game_img_bank()["games"][fam]
+    scenes, fb = g.get("scenes", {}), g.get("fallback", "")
+    plan: Dict[int, str] = {}
+    log_ = st.get("log") or []
+    last, last_lieu, since = "", "", 0
+    if not any(e.get("who") == "intro" for e in log_) and "titre" in scenes:
+        plan[-1] = last = "titre"
+    for i, e in enumerate(log_):
+        who, text = e.get("who"), e.get("text", "") or ""
+        if who == "intro":
+            if "titre" in scenes:
+                plan[i] = last = "titre"
+            continue
+        if who != "mj":
+            continue
+        ck = (bi, text, e.get("status", ""), last)
+        k = cache.get(ck) if cache is not None else None
+        lieu = ""
+        try:
+            lieu = game_fields(e.get("status", "") or text).get("LIEU", "") or game_fields(text).get("LIEU", "")
+        except Exception:
+            pass
+        if k is None:
+            gp = game_parse(text)
+            k = game_img_pick(bi, gp.get("scene", ""), gp.get("title", ""), text, lieu, prev=last)
+            if cache is not None:
+                if len(cache) > 600:
+                    cache.clear()
+                cache[ck] = k
+        since += 1
+        if not k and last in ("", "titre") and fb in scenes:
+            k = fb
+        ln = _art_norm(lieu)[:40]
+        if k and (k != last or (ln and last_lieu and ln != last_lieu and since >= 3)):
+            plan[i], last, since = k, k, 0
+        if ln:
+            last_lieu = ln
+    return plan
 
 
 GAME_FALLOUT_TEXT = "\n".join([
@@ -3721,6 +3908,32 @@ def game_is_art_line(line: str) -> bool:
     return sym >= 3 and sym >= letters
 
 
+CODE_MODEL_RX = re.compile(r"coder|starcoder|codellama|codegemma|codestral|codeqwen|deepseek-coder|(^|[^a-z])code([^a-z]|$)", re.I)
+
+
+def is_code_model(name: str) -> bool:
+    """v41.1 : modèle spécialisé code (mauvais maître du jeu)."""
+    return bool(CODE_MODEL_RX.search(name or ""))
+
+
+GAME_END_RX = re.compile(r"[.!?…»\")\]*_~]\s*$")
+GAME_FALLBACK_CHOICES = [(1, "▶ Continuer"), (2, "Regarder autour de moi"),
+                         (3, "Fouiller les environs"), (4, "Parler à quelqu'un / chercher de l'aide")]
+GAME_FOLLOWUP = ("(Hors-jeu : ta réponse s'est arrêtée ou n'a pas de choix.) Termine la scène en 1 à 3 phrases, "
+                 "puis propose 3 à 4 choix numérotés (1. 2. 3. 4.) et finis par « QUE FAIS-TU ? ».")
+
+
+def game_reply_incomplete(text: str, choices) -> bool:
+    """v41.1 : pas de choix, ou texte coupé net (pas de ponctuation finale)."""
+    if not choices:
+        return True
+    t = (text or "").rstrip()
+    last = t.splitlines()[-1].strip() if t else ""
+    if re.match(r"^\W*\d+\s*[.)\-–:]", last):
+        return False
+    return bool(t) and not GAME_END_RX.search(t)
+
+
 def game_parse(text: str) -> Dict[str, Any]:
     """Analyse une réponse de jeu : titre, choix numérotés (dernière liste), bloc de statut."""
     blocks = game_split_blocks(text)
@@ -3997,17 +4210,45 @@ def game_export_txt(st: Dict[str, Any]) -> str:
     return "\n".join(out)
 
 
-def game_export_html(st: Dict[str, Any]) -> str:
+def _game_cached_art(h: str):
+    """v41.0 : art ANSI d'une scène générée (cache du Studio), sans démarrer quoi que ce soit."""
+    if not h or _ANSI is None:
+        return None
+    try:
+        p = os.path.join(PRIVATE_DIR, "studio", "cache", h + ".json")
+        with open(p, "r", encoding="utf-8") as f:
+            return _ANSI.art_from_dict(json.load(f)["art"])
+    except Exception:
+        return None
+
+
+def game_export_html(st: Dict[str, Any], images: bool = True, generated: bool = False) -> str:
     import html as _h
     css = ("body{background:#06120a;color:#c9f7c9;font:17px/1.55 'Segoe UI',sans-serif;max-width:860px;margin:30px auto;padding:0 18px}"
            "h1{color:#ffc857;font-family:Consolas,monospace}h2{color:#ffc857;font-family:Consolas,monospace;margin-top:34px}"
            "pre{background:#04140a;color:#41ff6a;padding:12px 16px;border:1px solid #1f4a2a;border-radius:6px;"
            "font:14px/1.25 Consolas,'Cascadia Mono',monospace;overflow:auto}"
            ".you{color:#ffc857;font-weight:bold;font-family:Consolas,monospace;margin-top:22px}"
-           ".ch{color:#41ff6a;font-weight:bold}.chk{color:#5ff5ff;font-family:Consolas,monospace}.sys{color:#5f8f68}")
+           ".ch{color:#41ff6a;font-weight:bold}.chk{color:#5ff5ff;font-family:Consolas,monospace}.sys{color:#5f8f68}"
+           ".img{margin:14px 0}.img pre.ansi{display:inline-block;padding:6px;border:1px solid #1f4a2a;border-radius:6px;"
+           "line-height:1!important;letter-spacing:0;overflow:visible}")
     body = [f"<h1>☢ {_h.escape(st.get('name', 'Partie'))}</h1>",
             f"<p class='sys'>Exporté par Padawan le {time.strftime('%Y-%m-%d %H:%M')} · {st.get('turn', 0)} tours</p>"]
     bi = st.get("builtin", "")
+    # v40.2 : les illustrations ANSI (mêmes règles que l'écran : pas de répétition)
+    img_fam = game_img_family(bi) if images else ""
+    img_plan = game_img_plan(st) if img_fam else {}
+
+    def img_html(key: str, ei: int = -1) -> str:
+        try:
+            a = _ANSI.bank_art(game_img_bank(), img_fam, key) if key else None
+            if a is not None and generated and 0 <= ei < len(st.get("log") or []):
+                a = _game_cached_art((st["log"][ei] or {}).get("img_gen", "")) or a
+            return ("<div class='img'>" + a.to_html(fragment=True, font_px=11) + "</div>") if a else ""
+        except Exception:
+            return ""
+    if -1 in img_plan:
+        body.append(img_html(img_plan[-1]))
 
     def para(line: str) -> str:
         t = _h.escape(line)
@@ -4015,7 +4256,7 @@ def game_export_html(st: Dict[str, Any]) -> str:
         t = re.sub(r"(\[[^\]]{2,90}\])", r"<span class='chk'>\1</span>", t)
         return t
 
-    for e in st.get("log") or []:
+    for ei, e in enumerate(st.get("log") or []):
         who, text = e.get("who"), e.get("text", "")
         if who == "you":
             body.append(f"<p class='you'>▶ {_h.escape(text)}</p>")
@@ -4023,19 +4264,24 @@ def game_export_html(st: Dict[str, Any]) -> str:
             meta = GAME_META.get(bi, {})
             art = game_art_for(bi, meta.get("art", ""))[1]
             body.append(f"<h2>{_h.escape(meta.get('title', ''))}</h2>")
-            if art:
+            if img_fam:
+                body.append(img_html(img_plan.get(ei, "")))
+            elif art:
                 body.append(f"<pre>{_h.escape(art)}</pre>")
             body.append("".join(f"<p>{para(x)}</p>" for x in meta.get("intro", "").split("\n") if x.strip()))
         elif who == "mj":
             g = game_parse(text)
             art = game_art_for(bi, g["scene"], text[:600])[1] if bi else ""
             done = False
+            if img_fam:  # v40.2 : image ANSI (ou rien si la scène n'a pas changé) à la place de l'art ASCII
+                art = img_html(img_plan.get(ei, ""), ei) or " "
+                pre_art = art if art.strip() else ""
             for kind, blk in game_split_blocks(text):
                 if kind == "fence":
                     if game_is_status(blk) or not art:
                         body.append(f"<pre>{_h.escape(blk.strip(chr(10)))}</pre>")
                     elif not done:
-                        body.append(f"<pre>{_h.escape(art)}</pre>")
+                        body.append(pre_art if img_fam else f"<pre>{_h.escape(art)}</pre>")
                         done = True
                     continue
                 for line in blk.split("\n"):
@@ -4045,16 +4291,20 @@ def game_export_html(st: Dict[str, Any]) -> str:
                     if m:
                         body.append(f"<h2>{_h.escape(_strip_md(m.group(1)))}</h2>")
                         if art and not done:
-                            body.append(f"<pre>{_h.escape(art)}</pre>")
+                            body.append(pre_art if img_fam else f"<pre>{_h.escape(art)}</pre>")
                             done = True
                     elif _SCENE_RE.match(line):
                         if art and not done:
-                            body.append(f"<pre>{_h.escape(art)}</pre>")
+                            body.append(pre_art if img_fam else f"<pre>{_h.escape(art)}</pre>")
                             done = True
                     elif _CHOICE_RE.match(line):
                         body.append(f"<p class='ch'>{para(line.strip())}</p>")
+                    elif img_fam and game_is_art_line(line) and not line.strip().startswith("["):
+                        continue  # art ASCII dessiné par le modèle : remplacé par les images
                     else:
                         body.append(f"<p>{para(line)}</p>")
+            if img_fam and pre_art and not done:
+                body.append(pre_art)
     return ("<!doctype html><html lang='fr'><head><meta charset='utf-8'><title>"
             + _h.escape(st.get("name", "Partie")) + "</title><style>" + css + "</style></head><body>"
             + "\n".join(body) + "</body></html>")
@@ -6822,6 +7072,8 @@ class Padawan(tk.Tk):
         self.bind("<Control-M>", lambda e: (self.show_models(), "break")[1])
         self.bind("<Control-k>", lambda e: (self.show_atelier(), "break")[1])  # v40.0 💻 Atelier
         self.bind("<Control-K>", lambda e: (self.show_atelier(), "break")[1])
+        self.bind("<Control-g>", lambda e: (self.show_studio(), "break")[1])  # v41.0 🎨 Studio
+        self.bind("<Control-G>", lambda e: (self.show_studio(), "break")[1])
         self.bind("<Control-p>", lambda e: (self.show_prompts(), "break")[1])  # v39.2 📜 Prompts
         self.bind("<Control-P>", lambda e: (self.show_prompts(), "break")[1])
         self.bind("<Control-l>", lambda e: (self.new_conversation(), "break")[1])
@@ -7140,7 +7392,16 @@ class Padawan(tk.Tk):
         gatl.pack(fill="x", pady=(0, 4), after=gmods)
         self._tip(gatl, "💻 Atelier (Ctrl+K) : mode programmeur avec qwen2.5-coder\n"
                          "chat à gauche, éditeur coloré à droite · 👁 aperçu · 🩺 corriger l'erreur\n"
-                         "🚀 déployer (C:\\py, Web local, FTP/SFTP) · projets, modèles, snippets")
+                         "🚀 déployer (C:\\py, Web local, FTP/SFTP) · projets, modèles, snippets\n"
+                         "🖼→ANSI : une image devient de l'art ANSI / ASCII (DOS, truecolor, Pip-Boy)")
+        if _PS is not None:  # v41.0
+            gstu = nav("🎨 Studio  Ctrl+G", self.show_studio)
+            gstu.configure(fg=C["cyan"], font=("Segoe UI", 10, "bold"))
+            gstu.bind("<Leave>", lambda e, b=gstu: b.configure(bg=C["card"], fg=C["cyan"]), add="+")
+            gstu.pack(fill="x", pady=(0, 4), after=gatl)
+            self._tip(gstu, "🎨 Studio d'images (Ctrl+G) : une idée en français → une image dessinée sur ton PC\n"
+                            "(ComfyUI + SD-Turbo, sans internet) + sa version art ANSI côte à côte\n"
+                            "styles en un clic · graine · variations · .png / .ans / .html · galerie")
         nav("Gare l'idée  Ctrl+I", self.park).pack(fill="x", pady=1)
         self.btn_inbox = nav(self._inbox_label(), self.show_prompts)
         self.btn_inbox.pack(fill="x", pady=1)
@@ -7350,6 +7611,11 @@ class Padawan(tk.Tk):
         _mb.pack(side="left", padx=(0, 2))
         _mb.bind("<Button-1>", lambda e: self.show_models())
         self._tip(_mb, "🧠 Modèles (Ctrl+M) : diagnostic du PC, installer / comparer des modèles")
+        if _PS is not None:  # v41.0
+            _sb = tk.Label(row2, text="🎨", bg=C["bg"], fg=C["cyan"], font=("Segoe UI", 11, "bold"), cursor="hand2")
+            _sb.pack(side="left", padx=(0, 2))
+            _sb.bind("<Button-1>", lambda e: self.show_studio())
+            self._tip(_sb, "🎨 Studio d'images (Ctrl+G)")
         self.model_combo.pack(side="left", padx=(0, 4))
         self.model_combo.bind("<<ComboboxSelected>>", self.on_model_chosen)
         self.model_dot = tk.Label(
@@ -9465,9 +9731,8 @@ class Padawan(tk.Tk):
         if _PA is None:
             self.say("sys", "💻 Atelier : module padawan_atelier.py introuvable à côté de padawan39.py.")
             return
-        if getattr(self, "game", None):
-            self.say("sys", "💻 Quitte d'abord le jeu en cours (bouton Quitter du jeu), puis Ctrl+K.")
-            return
+        if getattr(self, "game", None):  # v41.2 : avant, refus muet (message écrit dans le chat caché par le jeu)
+            self._game_pause_for("💻 Atelier")
         a = getattr(self, "_atelier", None)
         try:
             if a is None or not a.winfo_exists():
@@ -9480,6 +9745,70 @@ class Padawan(tk.Tk):
         except Exception as e:
             log(f"atelier: {e}")
             self.say("sys", f"💻 Atelier : ouverture impossible ({e})")
+
+    # ── v41.0 🎨 Studio d'images ─────────────────────────────────────────────
+    def _studio_core(self):
+        if _PS is None:
+            return None
+        core = getattr(self, "_studio", None)
+        if core is None:
+            core = self._studio = _PS.Studio(PRIVATE_DIR, ollama_base=OLLAMA, log=log)
+            core.num_ctx = lambda: int(GEN.get("num_ctx") or 0) or _detect_num_ctx()
+            self.after(60000, self._studio_idle_tick)
+        return core
+
+    def _studio_idle_tick(self):
+        """Arrêt auto du moteur après N minutes sans image (réglable dans 🎨 Studio → ⚙ Moteur)."""
+        core = getattr(self, "_studio", None)
+        if core is None or self._quitting:
+            return
+        if not getattr(self, "_game_gen_busy", False):
+            threading.Thread(target=core.engine.idle_check, daemon=True).start()
+        self.after(60000, self._studio_idle_tick)
+
+    def show_studio(self, idea: str = ""):
+        if _PS is None:
+            self.say("sys", "🎨 Studio : module padawan_studio.py introuvable à côté de padawan39.py.")
+            return
+        if getattr(self, "game", None):
+            self._game_pause_for("🎨 Studio")
+        try:
+            v = getattr(self, "_studio_view", None)
+            if v is None or not v.winfo_exists():
+                hooks = {"current": self.current_model, "ready": lambda: bool(self.ready and self.model_ready),
+                         "leave": self._studio_left, "atelier": self._studio_to_atelier}
+                v = self._studio_view = _PS.StudioView(self, C, self._studio_core(), hooks=hooks)
+            v.enter(idea=idea)
+            self._ui_status("🎨 Studio", C["cyan"])
+        except Exception as e:
+            log(f"studio: {e}")
+            self.say("sys", f"🎨 Studio : ouverture impossible ({e})")
+
+    def _studio_left(self) -> None:
+        """Retour du Studio : ComfyUI rend la carte graphique, puis le modèle de texte est rechargé d'avance."""
+        core = getattr(self, "_studio", None)
+        name = self.current_model()
+
+        def work():
+            try:
+                if core is not None and core.engine.alive(timeout=0.5) and core.cfg.get("vram") != "jamais":
+                    core.engine.free()
+                    if not any(n == name or n.split(":")[0] == name.split(":")[0] for n, v in core.ollama.loaded() if v):
+                        self.warm_model(name)
+            except Exception as e:
+                log(f"studio left: {e}")
+        threading.Thread(target=work, daemon=True).start()
+        try:
+            self.ent.focus_set()
+        except Exception:
+            pass
+        self._ui_status("Retour du Studio.", C["dim"])
+
+    def _studio_to_atelier(self, path: str) -> None:
+        self.show_atelier()
+        a = getattr(self, "_atelier", None)
+        if a is not None and a.winfo_exists() and not getattr(self, "game", None):
+            a.ansi_studio(path)
 
     def _atelier_models(self) -> List[str]:
         out = []
@@ -9824,11 +10153,31 @@ class Padawan(tk.Tk):
         try:
             if self.game:
                 p = getattr(self, "_game_override", None) or self.prompts.get(self.game.get("pid", "")) or {}
-                return (p.get("model") or "").strip()
+                pm = (p.get("model") or "").strip()
+                if pm:
+                    return pm
+                base = getattr(self, "_model_before", None) or self.current_model()
+                if is_code_model(base):
+                    return self._game_play_model()  # v41.1 : un « coder » ne fait pas un bon MJ
+                return ""
             p = self.prompts.active_for(self.router.active)
             return ((p or {}).get("model") or "").strip()
         except Exception:
             return ""
+
+    def _game_play_model(self) -> str:
+        """v41.1 : dolphin3:8b si installé, sinon le meilleur modèle installé non-code (pas de 70b)."""
+        best = self._model_local_id(MODEL)
+        if best:
+            return best
+        ids = [model_id_from_label(m) for m in (getattr(self, "mods", None) or [])]
+        ok = [i for i in ids if i and not is_code_model(i) and not re.search(r"\b(70|72|65|34|32)b", i)
+              and "embed" not in i]
+        for pref in ("dolphin", "qwen2.5:", "llama", "mistral", "gemma"):
+            for i in ok:
+                if pref in i:
+                    return i
+        return ok[0] if ok else ""
 
     def _model_sync_prompt(self) -> None:
         """v39.6 : bascule temporaire vers le modèle du prompt/jeu, ou retour au modèle d'avant.
@@ -9850,7 +10199,11 @@ class Padawan(tk.Tk):
                 self._model_label_set(want)
                 self.model, self.model_ready = want, False
                 threading.Thread(target=self.warm_model, args=(want,), daemon=True).start()
-                self.say("sys", f"🧠 Modèle du prompt : {want} (retour à {self._model_before} en quittant).")
+                if self.game:
+                    self._game_sys_safe(f"🧠 Jeu → {want} (meilleur conteur ; {self._model_before} revient en quittant, "
+                                        "rien n'est sauvé).")
+                else:
+                    self.say("sys", f"🧠 Modèle du prompt : {want} (retour à {self._model_before} en quittant).")
             elif before:
                 self._model_before = None
                 if before != cur:
@@ -10027,6 +10380,18 @@ class Padawan(tk.Tk):
         self._game_compact = self.winfo_screenheight() < 860
         self._game_dice = bool(self.cfg.get("game_dice", True))
         self._game_sound = bool(self.cfg.get("game_sound", False))
+        self._game_images = bool(self.cfg.get("game_images", True))        # v40.2 🖼
+        self._game_images_anim = bool(self.cfg.get("game_images_anim", True))
+        self._game_images_gen = bool(self.cfg.get("game_images_gen", False))  # v41.0 🎨 images générées
+        self._game_gen_q: List[Any] = []        # demandes en attente (la plus récente gagne)
+        self._game_gen_busy = False
+        self._game_gen_mem: Dict[str, Any] = {}  # hash de scène → Art (cache mémoire)
+        self._game_img_ph: Dict[int, Any] = {}   # index du journal → (PhotoImage, taille, famille)
+        self._game_gen_times: List[Dict[str, Any]] = []
+        self._game_imgs: List[Any] = []          # PhotoImage vivantes (sinon Tk les efface)
+        self._game_img_cache: Dict[Any, Any] = {}
+        self._game_pick_cache: Dict[Any, str] = {}
+        self._game_img_seq = 0
         self.game_wrap = tk.Frame(mid, bg=G["bg"], highlightbackground=G["line"], highlightthickness=1)
         hdr = tk.Frame(self.game_wrap, bg=G["bg"])
         hdr.pack(side="top", fill="x", padx=6, pady=(5, 3))
@@ -10048,6 +10413,10 @@ class Padawan(tk.Tk):
         for key, text, cmd, tip in (
             ("quit", "↩ Quitter", self.game_quit, "Quitter le jeu (la partie est sauvegardée automatiquement)\n"
                                                     "Padawan reprend son prompt et son rôle d'avant."),
+            ("images", "", self._game_toggle_images, "🖼 Illustrations ANSI des scènes\n"
+                                                       "BANQUE = images originales rétro, effet CRT · GÉNÉRÉES = la scène est dessinée\n"
+                                                       "par le 🎨 Studio en arrière-plan (la banque s'affiche d'abord) · FIXES = banque sans\n"
+                                                       "animation · NON = art ASCII. Réglage gardé par jeu. Clique une image pour l'agrandir."),
             ("sound", "", self._game_toggle_sound, "Petits bips façon Pip-Boy à chaque tour (désactivés par défaut)"),
             ("dice", "", self._game_toggle_dice, "Dés réels : Padawan lance un vrai d20 local à chaque tour\n"
                                                    "et l'envoie au maître du jeu ([JET d20 = N])."),
@@ -10057,6 +10426,11 @@ class Padawan(tk.Tk):
             ("new", "🆕 Nouvelle", self.game_new, "🆕 Nouvelle partie : recommencer à zéro (confirmation)"),
         ):
             gbtn(key, text, cmd, tip).pack(side="right", padx=2)
+        self.game_title.configure(width=1)  # v40.2 : le titre (long) se coupe au lieu de cacher des boutons
+        self._game_tb_full = {k: w.cget("text") for k, w in self.game_btns.items()
+                              if k in ("quit", "export", "load", "save", "new")}
+        self._game_tb_compact = 0
+        hdr.bind("<Configure>", lambda e: self._game_paint_toggles(), add="+")
         self._game_paint_toggles()
 
         self.game_choices = tk.Frame(self.game_wrap, bg=G["bg"])
@@ -10105,6 +10479,7 @@ class Padawan(tk.Tk):
         T.tag_configure("status", foreground=G["green"], background=G["pip"], font=("Consolas", 10),
                         lmargin1=18, lmargin2=18, spacing1=0, spacing3=0, wrap="none")
         T.tag_configure("narr", foreground=G["fg"], font=("Segoe UI", 12))
+        T.tag_configure("gimgline", lmargin1=14, lmargin2=14, spacing1=2, spacing3=4, font=("Consolas", 2))
         T.tag_configure("bold", font=("Segoe UI", 12, "bold"), foreground="#ffffff")
         T.tag_configure("dlg", foreground=G["amber"])
         T.tag_configure("check", foreground=G["cyan"], font=("Consolas", 11, "bold"))
@@ -10120,12 +10495,368 @@ class Padawan(tk.Tk):
         self.ent.bind("<KeyPress>", self._game_key_ent, add="+")
         self.bind("<KeyPress>", self._game_key_any, add="+")
 
+    def _game_tb_texts(self, level: int) -> Dict[str, str]:
+        """Textes de la barre du jeu : 0 = complets, 1 = abrégés, 2 = icônes (fenêtre très étroite)."""
+        d, s_ = getattr(self, "_game_dice", True), getattr(self, "_game_sound", False)
+        im, an = getattr(self, "_game_images", True), getattr(self, "_game_images_anim", True)
+        gen = im and an and self._game_gen_on(check_engine=False)
+        img_s = ("🖼 G" if gen else "🖼 B" if an else "🖼 F") if im else "🖼 NON"
+        if level >= 2:
+            return {"quit": "↩", "export": "📜", "load": "📂", "save": "💾", "new": "🆕",
+                    "dice": "🎲 OUI" if d else "🎲 NON", "sound": "🔊" if s_ else "🔈", "images": img_s}
+        if level == 1:
+            return {"quit": "↩ Quitter", "export": "📜 Export", "load": "📂 Charger", "save": "💾 Sauver",
+                    "new": "🆕 Nouv.", "dice": "🎲 Dés OUI" if d else "🎲 Dés NON",
+                    "sound": "🔊 Sons OUI" if s_ else "🔈 Sons NON",
+                    "images": ("🖼 Génér." if gen else "🖼 Banque" if an else "🖼 Fixes") if im else "🖼 Img NON"}
+        t = dict(getattr(self, "_game_tb_full", {}))
+        t["dice"] = "🎲 Dés : OUI" if d else "🎲 Dés : NON"
+        t["sound"] = "🔊 Sons : OUI" if s_ else "🔈 Sons : NON"
+        t["images"] = (("🖼 Images : GÉNÉRÉES" if gen else "🖼 Images : BANQUE") if an else "🖼 Images : FIXES") \
+            if im else "🖼 Images : NON"
+        return t
+
     def _game_paint_toggles(self):
         b = getattr(self, "game_btns", {})
+        if b and "quit" in b and hasattr(self, "_game_tb_full"):  # v40.2 : textes complets / abrégés / icônes
+            level = 0
+            try:
+                import tkinter.font as _tkf
+                hw = self.game_title.master.winfo_width()
+                if hw > 50:
+                    f = _tkf.Font(font=b["quit"].cget("font"))
+                    for level, room in ((0, 240), (1, 60), (2, 0)):
+                        need = sum(f.measure(x) + 26 for x in self._game_tb_texts(level).values()) + room
+                        if need <= hw:
+                            break
+            except Exception:
+                level = 0
+            self._game_tb_compact = level
+            for k, x in self._game_tb_texts(level).items():
+                if k in b and b[k].cget("text") != x:
+                    b[k].configure(text=x)
+            return
         if "dice" in b:
             b["dice"].configure(text="🎲 Dés : OUI" if self._game_dice else "🎲 Dés : NON")
         if "sound" in b:
             b["sound"].configure(text="🔊 Sons : OUI" if self._game_sound else "🔈 Sons : NON")
+        if "images" in b:
+            on = getattr(self, "_game_images", True)
+            b["images"].configure(text=self._game_tb_texts(0).get("images", "🖼 Images"))
+
+    def _game_img_mode(self) -> str:
+        if not getattr(self, "_game_images", True):
+            return "non"
+        if not getattr(self, "_game_images_anim", True):
+            return "fixes"
+        return "gen" if getattr(self, "_game_images_gen", False) else "banque"
+
+    def _game_set_img_mode(self, mode: str, save: bool = True) -> None:
+        self._game_images = mode != "non"
+        self._game_images_anim = mode in ("banque", "gen")
+        self._game_images_gen = mode == "gen"
+        if save:
+            self.cfg["game_images"] = self._game_images
+            self.cfg["game_images_anim"] = self._game_images_anim
+            self.cfg["game_images_gen"] = self._game_images_gen
+            fam = game_img_family((self.game or {}).get("builtin", ""))
+            if fam:  # v41.0 : réglage gardé par jeu (et dernier choix = défaut des autres)
+                per = dict(self.cfg.get("game_images_per") or {})
+                per[fam] = mode
+                self.cfg["game_images_per"] = per
+
+    def _game_load_img_mode(self) -> None:
+        fam = game_img_family((self.game or {}).get("builtin", ""))
+        m = (self.cfg.get("game_images_per") or {}).get(fam) if fam else None
+        if m in ("banque", "gen", "fixes", "non"):
+            self._game_set_img_mode(m, save=False)
+
+    def _game_gen_on(self, check_engine: bool = True) -> bool:
+        if not getattr(self, "_game_images_gen", False) or _PS is None:
+            return False
+        if not check_engine:
+            return True
+        core = self._studio_core()
+        return bool(core and core.engine.ready_to_run())
+
+    def _game_toggle_images(self):
+        """BANQUE (animé) → GÉNÉRÉES → FIXES → NON → BANQUE (GÉNÉRÉES sauté si le moteur n'est pas installé)."""
+        order = ["banque", "gen", "fixes", "non"]
+        cur = self._game_img_mode()
+        nxt = order[(order.index(cur) + 1) % len(order)]
+        if nxt == "gen":
+            core = self._studio_core() if _PS is not None else None
+            if not (core and core.engine.ready_to_run()):
+                nxt = "fixes"
+                self._game_flash("🎨 Images générées : installe d'abord le moteur (🎨 Studio, Ctrl+G hors jeu).")
+            else:
+                self._game_flash("🎨 Images générées : la scène est dessinée en arrière-plan (la banque d'abord, "
+                                 "≈ 15-20 s), gardée en cache.")
+        self._game_set_img_mode(nxt)
+        self._game_paint_toggles()  # enregistré dans config.json à la sortie, comme 🎲 et 🔊
+        if self.game and not self.busy:
+            self._game_rerender()
+
+    # ---- 🖼 v40.2 illustrations ANSI
+    def _game_img_on(self) -> bool:
+        st = self.game or {}
+        return bool(getattr(self, "_game_images", False) and game_img_family(st.get("builtin", ""))
+                    and _ANSI is not None and _ANSI.load_pil() and _ANSI.ImageTk is not None)
+
+    def _game_gen_art(self, h: str):
+        """Art ANSI d'une scène générée (cache disque C:\\web_private\\Padawan\\studio\\cache)."""
+        if not h:
+            return None
+        a = self._game_gen_mem.get(h)
+        if a is None and _PS is not None:
+            core = self._studio_core()
+            a = core.cache_get(h) if core else None
+            if a is not None:
+                if len(self._game_gen_mem) > 60:
+                    self._game_gen_mem.clear()
+                self._game_gen_mem[h] = a
+        return a
+
+    def _game_li_art(self, li: Optional[int]):
+        """(art généré, hash) pour l'entrée li du journal en mode GÉNÉRÉES, sinon (None, "")."""
+        if li is None or li < 0 or not self._game_gen_on(check_engine=False):
+            return None, ""
+        try:
+            h = ((self.game or {}).get("log") or [])[li].get("img_gen", "")
+        except Exception:
+            return None, ""
+        a = self._game_gen_art(h)
+        return (a, h) if a is not None else (None, "")
+
+    def _game_img_pil(self, fam: str, key: str, cw: int, art=None, tag: str = ""):
+        ck = (fam, key, cw, tag)
+        im = self._game_img_cache.get(ck)
+        if im is None:
+            a = art if art is not None else _ANSI.bank_art(game_img_bank(), fam, key)
+            if a is None:
+                return None
+            im = _ANSI.render_image(a, cw).convert("RGB")
+            # lignes de balayage CRT discrètes (1 ligne sur 3 un peu plus sombre)
+            if cw >= 4:
+                from PIL import ImageDraw as _D
+                dr = _D.Draw(im, "RGBA")
+                for y in range(2, im.size[1], 3):
+                    dr.line([(0, y), (im.size[0], y)], fill=(0, 0, 0, 70))
+            if len(self._game_img_cache) > 80:
+                self._game_img_cache.clear()
+            self._game_img_cache[ck] = im
+        return im
+
+    def _game_img_cw(self, art) -> int:
+        T = self.game_txt
+        w = T.winfo_width() if T.winfo_width() > 200 else 760
+        h = T.winfo_height() if T.winfo_height() > 200 else 480
+        cw = (w - 60) // max(1, art.cols)
+        cw = min(cw, int(h * 0.52) // max(1, 2 * art.nrows))  # l'image laisse de la place au texte
+        return max(3, min(9, cw))
+
+    def _game_img(self, key: str, animate: bool = False, li: Optional[int] = None):
+        """Insère l'illustration (clé) dans le fil du jeu, avec révélation CRT facultative.
+        v41.0 : en mode GÉNÉRÉES, l'image dessinée pour cette scène (li) remplace celle de la banque."""
+        st = self.game or {}
+        fam = game_img_family(st.get("builtin", ""))
+        b = game_img_bank()
+        a = _ANSI.bank_art(b, fam, key) if (fam and key) else None
+        if a is None:
+            return
+        ga, gh = self._game_li_art(li)
+        if ga is not None and (ga.cols, ga.nrows) == (a.cols, a.nrows):
+            a = ga
+        else:
+            gh = ""
+        im = self._game_img_pil(fam, key, self._game_img_cw(a), art=a if gh else None, tag=gh)
+        if im is None:
+            return
+        G = GAME_COLORS
+        T = self.game_txt
+        try:
+            ph = _ANSI.ImageTk.PhotoImage(im, master=T)
+        except Exception as e:
+            log(f"game img: {e}")
+            return
+        self._game_img_seq += 1
+        tg = f"gimg{self._game_img_seq}"
+        T.tag_configure(tg)
+        T.configure(state="normal")
+        T.insert("end", " ", ("gimgline",))
+        idx = T.index("end-1c")
+        T.image_create("end", image=ph, padx=0, pady=4)
+        T.tag_add(tg, idx)
+        T.tag_add("gimgline", idx)
+        T.insert("end", "\n", ("gimgline",))
+        T.configure(state="disabled")
+        T.tag_bind(tg, "<Button-1>", lambda e, f=fam, k=key, i=li: self._game_img_popup(f, k, i))
+        T.tag_bind(tg, "<Enter>", lambda e: T.configure(cursor="hand2"))
+        T.tag_bind(tg, "<Leave>", lambda e: T.configure(cursor="arrow"))
+        self._game_imgs.append(ph)
+        if li is not None:
+            self._game_img_ph[li] = (ph, im.size, fam, key, gh)
+        if animate and getattr(self, "_game_images_anim", True):
+            self._game_img_reveal(ph, im, fam)
+
+    # ---- 🎨 v41.0 images générées (Studio) : en arrière-plan, après la réponse du MJ, sans bloquer le jeu
+    def _game_gen_request(self, st: Dict[str, Any], li: int, key: str, text: str) -> None:
+        core = self._studio_core()
+        fam = game_img_family(st.get("builtin", ""))
+        if core is None or not fam:
+            return
+        lieu = ""
+        try:
+            e = st["log"][li]
+            lieu = game_fields(e.get("status", "") or text).get("LIEU", "") or game_fields(text).get("LIEU", "")
+        except Exception:
+            pass
+        h = core.cache_key(fam, key, lieu)
+        if core.cache_get(h) is not None:  # déjà dessinée (même scène, même lieu) : tout de suite
+            st["log"][li]["img_gen"] = h
+            return
+        g = game_parse(text)
+        narr = " ".join(x for k, x in game_split_blocks(text) if k != "fence")
+        narr = re.sub(r"(?m)^\s*(\d+[.)]|SCÈNE\s*:|QUE FAIS).*$", "", narr)
+        scene = (g.get("title", "") + ". " + narr).strip()[:900]
+        self._game_gen_q = [(st, li, key, fam, scene, lieu, h)]  # la plus récente seulement
+        if not self._game_gen_busy:
+            self._game_gen_busy = True
+            threading.Thread(target=self._game_gen_worker, daemon=True).start()
+
+    def _game_gen_worker(self) -> None:
+        core = self._studio_core()
+        while True:
+            try:
+                job = self._game_gen_q.pop(0)
+            except IndexError:
+                break
+            st, li, key, fam, scene, lieu, h = job
+            t0 = time.time()
+            rec: Dict[str, Any] = {"li": li, "key": key}
+            try:
+                model = model_id_from_label(self.mvar.get())
+                self.after0(self._game_gen_hint, st, "🎨 dessin de la scène en arrière-plan…")
+                prompt, how = core.game_prompt(fam, scene, key, lieu, model=model)
+                rec["prompt_s"] = round(time.time() - t0, 1)
+                to = float(core.cfg.get("game_timeout") or 90)
+                imgs, info = core.generate(prompt, size="paysage", steps=2, timeout=to, vram="jamais")
+                ast = _PS.GAME_STYLE.get(fam, ("", "pipboy"))[1]
+                bank = _ANSI.bank_art(game_img_bank(), fam, key)
+                cols, rows = (bank.cols, bank.nrows) if bank is not None else (72, 20)
+                art = _PS.to_ansi(imgs[0], ast, cols, rows, title=key, game=True)
+                core.cache_put(h, art, info["png"][0], {"prompt": prompt, "how": how, "seed": info["seed"],
+                                                       "fam": fam, "key": key, "lieu": lieu})
+                self._game_gen_mem[h] = art
+                rec.update(gen_s=info.get("total_s"), all_s=round(time.time() - t0, 1), ok=True, how=how)
+                self.after0(self._game_gen_apply, st, li, h)
+            except Exception as e:
+                rec.update(ok=False, err=str(e)[:200], all_s=round(time.time() - t0, 1))
+                log(f"game gen: {e}")
+                self.after0(self._game_gen_hint, st, f"🖼 image de la banque (dessin indisponible : {str(e)[:80]})")
+            self._game_gen_times.append(rec)
+            self._game_gen_times = self._game_gen_times[-30:]
+        self._game_gen_busy = False
+
+    def _game_gen_hint(self, st, text: str) -> None:
+        if st is self.game and not self.busy:
+            try:
+                self.game_hint.config(text=text)
+            except Exception:
+                pass
+
+    def _game_gen_apply(self, st, li: int, h: str) -> None:
+        """L'image dessinée est prête : on la glisse à la place de celle de la banque, avec le balayage CRT."""
+        if st is not self.game:
+            return
+        try:
+            st["log"][li]["img_gen"] = h
+        except Exception:
+            return
+        self._game_autosave()
+        self._game_gen_hint(st, "🎨 scène dessinée ✔ (clic sur l'image = agrandir)")
+        cur = self._game_img_ph.get(li)
+        if not cur or not self._game_gen_on(check_engine=False):
+            return
+        ph, size, fam, key, _old = cur
+        a = self._game_gen_art(h)
+        if a is None:
+            return
+        cw = max(1, size[0] // max(1, a.cols))
+        im = self._game_img_pil(fam, key, cw, art=a, tag=h)
+        if im is None or im.size != tuple(size):
+            return self._game_rerender() if not self.busy else None
+        try:
+            ph.paste(im)
+        except Exception:
+            return
+        self._game_img_ph[li] = (ph, size, fam, key, h)
+        if getattr(self, "_game_images_anim", True):
+            self._game_img_reveal(ph, im, fam)
+
+    def _game_img_reveal(self, ph, im, fam: str, steps: int = 10, delay: int = 28):
+        """Effet d'écran CRT : l'image se dessine de haut en bas derrière un trait lumineux (≈ 0,3 s)."""
+        try:
+            from PIL import Image as _I
+        except Exception:
+            return
+        W, H = im.size
+        beam = {"fallout": (150, 255, 170), "donjon": (120, 255, 255), "polar": (255, 255, 255)}.get(fam, (200, 255, 200))
+        black = _I.new("RGB", (W, H), (0, 0, 0))
+        try:
+            ph.paste(black)
+        except Exception:
+            return
+
+        def frame(k: int):
+            try:
+                y = int(H * k / steps)
+                fr = black.copy()
+                if y > 0:
+                    fr.paste(im.crop((0, 0, W, y)), (0, 0))
+                if k < steps:
+                    fr.paste(_I.new("RGB", (W, 3), beam), (0, max(0, y - 1)))
+                ph.paste(fr)
+            except Exception:
+                return  # fenêtre fermée / image effacée
+            if k < steps:
+                self.after(delay, frame, k + 1)
+        self.after(15, frame, 1)
+
+    def _game_img_popup(self, fam: str, key: str, li: Optional[int] = None):
+        a = _ANSI.bank_art(game_img_bank(), fam, key) if _ANSI else None
+        if a is None:
+            return
+        ga, gh = self._game_li_art(li)
+        if ga is not None:
+            a = ga
+        G = GAME_COLORS
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        cw = max(6, min(18, int(sw * 0.82) // a.cols, int(sh * 0.70) // (2 * a.nrows)))
+        im = self._game_img_pil(fam, key, cw, art=a if gh else None, tag=gh)
+        top = tk.Toplevel(self)
+        top.title(f"🖼 {key} — illustration ANSI")
+        top.configure(bg=G["bg"])
+        top.transient(self)
+        ph = _ANSI.ImageTk.PhotoImage(im, master=top)
+        top._ph = ph  # type: ignore[attr-defined]
+        lb = tk.Label(top, image=ph, bg="#000000", bd=0, cursor="hand2")
+        lb.pack(padx=10, pady=(10, 4))
+        sty = {"pipboy": "Pip-Boy vert", "dos16": "16 couleurs DOS", "noir": "film noir"}.get(a.style, a.style)
+        tk.Label(top, text=f"{key} · {a.cols}×{a.nrows} caractères · {sty} · "
+                           + ("scène dessinée par le 🎨 Studio (SD-Turbo)  " if gh else "illustration originale Padawan  ")
+                           + "(clic ou Échap pour fermer)",
+                 bg=G["bg"], fg=G["dim"], font=("Segoe UI", 9)).pack(pady=(0, 8))
+        for w in (top, lb):
+            w.bind("<Button-1>", lambda e: top.destroy())
+        top.bind("<Escape>", lambda e: top.destroy())
+        top.update_idletasks()
+        x = self.winfo_rootx() + max(0, (self.winfo_width() - top.winfo_width()) // 2)
+        y = self.winfo_rooty() + max(0, (self.winfo_height() - top.winfo_height()) // 3)
+        top.geometry(f"+{x}+{y}")
+        top.focus_set()
+        if getattr(self, "_game_images_anim", True):
+            self._game_img_reveal(ph, im, fam, steps=14, delay=22)
 
     def _game_toggle_dice(self):
         self._game_dice = not self._game_dice
@@ -10250,6 +10981,8 @@ class Padawan(tk.Tk):
         st["builtin"] = p.get("builtin", "") or st.get("builtin", "")
         self._game_override = override
         self.game = st
+        self._game_load_img_mode()  # v41.0 🖼 réglage par jeu
+        self._game_gen_q = []
         self._model_sync_prompt()  # v39.6 : le jeu peut avoir son propre modèle
         if not override:
             self.prompts.data["game"] = p["id"]
@@ -10328,6 +11061,15 @@ class Padawan(tk.Tk):
         meta = GAME_META.get(st.get("builtin", ""), {})
         t = meta.get("title") or str(st.get("name", "🎮")).lstrip("🎮🕵️🧙 ").upper()
         self.game_title.config(text=f"☢ {t}   ·   TOUR {st.get('turn', 0)}")
+
+    def _game_pause_for(self, what: str) -> None:
+        """v41.2 : met le jeu sur pause (sauvegarde auto + retour au modèle d'avant) avant d'ouvrir un autre mode."""
+        try:
+            self.game_quit()
+        except Exception as e:
+            log(f"pause jeu pour {what}: {e}")
+            self.game = None
+        self.say("sys", f"{what} : partie mise sur pause — 🎮 Jouer pour la reprendre.")
 
     def game_quit(self):
         if not self.game:
@@ -10421,7 +11163,9 @@ class Padawan(tk.Tk):
             return
         try:
             with open(path, "w", encoding="utf-8") as f:
-                f.write(game_export_html(st) if path.lower().endswith((".html", ".htm")) else game_export_txt(st))
+                f.write(game_export_html(st, images=bool(getattr(self, "_game_images", True)),
+                                         generated=self._game_gen_on(check_engine=False))
+                        if path.lower().endswith((".html", ".htm")) else game_export_txt(st))
             self._game_sys(f"📜 Aventure exportée : {path}")
         except Exception as e:
             self._game_sys(f"⚠ Export impossible : {e}")
@@ -10432,6 +11176,12 @@ class Padawan(tk.Tk):
         T.configure(state="normal")
         T.insert("end", text, tags)
         T.configure(state="disabled")
+
+    def _game_sys_safe(self, text: str):
+        try:
+            self._game_sys(text)
+        except Exception:
+            self.say("sys", text)
 
     def _game_sys(self, text: str):
         self._game_w(text + "\n", "sys")
@@ -10471,13 +11221,28 @@ class Padawan(tk.Tk):
             if pos < len(seg):
                 self._game_w(seg[pos:], base, *extra)
 
-    def _game_render_reply(self, text: str, status: str = ""):
+    def _game_render_reply(self, text: str, status: str = "", img_key: str = "", animate: bool = False,
+                           li: Optional[int] = None):
         st = self.game or {}
         bi = st.get("builtin", "")
         g = game_parse(text)
         ch_set = {(n, lab) for n, lab in g["choices"]}
         art_key, art = game_art_for(bi, g["scene"], (g["title"] + " " + text[:600])) if bi else ("", "")
         art_done = False
+        use_img = self._game_img_on()  # v40.2 : illustration ANSI (ou rien si même scène) au lieu de l'art ASCII
+        if use_img:
+            art = "🖼"
+
+        def put_art():
+            nonlocal art_done
+            if art_done:
+                return
+            art_done = True
+            if use_img:
+                if img_key:
+                    self._game_img(img_key, animate, li)
+            elif art:
+                self._game_block(art, "art")
         blocks = game_split_blocks(text)
         fenced_status = any(k == "fence" and game_is_status(b) for k, b in blocks)
         for kind, body in blocks:
@@ -10488,8 +11253,7 @@ class Padawan(tk.Tk):
                     else:
                         self._game_block(status or body, "status")
                 elif art and not art_done:
-                    self._game_block(art, "art")
-                    art_done = True
+                    put_art()
                 elif not art:
                     self._game_block(body, "art")
                 continue
@@ -10512,14 +11276,12 @@ class Padawan(tk.Tk):
                 if mt:
                     self._game_w(_strip_md(mt.group(1)) + "\n", "title")
                     if art and not art_done:
-                        self._game_block(art, "art")
-                        art_done = True
+                        put_art()
                     i += 1
                     continue
                 if _SCENE_RE.match(line):
                     if art and not art_done:
-                        self._game_block(art, "art")
-                        art_done = True
+                        put_art()
                     i += 1
                     continue
                 if re.match(r"^\s*\**\s*QUE FAIS[- ]TU", s, re.I):
@@ -10545,33 +11307,44 @@ class Padawan(tk.Tk):
                         j += 1
                     if len(blk) >= 3:
                         if not art_done:
-                            self._game_block(art if art else "\n".join(blk), "art")
-                            art_done = True
+                            if art:
+                                put_art()
+                            else:
+                                self._game_block("\n".join(blk), "art")
+                                art_done = True
                         i = j
                         continue
                 self._game_inline(line)
                 self._game_w("\n", "narr")
                 i += 1
         if art and not art_done:  # pas de titre ni de SCÈNE: on montre quand même l'image
-            self._game_block(art, "art")
+            put_art()
         self._game_w("\n", "narr")
 
-    def _game_rerender(self):
+    def _game_rerender(self, animate_last: bool = False):
         T = self.game_txt
         T.configure(state="normal")
         T.delete("1.0", "end")
         T.configure(state="disabled")
+        self._game_imgs = []
+        self._game_img_ph = {}
         st = self.game or {}
-        for e in st.get("log", []):
+        plan = game_img_plan(st, self._game_pick_cache) if self._game_img_on() else {}
+        last_i = max(plan) if plan else None
+        if -1 in plan:
+            self._game_img(plan[-1], animate=animate_last and last_i == -1)
+        for ei, e in enumerate(st.get("log", [])):
             who, text = e.get("who"), e.get("text", "")
             if who == "you":
                 self._game_w(f"▶ {text}\n", "you")
             elif who == "mj":
-                self._game_render_reply(text, e.get("status", ""))
+                self._game_render_reply(text, e.get("status", ""), img_key=plan.get(ei, ""),
+                                        animate=animate_last and ei == last_i, li=ei)
             elif who == "fx":
                 self._game_w(text + "\n\n", "check")
             elif who == "intro":
-                self._game_render_intro(intro_only=True)
+                self._game_render_intro(intro_only=True, img_key=plan.get(ei, ""),
+                                        animate=animate_last and ei == last_i)
             else:
                 self._game_w(text + "\n", "sys")
         r = T.tag_prevrange("you", "end")
@@ -10699,14 +11472,17 @@ class Padawan(tk.Tk):
         self._game_send(f"Je choisis {n}. {ch[n]}", display=f"{n}. {ch[n]}")
 
     # ---- création du personnage (locale, fiable)
-    def _game_render_intro(self, intro_only: bool = False):
+    def _game_render_intro(self, intro_only: bool = False, img_key: str = "", animate: bool = False):
         st = self.game or {}
         meta = GAME_META.get(st.get("builtin", ""), {})
         if not meta:
             return
         self._game_w(meta["title"] + "\n", "title")
         k, art = game_art_for(st.get("builtin", ""), meta.get("art", ""))
-        if art:
+        if self._game_img_on():
+            if img_key:
+                self._game_img(img_key, animate)
+        elif art:
             self._game_block(art, "art")
         for para in meta["intro"].split("\n"):
             self._game_inline(para)
@@ -10727,7 +11503,7 @@ class Padawan(tk.Tk):
         st["log"].append({"who": "intro", "text": ""})
         st["choices"] = [(i, a["label"]) for i, a in enumerate(meta["archetypes"], 1)]
         st["choices"].append((len(meta["archetypes"]) + 1, meta["custom"]))
-        self._game_rerender()
+        self._game_rerender(animate_last=True)
 
     def _game_intro_pick(self, n: int, custom_text: str = ""):
         from tkinter import simpledialog
@@ -10932,7 +11708,7 @@ class Padawan(tk.Tk):
                     T = self.game_txt
                     T.configure(state="normal")
                     if first[0]:
-                        T.delete("game_stream", "end")
+                        T.delete("game_stream", "end-1c")
                         first[0] = False
                     T.insert("end", t, "stream")
                     T.configure(state="disabled")
@@ -10955,7 +11731,7 @@ class Padawan(tk.Tk):
         T = self.game_txt
         T.configure(state="normal")
         try:
-            T.delete("game_stream", "end")
+            T.delete("game_stream", "end-1c")
         except Exception:
             pass
         T.configure(state="disabled")
@@ -10970,7 +11746,7 @@ class Padawan(tk.Tk):
         T = self.game_txt
         T.configure(state="normal")
         try:
-            T.delete("game_stream", "end")
+            T.delete("game_stream", "end-1c")
         except Exception:
             pass
         T.configure(state="disabled")
@@ -11015,9 +11791,29 @@ class Padawan(tk.Tk):
         if res["lost"]:
             fx.append("−" + ", −".join(res["lost"]))
         fx += res["stat_changes"] + res["notes"]
+        auto = False
+        if game_reply_incomplete(ans, g["choices"]):  # v41.1 : réponse coupée ou sans choix
+            if not st.get("_autocont"):
+                st["_autocont"] = 1
+                auto = True
+            else:
+                st["_autocont"] = 0
+                if not g["choices"]:
+                    g["choices"] = list(GAME_FALLBACK_CHOICES)
+        else:
+            st["_autocont"] = 0
         st["choices"] = g["choices"]
         start = self.game_txt.index("end-1c")
-        self._game_render_reply(ans, st["log"][-1].get("status", ""))
+        ikey = ""
+        if self._game_img_on():
+            try:
+                ikey = game_img_plan(st, self._game_pick_cache).get(len(st["log"]) - 1, "")
+            except Exception as e:
+                log(f"game_img_plan: {e}")
+        li = len(st["log"]) - 1
+        if ikey and self._game_gen_on():
+            self._game_gen_request(st, li, ikey, ans)
+        self._game_render_reply(ans, st["log"][-1].get("status", ""), img_key=ikey, animate=bool(ikey), li=li)
         if fx:
             line = "🎒 Pip-Boy : " + " · ".join(fx)
             st["log"].append({"who": "fx", "text": line})
@@ -11029,6 +11825,12 @@ class Padawan(tk.Tk):
         self._game_autosave()
         self._game_beep("turn")
         self.ent.focus_set()
+        if auto:
+            self._game_sys("↻ Réponse coupée ou sans choix — je demande la suite au maître du jeu…")
+            self.after(250, lambda: self.game is st and not self.busy and
+                       self._game_send(GAME_FOLLOWUP, display="(suite et choix demandés)", count=False))
+        elif g["choices"] == GAME_FALLBACK_CHOICES:
+            self._game_sys("▶ Pas de choix proposés : choix de secours (▶ Continuer = la suite).")
 
     # ---- ☢ Pip-Boy
     def _game_update_pip(self):
@@ -11771,6 +12573,13 @@ class Padawan(tk.Tk):
         try:  # v40.0 : arrête les programmes / serveurs d'aperçu lancés par l'Atelier
             if getattr(self, "_atelier", None) is not None:
                 self._atelier.shutdown()
+        except Exception:
+            pass
+        try:  # v41.0 : arrête le moteur d'images s'il a été démarré par Padawan
+            if getattr(self, "_studio_view", None) is not None:
+                self._studio_view.shutdown()
+            if getattr(self, "_studio", None) is not None:
+                self._studio.engine.stop()
         except Exception:
             pass
         self._persist_cfg(light=False)

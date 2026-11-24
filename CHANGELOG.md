@@ -1,5 +1,14 @@
 # Journal des versions — Padawan Suite
 
+## v1.6.0 — 2026.11.23 — 🎨 Studio, 🖼 ANSI et 💻 Atelier 1.4
+- Padawan v40.0 → v41.2.
+- 🎨 **Studio d'images** (`Ctrl+G`, module `padawan_studio.py`, v41.0) : ComfyUI local + SD-Turbo démarré à la demande sur 127.0.0.1, idée FR → prompt EN par le modèle courant, 6 styles, graine, variations, image + art ANSI côte à côte, export .png/.ans/.html, galerie, partage de la VRAM avec Ollama. ComfyUI et les modèles d'images ne sont pas inclus.
+- 🖼 **ANSI** (module `padawan_ansi.py`, v40.1–v40.2) : 🖼→ANSI dans l'Atelier (16 couleurs DOS, truecolor, ASCII, Pip-Boy, ░▒▓█ ; .ans + SAUCE, .txt, HTML). Jeux illustrés : 31 scènes originales (`padawan_jeux_images.json.gz`), effet CRT, clic = agrandir, bouton 🖼 Images (Banque / Générées / Fixes / NON).
+- 💻 **Atelier 1.4** : les demandes de modification dans le chat modifient le vrai fichier (lignes numérotées, recalage des numéros, SEARCH/REPLACE accepté), garde-fou anti-fragment avec une relance, couleurs du fichier nommées pour le modèle, aperçu sur « montre-moi le résultat », diff avec gros boutons Appliquer/Refuser. 📎 Insérer un fichier (`Ctrl+I`, glisser-déposer : au curseur, joint au chat, ou onglet), tous encodages, binaires refusés. Gros fichiers joints en partie avec avis. Copie de récupération des onglets non enregistrés.
+- 🎮 Jeux (v41.1) : jamais de modèle « coder » en jeu (bascule temporaire dolphin3:8b), relance automatique si réponse coupée ou sans choix, ▶ Continuer + choix de secours. v41.2 : Atelier et Studio s'ouvrent en pleine partie (pause + sauvegarde).
+- 📦 **Archiveur 5.1** : liens Google/YouTube normalisés (vid: dans le fragment, /url?q=, youtu.be, m., music., shorts, embed, nocookie), yt-dlp mis à jour chaque semaine et après un échec (nouvel essai), erreurs en français clair, 🧩 Embed (iframe YouTube ou lecteur local `lecteur.html`).
+- Tableau de bord 1.6.0 (suite 1.6.0, 2026.11.23). La construction du setup refuse aussi ComfyUI, les modèles d'images et les réglages du Studio.
+
 ## v1.5.0 — 2026.11.18 — 💻 Atelier du programmeur
 - Padawan v39.6 → v40.0.
 - 💻 **Atelier** (`Ctrl+K`, module `padawan_atelier.py`) : mode programmeur plein écran. Chat à gauche (le modèle de code `qwen2.5-coder` s'active le temps de l'Atelier, puis le modèle d'avant revient), éditeur à droite : onglets, numéros de ligne, coloration HTML/CSS/JS/Python/PHP/Arduino/JSON, recherche/remplacement, annuler/rétablir propres, mini-carte.

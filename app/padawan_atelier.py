@@ -40,7 +40,15 @@ try:
 except Exception:  # pragma: no cover
     requests = None
 
-VERSION = "1.0"
+try:  # v40.1 🖼→ANSI (module facultatif : l'Atelier marche sans lui)
+    import padawan_ansi as _ANSI
+except Exception:  # pragma: no cover
+    _ANSI = None
+
+VERSION = "1.4"  # v41.4 : demande de modification dans le chat → vrai fichier modifié (SEARCH/REPLACE appliqué localement, garde-fou anti-fragment, 1 relance, aperçu)
+# v41.3 : 📎 vraie fenêtre de choix (au premier plan), retour visible, tout fichier texte (php, ino…), gros fichier ouvert joint en partie
+# v41.2 : 📎 Insérer un fichier (au curseur, joint au chat, ou ouvert dans un onglet ; Ctrl+I, glisser-déposer)
+# v40.1 : 🖼→ANSI (convertisseur d'images en art ANSI/ASCII, module padawan_ansi.py)
 IS_WIN = os.name == "nt"
 NOWIN = 0x08000000 if IS_WIN else 0          # CREATE_NO_WINDOW
 NEWCON = 0x00000010 if IS_WIN else 0         # CREATE_NEW_CONSOLE
@@ -74,12 +82,52 @@ def _savej(path: str, data) -> None:
 def read_text(path: str) -> str:
     with open(path, "rb") as f:
         raw = f.read()
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        try:
+            return raw.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
     for enc in ("utf-8-sig", "cp1252", "latin-1"):
         try:
             return raw.decode(enc)
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", "replace")
+
+
+TEXT_EXT = {".php", ".phtml", ".html", ".htm", ".js", ".mjs", ".ts", ".css", ".scss", ".py", ".pyw", ".ino", ".c", ".h",
+            ".cpp", ".hpp", ".cs", ".java", ".json", ".sql", ".txt", ".md", ".bat", ".cmd", ".ps1", ".psm1", ".sh", ".xml",
+            ".ini", ".cfg", ".conf", ".csv", ".tsv", ".log", ".yml", ".yaml", ".toml", ".ans", ".asc", ".nfo", ".bas",
+            ".pas", ".lua", ".rb", ".go", ".rs", ".vbs", ".reg", ".htaccess", ".env", ".svg", ".tex", ".rtf", ".iss"}
+IMG_EXT = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".ico", ".tif", ".tiff"}
+ATTACH_MAX = 20000      # caractères joints au chat par fichier
+INSERT_MAX = 400_000    # caractères insérés dans l'éditeur
+
+
+def file_kind(path: str) -> str:
+    """v41.2 : 'image', 'text' ou 'binary' (octet NUL / trop de caractères de contrôle au début)."""
+    ext = os.path.splitext(path)[1].lower() or os.path.basename(path).lower()
+    if ext in IMG_EXT:
+        return "image"
+    if ext in TEXT_EXT:
+        return "text"
+    try:
+        with open(path, "rb") as f:
+            head = f.read(8192)
+    except Exception:
+        return "binary"
+    if head[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return "text"
+    if b"\x00" in head:
+        return "binary"
+    bad = sum(1 for c in head if c < 9 or 13 < c < 32)
+    return "binary" if head and bad > len(head) * 0.05 else "text"
+
+
+def clip_text(txt: str, limit: int) -> Tuple[str, bool]:
+    if len(txt) <= limit:
+        return txt, False
+    return txt[:limit] + f"\n…[tronqué : {limit:,} sur {len(txt):,} caractères]".replace(",", " "), True
 
 
 def write_text(path: str, text: str) -> None:
@@ -1402,6 +1450,190 @@ SYSTEM_PROG = (
     "avec le MÊME nom de fichier.\n"
 )
 
+SYSTEM_PATCH = (
+    "Tu modifies le VRAI fichier de Marc. Réponds UNIQUEMENT avec un ou plusieurs blocs de remplacement, "
+    "exactement dans ce format :\n"
+    "<<<<<<< SEARCH\n(texte copié EXACTEMENT du fichier, caractère pour caractère, assez pour être unique)\n"
+    "=======\n(le même texte, modifié)\n>>>>>>> REPLACE\n"
+    "Règles : change SEULEMENT ce qui est demandé ; tout le reste reste identique. Jamais d'exemple générique, "
+    "jamais de nouveau fichier, jamais de « ... ». Les couleurs se nomment librement : « bleu » peut être "
+    "un bleu ou un violet/mauve (#6C5EB5, #352879, navy…) — repère les vraies valeurs dans le fichier. "
+    "Après les blocs : une seule ligne en français qui dit ce que tu as changé."
+)
+
+EDIT_VERB_RX = re.compile(
+    r"(?i)\b(change[zrs]?|chang[eé]|modifie[zrs]?|modifi[eé]|remplace[zrs]?|ajoute[zrs]?|enl[eè]ve[zrs]?|retire[zrs]?|"
+    r"supprime[zrs]?|corrige[zrs]?|mets|met|mettre|rends|agrandis|r[eé]duis|renomme|traduis|centre|colore|"
+    r"passe[zr]?|transforme|am[eé]liore|fix|change|replace|add|remove|make)\b")
+EDIT_REF_RX = re.compile(r"(?i)\b(fichier|page|code|site|script|fond|background|couleur|texte|titre|bouton|menu|police|"
+                         r"css|html|style|ligne|fonction|section|image|lien|couleurs?|bordure|marge)\b")
+SHOW_RX = re.compile(r"(?i)\b(montre|affiche|r[eé]sultat|aper[cç]u|voir|preview)")
+
+
+def is_edit_request(q: str, tab_name: str = "") -> bool:
+    """v41.4 : « change le fond… », « ajoute un bouton… » sur le fichier ouvert (pas une question générale)."""
+    t = (q or "").strip()
+    if not t or len(t) > 1500 or re.match(r"(?i)^(comment|pourquoi|c'est quoi|qu'est|explique|est-ce)", t):
+        return False
+    if not EDIT_VERB_RX.search(t):
+        return False
+    base = os.path.splitext(tab_name or "")[0].lower()
+    return bool(EDIT_REF_RX.search(t) or (base and base in t.lower()))
+
+
+PATCH_RX = re.compile(r"<{5,9} ?SEARCH[^\n]*\n(.*?)\n?={5,9}[^\n]*\n(.*?)\n?>{5,9} ?REPLACE", re.S)
+
+
+def parse_patches(text: str) -> List[Tuple[str, str]]:
+    return [(a, b) for a, b in PATCH_RX.findall(text or "") if a.strip()]
+
+
+def apply_patches(src: str, patches: List[Tuple[str, str]]) -> Tuple[str, int, int]:
+    """Applique SEARCH/REPLACE : correspondance exacte, puis tolérante aux espaces. → (texte, réussis, ratés)."""
+    ok = bad = 0
+    for a, b in patches:
+        if a in src:
+            src = src.replace(a, b, 1)
+            ok += 1
+            continue
+        a2 = a.strip()
+        if a2 and a2 in src:
+            src = src.replace(a2, b.strip(), 1)
+            ok += 1
+            continue
+        toks = a2.split()
+        m = re.search(r"\s*".join(re.escape(x) for x in toks), src) if toks else None
+        if m:
+            src = src[:m.start()] + b.strip() + src[m.end():]
+            ok += 1
+        else:
+            bad += 1
+    return src, ok, bad
+
+
+SYSTEM_LINES = (
+    "Tu es un outil d'édition de fichiers. Tu ne parles pas, tu n'expliques pas, tu ne donnes jamais d'exemple. "
+    "On te donne un fichier avec ses lignes numérotées et une demande. Tu réponds UNIQUEMENT par les lignes "
+    "modifiées, une par ligne, au format exact :\nL<numéro>: <nouveau contenu COMPLET de la ligne>\n"
+    "Pour ajouter une ligne après la ligne N : L<N>+: <contenu>. Pour supprimer la ligne N : L<N>-\n"
+    "Copie le reste de chaque ligne à l'identique, ne change que ce qui est demandé. "
+    "Les couleurs : « bleu » peut être un bleu ou un violet/mauve (#6C5EB5, #352879, navy…) ; « rouge » = un rouge "
+    "(#B22222, #8B0000, #ff0000…). Rien d'autre dans ta réponse."
+)
+LINE_EDIT_RX = re.compile(r"^\s*[`>*-]*\s*L(\d{1,5})\s*([+-]?)\s*[:|]?\s?(.*)$")
+
+
+def number_lines(src: str) -> str:
+    return "\n".join(f"L{i}: {ln}" for i, ln in enumerate(src.split("\n"), 1))
+
+
+def parse_line_edits(text: str) -> List[Tuple[int, str, str]]:
+    out = []
+    for raw in (text or "").splitlines():
+        m = LINE_EDIT_RX.match(raw)
+        if m:
+            out.append((int(m.group(1)), m.group(2), m.group(3).rstrip()))
+    return out
+
+
+def apply_line_edits(src: str, edits: List[Tuple[int, str, str]]) -> Tuple[str, int]:
+    lines = src.split("\n")
+    rep_, add, dele = {}, {}, set()
+    for n, op, txt in edits:
+        if not 1 <= n <= len(lines):
+            continue
+        if op == "+":
+            add.setdefault(n, []).append(txt)
+        elif op == "-":
+            dele.add(n)
+        elif txt.strip() or lines[n - 1].strip() == "":
+            # v41.4 : un 7B se trompe parfois de numéro → on recale sur la ligne d'origine la plus ressemblante
+            r0 = difflib.SequenceMatcher(None, lines[n - 1], txt).ratio() if lines[n - 1].strip() else 1.0
+            if r0 < 0.55:
+                best, br = 0, 0.0
+                for j, ln in enumerate(lines, 1):
+                    if j in rep_ or not ln.strip():
+                        continue
+                    r = difflib.SequenceMatcher(None, ln, txt).ratio()
+                    if r > br:
+                        best, br = j, r
+                if br < 0.6:
+                    continue
+                n = best
+            rep_[n] = txt
+    out, k = [], 0
+    for i, ln in enumerate(lines, 1):
+        if i in dele:
+            k += 1
+        else:
+            new = rep_.get(i, ln)
+            if new != ln:
+                # garde l'indentation d'origine si le modèle l'a perdue
+                ind = ln[:len(ln) - len(ln.lstrip())]
+                if ind and not new[:1].isspace():
+                    new = ind + new
+                k += 1
+            out.append(new)
+        for x in add.get(i, []):
+            out.append(x)
+            k += 1
+    return "\n".join(out), k
+
+
+def looks_fragment(old: str, new: str) -> str:
+    """Raison (texte) si « new » n'est qu'un morceau qui écraserait « old », sinon ''."""
+    lo, ln = len(old.splitlines()), len(new.splitlines())
+    if lo >= 8 and ln < lo * 0.6:
+        return f"il ne garde que {ln} lignes sur {lo}"
+    low_o, low_n = old.lower(), new.lower()
+    for tag in ("<html", "<body", "<?php", "<!doctype", "def ", "void setup"):
+        if tag in low_o and tag not in low_n:
+            return f"il n'a plus « {tag.strip()} »"
+    return ""
+
+
+def _hue_name(hx: str) -> str:
+    import colorsys
+    h = hx.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    except ValueError:
+        return ""
+    hh, ll, ss = colorsys.rgb_to_hls(r, g, b)
+    if ss < 0.15:
+        return "noir" if ll < 0.15 else "blanc" if ll > 0.85 else "gris"
+    d = hh * 360
+    name = ("rouge" if d < 15 or d >= 345 else "orange" if d < 45 else "jaune" if d < 70 else "vert" if d < 165 else
+            "cyan" if d < 195 else "bleu" if d < 240 else "bleu-violet (mauve)" if d < 280 else "violet" if d < 320 else "rose")
+    return name + (" foncé" if ll < 0.35 else " clair" if ll > 0.7 else "")
+
+
+def color_hints(src: str) -> str:
+    """« #6C5EB5 = bleu-violet » pour les couleurs de fond : le modèle sait lesquelles sont « bleues »."""
+    seen = []
+    for m in re.finditer(r"(?i)background(?:-color)?\s*:[^;}]*", src):
+        for hx in re.findall(r"#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b", m.group(0)):
+            if hx.upper() not in [x.upper() for x in seen]:
+                seen.append(hx)
+    return ", ".join(f"{h} = {_hue_name(h)}" for h in seen[:12])
+
+
+def key_lines(src: str, q: str, limit: int = 14) -> str:
+    """Lignes du fichier liées à la demande (couleurs / fond…) pour que le modèle copie les vraies valeurs."""
+    words = ["background"] if re.search(r"(?i)fond|background|couleur|color", q) else []
+    words += [w.lower() for w in re.findall(r"[A-Za-zÀ-ÿ#_-]{4,}", q)]
+    out = []
+    for i, ln in enumerate(src.splitlines(), 1):
+        l2 = ln.lower()
+        if any(w in l2 for w in words if w not in ("change", "fichier", "page", "montre", "resultat", "résultat")):
+            out.append(f"ligne {i}: {ln.strip()[:220]}")
+        if len(out) >= limit:
+            break
+    return "\n".join(out)
+
+
 TEMPLATES: Dict[str, Dict[str, Any]] = {}
 
 TEMPLATES["dos_menu"] = {
@@ -1862,9 +2094,13 @@ class DiffDialog:
         if mode == "pick":
             _btn(bar, "✔ Tout accepter", lambda: self._all(True), C).pack(side="left", padx=(0, 4))
             _btn(bar, "✖ Tout rejeter", lambda: self._all(False), C).pack(side="left")
-            _btn(bar, "Annuler", d.destroy, C, big=True).pack(side="right")
-            _btn(bar, ok_text or "✅ Appliquer les changements cochés", self._apply, C, kind="gold",
-                 big=True).pack(side="right", padx=6)
+            _btn(bar, "✖  Refuser", d.destroy, C, kind="bad", big=True, width=14).pack(side="right")
+            okb = _btn(bar, ok_text or "✅  Appliquer", self._apply, C, kind="gold", big=True, width=16)
+            okb.pack(side="right", padx=6)
+            tk.Label(bar, text="Appliquer = garde les changements cochés", bg=C["bg"], fg=C["dim"],
+                     font=("Segoe UI", 9)).pack(side="right", padx=8)
+            d.bind("<Return>", lambda e: self._apply())
+            d.bind("<Escape>", lambda e: d.destroy())
         else:
             _btn(bar, "Annuler", d.destroy, C, big=True).pack(side="right")
             _btn(bar, ok_text or "✅ Oui, écraser", self._yes, C, kind="gold", big=True).pack(side="right", padx=6)
@@ -1897,7 +2133,7 @@ class DiffDialog:
             if pick:
                 v = tk.BooleanVar(value=True)
                 self.vars[k] = v
-                cb = tk.Checkbutton(t, text=f" Garder le changement {n}  (ligne {i1 + 1})", variable=v,
+                cb = tk.Checkbutton(t, text=f" ✔ Garder ce changement ({n}, ligne {i1 + 1})", variable=v,
                                     bg="#232b3a", fg=C["gold"], selectcolor="#11151c", activebackground="#232b3a",
                                     activeforeground=C["gold"], font=("Segoe UI", 9, "bold"), cursor="hand2",
                                     bd=0, highlightthickness=0)
@@ -2056,6 +2292,7 @@ class Atelier(tk.Frame):
         self.cfg_path = os.path.join(private_dir, "atelier.json")
         self.idx_path = os.path.join(private_dir, "atelier_projets.json")
         self.ws = os.path.join(private_dir, "atelier")
+        self.after(60000, self._recovery_tick)  # v41.4 : onglets non enregistrés → atelier\\recup
         par = os.path.dirname(os.path.normpath(private_dir))
         self.bak_root = (os.path.join(par, "bak", "atelier") if os.path.basename(par).lower() == "web_private"
                          else os.path.join(private_dir, "bak", "atelier"))
@@ -2147,6 +2384,8 @@ class Atelier(tk.Frame):
         k("<Control-Shift-C>", self.copy_file)
         k("<Control-k>", self.leave)
         k("<Control-K>", self.leave)
+        k("<Control-i>", self.insert_file)  # v41.2 📎
+        k("<Control-I>", self.insert_file)
         k("<Control-o>", self.open_file)
         k("<Control-O>", self.open_file)
         self.bind_class("AtelierKeys", "<Escape>", self._esc)
@@ -2191,11 +2430,17 @@ class Atelier(tk.Frame):
         r2 = tk.Frame(tb, bg=C["bg"])
         r2.pack(fill="x", pady=(3, 0))
         B = lambda p, t, c, tip, kind="norm": _btn(p, t, c, C, kind=kind, big=(p is r1), tip=tip)
+        self.ins_btn = B(r1, "📎 Insérer un fichier", self.insert_file,
+                         "Ctrl+I · choisis un fichier, puis :\n✍ insérer son contenu au curseur · 💬 le joindre à ta question au modèle\n"
+                         "· 📂 l'ouvrir dans un onglet. Tu peux aussi le glisser sur l'éditeur ou sur la zone de chat.", "gold")
+        self.ins_btn.pack(side="left", padx=2)
         B(r1, "📋 Copier", self.copy_file, "Copie TOUT le fichier dans le presse-papiers (Ctrl+Maj+C)").pack(side="left", padx=2)
         B(r1, "💾 Enregistrer", self.save_current, "Enregistre (Ctrl+S) · garde une version 🕘 à chaque fois").pack(side="left", padx=2)
         B(r1, "👁 Aperçu", self.preview_current, "F5 · HTML : navigateur, recharge tout seul à chaque 💾\n"
           "Python : exécuté en bas (sortie + saisie) · PHP : serveur php local", "cyan").pack(side="left", padx=2)
         B(r1, "🖥 Console", self.console_current, "Ctrl+F5 · lance dans une vraie console Windows\n(couleurs ANSI, input(), menus DOS)").pack(side="left", padx=2)
+        B(r1, "🖼→ANSI", self.ansi_studio, "Image → art ANSI / ASCII (16 couleurs DOS, truecolor, Pip-Boy, ░▒▓█)\n"
+          "Ouvrir, coller ou glisser une image · .ans, .txt, HTML, insérer dans l'onglet").pack(side="left", padx=2)
         B(r1, "🚀 Déployer", self.deploy_dialog, "Copie vers le dossier Python, le dossier Web local\nou ton serveur (FTP/FTPS/SFTP) — diff + .bak avant d'écraser", "gold").pack(side="left", padx=2)
         B(r1, "✏️ Modifier", self.modify_current, "Ctrl+E · décris le changement : le modèle réécrit le fichier,\n"
           "tu vois le diff et tu acceptes/rejettes chaque changement").pack(side="left", padx=2)
@@ -2253,6 +2498,7 @@ class Atelier(tk.Frame):
                selectbackground=[("readonly", C["card"])], selectforeground=[("readonly", C["fg"])])
         self.nb = ttk.Notebook(ed_area, style="Atl.TNotebook")
         self.nb.pack(fill="both", expand=True)
+        self.after(400, lambda: self._setup_drop(ed_area))  # v41.2 glisser-déposer
         self.nb.bind("<<NotebookTabChanged>>", lambda e: self._tab_changed())
         self.nb.bind("<Button-2>", self._nb_middle)
         self.nb.bind("<Button-3>", self._nb_menu)
@@ -2309,6 +2555,11 @@ class Atelier(tk.Frame):
         tk.Checkbutton(opt, text="📎 joindre le fichier ouvert", variable=self.attach_var, bg=C["bg"], fg=C["dim"],
                        selectcolor=C["card"], activebackground=C["bg"], font=("Segoe UI", 8),
                        command=self._attach_changed).pack(side="left")
+        self.attached: List[Tuple[str, str]] = []  # v41.2 fichiers joints à la prochaine question
+        self.att_lbl = tk.Label(opt, text="", bg=C["bg"], fg=C["gold"], font=("Segoe UI", 8, "bold"), cursor="hand2")
+        self.att_lbl.pack(side="left", padx=6)
+        self.att_lbl.bind("<Button-1>", lambda e: self._attach_clear())
+        Tip(self.att_lbl, "Fichiers joints à ta prochaine question · clic = tout retirer", C)
         tk.Label(opt, text="Entrée = envoyer · Maj+Entrée = ligne", bg=C["bg"], fg=C["dim"],
                  font=("Segoe UI", 8)).pack(side="right")
 
@@ -2407,7 +2658,37 @@ class Atelier(tk.Frame):
         if cb:
             cb()
 
+    def save_recovery(self) -> List[str]:
+        """v41.4 : copie des onglets NON enregistrés dans atelier\\recup (avant fermeture / toutes les 60 s)."""
+        out = []
+        try:
+            d = os.path.join(self.ws, "recup")
+            for t in list(self.tabs):
+                txt = t.ed.get()
+                if t.ed.dirty() and txt.strip():
+                    os.makedirs(d, exist_ok=True)
+                    p = os.path.join(d, f"{slugify(os.path.splitext(t.name)[0]) or 'onglet'}__recup{os.path.splitext(t.name)[1]}")
+                    try:
+                        if os.path.exists(p) and read_text(p) == txt:
+                            out.append(p)
+                            continue
+                    except Exception:
+                        pass
+                    write_text(p, txt)
+                    out.append(p)
+        except Exception:
+            pass
+        return out
+
+    def _recovery_tick(self):
+        self.save_recovery()
+        try:
+            self.after(60000, self._recovery_tick)
+        except Exception:
+            pass
+
     def shutdown(self):
+        self.save_recovery()
         try:
             self.runner.stop()
             if self.php_runner:
@@ -2544,11 +2825,282 @@ class Atelier(tk.Frame):
         self.inp.delete("1.0", "end")
         tab = self.cur()
         ctx = ""
-        if tab and self.attach_var.get() and tab.ed.get().strip() and len(tab.ed.get()) < 24000:
-            ctx = (f"[Fichier ouvert dans l'éditeur : {tab.name}]\n```{tab.ed.lang} {tab.name}\n{tab.ed.get()}\n```\n\n")
+        if tab and tab.ed.get().strip() and is_edit_request(q, tab.name):  # v41.4 : vraie modification du fichier
+            att = list(getattr(self, "attached", []) or [])
+            self._attach_clear(quiet=True)
+            self._chat_ins("Toi\n", "you")
+            self._chat_ins(q + f"\n✏️ modification de {tab.name}\n\n", "youtxt")
+            return self.edit_request(q, tab, extra_ctx="".join(b + "\n\n" for _, b in att))
+        cur_on = bool(tab and self.attach_var.get() and tab.ed.get().strip())
+        if cur_on:  # v41.3 : un gros fichier est joint en partie (avant : ignoré sans rien dire)
+            body, cut = clip_text(tab.ed.get(), 24000)
+            ctx = (f"[Fichier ouvert dans l'éditeur : {tab.name}]\n```{tab.ed.lang} {tab.name}\n{body}\n```\n\n")
+            if cut:
+                self.say_sys(f"⚠ {tab.name} est gros : seuls les 24 000 premiers caractères partent au modèle "
+                             "(sélectionne un passage + ✏️ Modifier pour une partie précise).")
+        att = list(getattr(self, "attached", []) or [])
+        for nm, body in att:
+            ctx += body + "\n\n"
         self._chat_ins("Toi\n", "you")
-        self._chat_ins(q + ("\n📎 " + tab.name if ctx else "") + "\n\n", "youtxt")
+        names = ([tab.name] if cur_on else []) + [n for n, _ in att]
+        self._chat_ins(q + ("\n📎 " + ", ".join(names) if names else "") + "\n\n", "youtxt")
+        if att:
+            self._attach_clear(quiet=True)
         self._generate(ctx + q, q, purpose="chat", tab=tab)
+
+    # ── v41.4 ✏️ modification réelle (SEARCH/REPLACE) ──────────────────────
+    def edit_request(self, what: str, tab: Tab, retry: int = 0, extra_ctx: str = ""):
+        src = tab.ed.get()
+        if len(src.split("\n")) <= 900 and len(src) <= 60000:  # v41.4 : lignes numérotées (fiable même en 7B)
+            keys = key_lines(src, what)
+            strict = ("\nATTENTION : ta réponse précédente était inutilisable. Réponds SEULEMENT par des lignes « L<n>: … ».\n"
+                      if retry else "")
+            prompt = (f"{extra_ctx}FICHIER {tab.name} ({len(src.split(chr(10)))} lignes) :\n{number_lines(src)}\n\n"
+                      + (f"Lignes probablement concernées :\n{keys}\n\n" if keys else "")
+                      + (f"Couleurs de fond du fichier : {color_hints(src)}\n\n"
+                         if re.search(r"(?i)fond|background|couleur|color", what) and color_hints(src) else "")
+                      + f"DEMANDE : {what}\n{strict}\nModifie TOUTES les lignes nécessaires (ex. chaque fond de couleur visible : page, "
+                         "boîtes, écran), pas seulement la première. Réponds uniquement par les lignes modifiées (format L<n>: …).")
+            return self._generate(prompt, f"✏️ {what} ({tab.name})", purpose="patch", tab=tab,
+                                  extra={"what": what, "retry": retry, "show": bool(SHOW_RX.search(what)),
+                                         "system": SYSTEM_LINES})
+        keys = key_lines(src, what)
+        strict = ("\nATTENTION : ta réponse précédente était un exemple générique ou un fragment. Cette fois, copie "
+                  "EXACTEMENT les lignes du fichier dans SEARCH et ne change que la demande.\n") if retry else ""
+        prompt = (f"{extra_ctx}Voici le fichier COMPLET de Marc ({len(src.splitlines())} lignes) :\n"
+                  f"```{tab.ed.lang} {tab.name}\n{src}\n```\n\n"
+                  + (f"Lignes probablement concernées :\n{keys}\n\n" if keys else "")
+                  + f"Demande de Marc : {what}\n{strict}\n"
+                  "Réponds avec des blocs <<<<<<< SEARCH / ======= / >>>>>>> REPLACE (texte EXACT du fichier dans SEARCH).")
+        self._generate(prompt, f"✏️ {what} ({tab.name})", purpose="patch", tab=tab,
+                       extra={"what": what, "retry": retry, "show": bool(SHOW_RX.search(what)), "system": SYSTEM_PATCH})
+
+    def _after_patch(self, full: str, ctx: Dict[str, Any]):
+        tab, ex = ctx["tab"], ctx["extra"]
+        if not tab or tab not in self.tabs:
+            return
+        old = tab.ed.get()
+        pts = parse_patches(full)
+        new, why = None, ""
+        le = parse_line_edits(full) if not pts else []
+        if le:
+            cand, k = apply_line_edits(old, le)
+            why = looks_fragment(old, cand) if k else "ses lignes ne changent rien"
+            if k and not why and cand != old:
+                new = cand
+        elif pts:
+            cand, ok, bad = apply_patches(old, pts)
+            if ok and cand != old:
+                new = cand
+                if bad:
+                    self.say_sys(f"⚠ {bad} bloc(s) introuvable(s) dans {tab.name} — seuls {ok} appliqué(s).")
+            else:
+                why = "ses blocs SEARCH ne correspondent pas au fichier"
+        else:
+            blocks = extract_blocks(full)
+            b = next((x for x in blocks if x["name"] and x["name"].lower() == tab.name.lower()), None) or \
+                next((x for x in blocks if x["lang"] == tab.ed.lang), None) or (blocks[0] if blocks else None)
+            if b:
+                why = looks_fragment(old, b["code"])
+                if not why:
+                    new = b["code"]
+            else:
+                why = "pas de changement dans la réponse"
+        if new is None:
+            if not ex.get("retry"):
+                self.say_sys(f"↻ Réponse inutilisable ({why}) — je redemande au modèle, plus strictement…")
+                return self.after(200, lambda: self.edit_request(ex["what"], tab, retry=1))
+            self.say_sys(f"🛑 Je n'applique rien : {why}. Ton fichier {tab.name} est intact. "
+                         "Reformule (ex. « change #6C5EB5 en rouge »), ou insère l'extrait proposé :")
+            snip = (extract_blocks(full) or [{"code": full}])[0]["code"]
+            self._offer_snippet(tab, snip)
+            return
+        self._propose(tab, new, "✏️ Modification proposée")
+        if ex.get("show") and tab.ed.get() != old:
+            self.after(300, self.preview_current)
+
+    def _offer_snippet(self, tab: Tab, code: str):
+        b = tk.Button(self.chat, text="➕ Insérer l'extrait au curseur", font=("Segoe UI", 8, "bold"), bg=self.C["card"],
+                      fg=self.C["gold"], relief="flat", cursor="hand2",
+                      command=lambda: self._ins_text(code, "➕ Extrait inséré au curseur (Ctrl+Z pour annuler)."))
+        self.chat.configure(state="normal")
+        self.chat.window_create("end", window=b)
+        self.chat.insert("end", "\n\n")
+        self.chat.configure(state="disabled")
+        self.chat.see("end")
+
+    # ── v41.2 📎 insérer un fichier ──────────────────────────────────────────
+    def insert_file(self, path: str = "", how: str = ""):
+        if not path:
+            init = (self.project or {}).get("dir", "") or os.path.expanduser("~")
+            path = filedialog.askopenfilename(parent=self, initialdir=init, title="📎 Insérer un fichier")
+            if not path:
+                return
+        path = os.path.normpath(path)
+        if not os.path.isfile(path):
+            return self.say_sys(f"📎 Introuvable : {path}")
+        if not how:  # v41.3 : vraie fenêtre (le menu tk_popup se refermait tout seul après la boîte « Ouvrir »)
+            return self._insert_choice(path)
+        try:
+            r = self._insert_file_do(path, how)
+        except Exception as e:
+            r = "error"
+            self.say_sys(f"📎 Erreur avec {os.path.basename(path)} : {e}")
+        self._ins_feedback(path, how, r)
+        return r
+
+    def _ins_feedback(self, path: str, how: str, r: str):
+        name = os.path.basename(path)
+        msg = {"editor": f"📎 {name} inséré au curseur", "chat": f"📎 {name} joint à ta prochaine question",
+               "open": f"📂 {name} ouvert dans un onglet", "refused": f"📎 {name} : non inséré (voir le chat)",
+               "error": f"📎 {name} : erreur (voir le chat)"}.get(r, f"📎 {name}")
+        col = self.C["ok"] if r in ("editor", "chat", "open") else self.C["bad"]
+
+        def show():
+            try:
+                self.status.configure(text=msg, fg=col)
+                self.after(5000, self._status)
+            except Exception:
+                pass
+        self.after(120, show)  # après le rafraîchissement de la barre par le changement d'onglet
+
+    def _insert_choice(self, path: str):
+        C = self.C
+        name = os.path.basename(path)
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            size = 0
+        kind = file_kind(path)
+        d = tk.Toplevel(self)
+        self._ins_dlg = d
+        d.title("📎 Insérer un fichier")
+        d.configure(bg=C["panel"])
+        d.transient(self.winfo_toplevel())
+        d.resizable(False, False)
+        tk.Label(d, text=f"📎 {name}", bg=C["panel"], fg=C["gold"], font=("Segoe UI", 13, "bold")).pack(padx=18, pady=(14, 0))
+        info = {"text": "fichier texte / code", "image": "image (seul son chemin peut être inséré)",
+                "binary": "fichier binaire — ne peut pas être inséré comme texte"}[kind]
+        tk.Label(d, text=f"{size / 1024:.0f} Ko · {info}\n{path}", bg=C["panel"], fg=C["dim"], font=("Segoe UI", 9),
+                 justify="center", wraplength=520).pack(padx=18, pady=(2, 10))
+        def go(how):
+            try:
+                d.grab_release()
+            except Exception:
+                pass
+            d.destroy()
+            self.insert_file(path, how)
+        opts = [("📂  Ouvrir dans un onglet", "open", "gold"), ("✍  Insérer le contenu au curseur", "editor", "norm"),
+                ("💬  Joindre à ma question au modèle", "chat", "cyan")]
+        btns = {}
+        for lab, how, kd in opts:
+            b = _btn(d, lab, lambda h=how: go(h), C, kind=kd, big=True, width=34)
+            b.pack(padx=18, pady=3, fill="x")
+            btns[how] = b
+        _btn(d, "Annuler (Échap)", d.destroy, C).pack(pady=(6, 12))
+        self._ins_btns = btns
+        default = "editor" if kind == "image" else "open"
+        btns[default].configure(relief="solid", bd=2)
+        d.bind("<Return>", lambda e: go(default))
+        d.bind("<Escape>", lambda e: d.destroy())
+        d.update_idletasks()
+        top = self.winfo_toplevel()
+        x = top.winfo_rootx() + (top.winfo_width() - d.winfo_reqwidth()) // 2
+        y = top.winfo_rooty() + (top.winfo_height() - d.winfo_reqheight()) // 3
+        d.geometry(f"+{max(0, x)}+{max(0, y)}")
+        d.attributes("-topmost", True)
+        d.lift()
+        d.focus_force()
+        btns[default].focus_set()
+        try:
+            d.grab_set()
+        except Exception:
+            pass
+        try:
+            self.status.configure(text=f"📎 {name} : choisis quoi faire dans la fenêtre", fg=self.C["gold"])
+        except Exception:
+            pass
+        return d
+
+    def _insert_file_do(self, path: str, how: str) -> str:
+        name = os.path.basename(path)
+        kind = file_kind(path)
+        if kind == "binary":
+            self.say_sys(f"📎 « {name} » est un fichier binaire (exe, zip, pdf…) : je ne peux pas l'insérer comme texte.")
+            return "refused"
+        if how == "open":
+            if kind == "image":
+                self.say_sys(f"📎 « {name} » est une image : essaie 🖼→ANSI, ou ✍ pour insérer son chemin.")
+                return "refused"
+            return "open" if self.open_path(path) else "error"
+        if kind == "image":
+            ref = path.replace("\\", "/")
+            if how == "editor":
+                return self._ins_text(ref, f"📎 Chemin de l'image inséré : {name}")
+            self._attach_add(name, f"[Image jointe : {name} — chemin {ref} (le modèle ne voit pas l'image, seulement son nom/chemin)]")
+            return "chat"
+        try:
+            txt = read_text(path)
+        except Exception as e:
+            self.say_sys(f"📎 Lecture impossible : {e}")
+            return "error"
+        if how == "editor":
+            body, cut = clip_text(txt, INSERT_MAX)
+            return self._ins_text(body, f"📎 {name} inséré au curseur ({len(txt):,} car.)".replace(",", " ")
+                                  + (" — ⚠ tronqué" if cut else "") + " · Ctrl+Z pour annuler")
+        body, cut = clip_text(txt, ATTACH_MAX)
+        lang = lang_of(name) or ""
+        self._attach_add(name, f"[Fichier joint : {name}]\n```{lang} {name}\n{body}\n```")
+        if cut:
+            self.say_sys(f"⚠ {name} est gros : seuls les {ATTACH_MAX:,} premiers caractères sont joints.".replace(",", " "))
+        return "chat"
+
+    def _ins_text(self, text: str, msg: str) -> str:
+        t = self.cur()
+        if not t:
+            t = self.add_tab("sans_titre.txt", "", dirty=True)
+        ed = t.ed
+        ed.t.edit_separator()
+        ed.t.insert("insert", text)
+        ed.t.edit_separator()
+        try:
+            ed.t.event_generate("<<Modified>>")
+        except Exception:
+            pass
+        ed.t.focus_set()
+        self.say_sys(msg)
+        return "editor"
+
+    def _attach_add(self, name: str, body: str):
+        self.attached = [a for a in self.attached if a[0] != name] + [(name, body)]
+        self._attach_lbl()
+        self.say_sys(f"📎 {name} joint : il partira avec ta prochaine question.")
+        self.inp.focus_set()
+
+    def _attach_clear(self, quiet: bool = False):
+        if self.attached and not quiet:
+            self.say_sys("📎 Fichiers joints retirés.")
+        self.attached = []
+        self._attach_lbl()
+
+    def _attach_lbl(self):
+        n = len(self.attached)
+        self.att_lbl.configure(text=(f"📎 {n} joint{'s' if n > 1 else ''} : " + ", ".join(a[0] for a in self.attached)[:60] + " ✖") if n else "")
+
+    def _setup_drop(self, ed_area):
+        if _ANSI is None or not hasattr(_ANSI, "enable_drop"):
+            return
+        def on(files, how):
+            for f in files[:5]:
+                if how == "editor" and len(files) == 1:
+                    self.insert_file(f)  # menu : insérer / joindre / ouvrir
+                else:
+                    self._insert_file_do(f, "chat" if how == "chat" else "open")
+        try:
+            self._drop_ed = _ANSI.enable_drop(ed_area, lambda fs: on(fs, "editor"))
+            self._drop_chat = _ANSI.enable_drop(self.inp, lambda fs: on(fs, "chat"))
+        except Exception:
+            pass
 
     def _generate(self, prompt: str, shown: str, *, purpose: str, tab: Optional[Tab] = None,
                   sel: Optional[Tuple[str, str]] = None, extra: Optional[Dict[str, Any]] = None):
@@ -2559,8 +3111,9 @@ class Atelier(tk.Frame):
             self.say_sys("❌ Module requests manquant.")
             return
         model = self.current_model()
-        msgs = [{"role": "system", "content": SYSTEM_PROG}]
-        for h in self.history[-6:]:
+        sysp = (extra or {}).get("system") or SYSTEM_PROG
+        msgs = [{"role": "system", "content": sysp}]
+        for h in (self.history[-6:] if purpose != "patch" else []):
             msgs.append({"role": h["role"], "content": h["content"][:6000]})
         msgs.append({"role": "user", "content": prompt})
         self.history.append({"role": "user", "content": shown})
@@ -2681,6 +3234,8 @@ class Atelier(tk.Frame):
     def _after_answer(self, full: str):
         ctx = self._gen_ctx
         purpose, tab = ctx["purpose"], ctx["tab"]
+        if purpose == "patch":
+            return self._after_patch(full, ctx)
         blocks = extract_blocks(full)
         if purpose == "explain" or not blocks:
             if purpose in ("edit", "fix", "sel") and not blocks:
@@ -2740,7 +3295,14 @@ class Atelier(tk.Frame):
         self.nb.select(t.ed)
 
     def _propose(self, tab: Tab, new: str, title: str, old: Optional[str] = None):
+        guard = old is None
         old = tab.ed.get() if old is None else old
+        why = looks_fragment(old, new) if guard else ""
+        if why:  # v41.4 : un exemple/fragment ne remplace jamais le fichier entier
+            self.say_sys(f"🛑 Ce code n'est qu'un morceau ({why}) : je ne remplace pas {tab.name}. "
+                         "Pour modifier ton fichier, écris ta demande (ex. « change le fond en rouge ») ou ✏️ Modifier.")
+            self._offer_snippet(tab, new)
+            return
         if old == new:
             self.say_sys(f"= {tab.name} : aucune différence.")
             return
@@ -3604,9 +4166,7 @@ class Atelier(tk.Frame):
             self._generate(prompt, f"✏️ {what} (sélection de {t.name})", purpose="sel", tab=t, sel=(a, b),
                            extra={"title": "✏️ Modification de la sélection"})
         else:
-            prompt = (f"Voici le fichier complet :\n```{t.ed.lang} {t.name}\n{t.ed.get()}\n```\n\n"
-                      f"Changement demandé : {what}\n\nRenvoie le fichier COMPLET modifié (même nom), puis 3 puces max.")
-            self._generate(prompt, f"✏️ {what} ({t.name})", purpose="edit", tab=t)
+            self.edit_request(what, t)  # v41.4 : SEARCH/REPLACE + garde-fou
 
     def quick_action(self, kind: str, label: str):
         t = self.cur()
@@ -3977,6 +4537,7 @@ class Atelier(tk.Frame):
         m.add_command(label="🧪 Testeur d'expressions régulières", command=self.regex_tool)
         m.add_command(label="🧾 JSON : valider et mettre en forme", command=self.json_format)
         m.add_command(label="🎨 Choisir une couleur (insère #rrggbb)", command=self.color_pick)
+        m.add_command(label="🖼→ANSI : image en art ANSI / ASCII…", command=self.ansi_studio)
         m.add_command(label="📊 Statistiques du fichier", command=self.stats_dialog)
         m.add_separator()
         m.add_command(label="📦 Exporter le projet en .zip…", command=self.export_zip)
@@ -3990,6 +4551,63 @@ class Atelier(tk.Frame):
         m.add_command(label="🟦 Thème DOS / Padawan", command=self.toggle_theme)
         m.add_command(label="A+  Police plus grande", command=lambda: self._font(1))
         m.add_command(label="A−  Police plus petite", command=lambda: self._font(-1))
+
+    # ── v40.1 🖼→ANSI ────────────────────────────────────────────────────────
+    def ansi_studio(self, path: str = ""):
+        """Ouvre (ou ramène) la fenêtre 🖼→ANSI. Retourne l'objet AnsiStudio (ou None)."""
+        if _ANSI is None:
+            messagebox.showwarning("🖼→ANSI", "Module padawan_ansi.py introuvable à côté de Padawan.", parent=self)
+            return None
+        s = getattr(self, "_ansi_win", None)
+        if s is not None and s.exists():
+            try:
+                s.d.deiconify()
+                s.d.lift()
+                s.d.focus_force()
+            except Exception:
+                pass
+            if path:
+                s.load_path(path)
+            return s
+
+        def cur_dir() -> str:
+            t = self.cur()
+            if t and t.path:
+                return os.path.dirname(t.path)
+            return self.ws
+
+        hooks = {"pip": self._pip_module, "new_tab": lambda name, text: self.add_tab(name, text, dirty=True),
+                 "insert": self._ansi_to_tab, "default_dir": cur_dir, "python": find_python, "env": clean_env,
+                 "flash": self._flash, "log": self.log}
+        try:
+            self._ansi_win = _ANSI.AnsiStudio(self, self.C, cfg=self.cfg, save_cfg=self._save_cfg,
+                                              workdir=os.path.join(self.ws, "_ansi"), hooks=hooks, path=path)
+        except Exception as e:
+            self.log(f"ansi: {e}")
+            messagebox.showerror("🖼→ANSI", f"Ouverture impossible : {e}", parent=self)
+            return None
+        return self._ansi_win
+
+    def _ansi_to_tab(self, art) -> str:
+        t = self.cur()
+        lang = t.ed.lang if t else ""
+        if lang == "python":
+            code, what = art.to_python(), "code Python (print en couleurs)"
+        elif lang in ("html", "php"):
+            code, what = art.to_html(fragment=True), "<pre> HTML coloré"
+        else:
+            code, what = art.to_text(), "texte"
+        self.insert_snippet(code)
+        t = self.cur()
+        return what + (f" → {t.name}" if t else "")
+
+    def _pip_module(self, mod: str):
+        """pip install <mod> (même chemin que le bouton 📦 de l'Atelier, avec confirmation)."""
+        self._pip_mod = mod
+        if not (self.run_tab or self.cur()):
+            self.add_tab(f"installer_{mod}.txt", f"Installation du module {mod} pour Python (pip)…\n"
+                         "La sortie s'affiche en bas. Ensuite, rouvre l'outil.\n", dirty=False)
+        self.pip_install()
 
     def _font(self, d: int):
         self.cfg["font_size"] = max(7, min(28, int(self.cfg.get("font_size") or 11) + d))

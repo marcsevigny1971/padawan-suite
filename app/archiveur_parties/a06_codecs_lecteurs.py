@@ -602,6 +602,43 @@ def update_ytdlp(log: Callable[[str], None]) -> Tuple[bool, str, str]:
         return False, old, old
 
 
+YTDLP_STAMP = os.path.join(PRIV_DIR, "ytdlp_maj.json")
+_YTDLP_STALE = re.compile(r"(?i)http error 403|signature|nsig|requested format is not available|unable to extract|"
+                          r"no video formats|player response|forbidden|precondition|unsupported url: https?://(www\.)?youtube")
+
+
+def ytdlp_stale_error(err: Any) -> bool:
+    return bool(_YTDLP_STALE.search(str(err or "")))
+
+
+def _ytdlp_reload() -> None:
+    for k in [k for k in sys.modules if k == "yt_dlp" or k.startswith("yt_dlp.")]:
+        sys.modules.pop(k, None)
+
+
+def ytdlp_auto_update(log: Callable[[str], None], *, force: bool = False, days: int = 7) -> bool:
+    """v5.1 : mise à jour yt-dlp automatique (1×/semaine, ou forcée après un échec YouTube). True = nouvelle version."""
+    try:
+        with open(YTDLP_STAMP, encoding="utf-8") as fh:
+            last = float((json.load(fh) or {}).get("t", 0))
+    except Exception:
+        last = 0.0
+    if not force and time.time() - last < days * 86400:
+        return False
+    if force and time.time() - last < 600:
+        return False  # déjà tenté il y a moins de 10 min
+    ok, old, new = update_ytdlp(log)
+    try:
+        with open(YTDLP_STAMP, "w", encoding="utf-8") as fh:
+            json.dump({"t": time.time(), "old": old, "new": new, "ok": ok}, fh)
+    except Exception:
+        pass
+    if ok and new and new != old:
+        _ytdlp_reload()
+        return True
+    return False
+
+
 # ---------------------------------------------------------------- instance unique (Windows)
 _INSTANCE_MUTEX = None
 _MUTEX_NAME = "Local\\ArchiveurPadawanUnique"

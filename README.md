@@ -141,12 +141,19 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.5.0) | SHA256 |
+| Fichier (version 1.6.0) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `E0E95C85995BA044C18F60D46EBB1A457035E622B9F73181FB9558110E241C36` |
-| `Padawan-Projet.zip` | `EA09FBAF9064F5DE714372A051B7795E52F2332D9B2A9BCE9D4BE1F46F3D5BE5` |
+| `Padawan-Setup.exe` | `D07AE7CD794500B75CD8BAFC5E977D2AA740DE17CC5595F7A2F174E421EA1027` |
+| `Padawan-Projet.zip` | `196FC7526C669B3376C13CBE5E4CA98FE4AC186BC0F3C5D6163E59750296A540` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.6.0 : Studio, ANSI et Atelier 1.4 (23 novembre 2026)
+- 🎨 **Studio d'images** (`Ctrl+G`) : ton idée en français devient une image générée sur ton PC (ComfyUI + SD-Turbo, local). 6 styles, variations, galerie, et la version ANSI à côté. ComfyUI et les modèles d'images s'installent à part.
+- 🖼 **Art ANSI** : convertisseur image → ANSI/ASCII dans l'Atelier, et des jeux illustrés de 31 scènes rétro (Pip-Boy, DOS 16 couleurs, film noir).
+- 💻 **Atelier 1.4** : « change le fond en rouge » modifie vraiment ton fichier (quelques lignes, diff Appliquer/Refuser), sans jamais écraser ta page avec un exemple. 📎 Insérer un fichier (`Ctrl+I` ou glisser-déposer).
+- 🎮 Jeux : jamais de modèle « coder » comme maître du jeu, et jamais bloqué sans choix (▶ Continuer).
+- 📦 **Archiveur 5.1** : colle même un lien de recherche Google, il trouve la vidéo YouTube. yt-dlp toujours à jour, 🧩 code embed.
 
 ## ✨ Nouveautés v1.5.0 : l'Atelier du programmeur (18 novembre 2026)
 - 💻 **Atelier** (`Ctrl+K`) : un vrai coin de programmeur dans Padawan. Le chat à gauche, l'éditeur de code à droite (onglets, numéros de ligne, couleurs pour HTML, CSS, JavaScript, Python, PHP, Arduino, JSON). Le modèle de code s'active tout seul le temps de l'Atelier.

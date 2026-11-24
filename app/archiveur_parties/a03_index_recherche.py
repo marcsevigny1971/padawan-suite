@@ -16,6 +16,18 @@ def friendly_error(exc: BaseException) -> str:
         return "Archivage annulé."
     if "private" in low or "login" in low or "sign in" in low or "authentication" in low:
         return "Contenu privé ou connexion requise — cochez « Cookies navigateur » et réessayez."
+    if "enablejs" in low or "google.com/search" in low:
+        return ("Lien de recherche Google : ce n'est pas la vidéo elle-même. Ouvre la vidéo et copie son lien "
+                "YouTube (ou colle le lien Google : l'Archiveur 5.1 y trouve la vidéo tout seul).")
+    if "sign in to confirm" in low or "not a bot" in low:
+        return "YouTube demande une vérification « pas un robot » — coche « Cookies navigateur » et réessaie."
+    if "video unavailable" in low or "this video is not available" in low:
+        return "Vidéo indisponible (supprimée, privée ou bloquée au Canada)."
+    if "age" in low and ("confirm your age" in low or "age-restricted" in low or "inappropriate" in low):
+        return "Vidéo réservée aux adultes — coche « Cookies navigateur » (compte connecté) et réessaie."
+    if "http error 403" in low or "signature" in low or "nsig" in low or "requested format is not available" in low \
+            or "unable to extract" in low or "no video formats" in low:
+        return "YouTube a changé quelque chose (403 / signature) : yt-dlp doit être mis à jour — l'Archiveur le fait tout seul et réessaie."
     if "unsupported url" in low:
         return "Site non pris en charge par yt-dlp — archivage page HTML tenté."
     if "http error 404" in low or "not found" in low:
@@ -362,10 +374,74 @@ def linkify_html(text: str) -> str:
     return "".join(parts)
 
 
+# ---------------------------------------------------------------- v5.1 : liens Google / YouTube
+_YT_ID = r"[A-Za-z0-9_-]{11}"
+_TRACK_KEYS = ("utm_", "fbclid", "gclid", "igshid", "mc_cid", "mc_eid", "si", "feature", "pp", "ved", "ei")
+
+
+def resolve_media_url(url: str, _depth: int = 0) -> Tuple[str, str]:
+    """(url_propre, note) : vidéo cachée dans un lien Google (#…vid:ID, /url?q=), formes YouTube
+    (youtu.be, m., music., shorts, live, embed, nocookie) → https://www.youtube.com/watch?v=ID ; pistage retiré."""
+    from urllib.parse import unquote, urlencode
+    raw = (url or "").strip()
+    if not raw:
+        return raw, ""
+    u = raw if re.match(r"^https?://", raw, re.I) else "https://" + raw
+    try:
+        p = urlparse(u)
+    except Exception:
+        return raw, ""
+    host = (p.hostname or "").lower()
+    bare = re.sub(r"^(www\.|m\.|mobile\.|music\.)", "", host)
+    if re.match(r"^(google\.[a-z.]+|[a-z]+\.google\.[a-z.]+)$", bare):
+        q = parse_qs(p.query)
+        for k in ("q", "url", "u"):  # redirection google.com/url?q=…
+            v = (q.get(k) or [""])[0]
+            if p.path.startswith("/url") and re.match(r"^https?://", v or "", re.I) and _depth < 3:
+                nu, _n = resolve_media_url(unquote(v), _depth + 1)
+                return nu, "Lien de redirection Google détecté → " + nu
+        frag = unquote(p.fragment or "")
+        m = re.search(r"(?:^|[,&;:#])vid[:=](" + _YT_ID + r")", frag) or re.search(r"(?:^|&)vid=(" + _YT_ID + r")", p.query)
+        if m:
+            vid = m.group(1)
+            return f"https://www.youtube.com/watch?v={vid}", f"Lien Google détecté → vidéo YouTube {vid}"
+        return raw, ""
+    if bare in ("youtube.com", "youtu.be", "youtube-nocookie.com"):
+        vid, t = "", ""
+        q = parse_qs(p.query)
+        if bare == "youtu.be":
+            vid = p.path.strip("/").split("/")[0]
+        elif q.get("v"):
+            vid = q["v"][0]
+        else:
+            m = re.match(r"^/(?:shorts|embed|live|v|e)/([^/?#]+)", p.path)
+            if m:
+                vid = m.group(1)
+        t = (q.get("t") or q.get("start") or [""])[0]
+        if vid and re.fullmatch(_YT_ID, vid):
+            nu = f"https://www.youtube.com/watch?v={vid}" + (f"&t={t}" if re.fullmatch(r"\d+s?", t or "") else "")
+            if nu != raw:
+                return nu, f"Lien YouTube nettoyé → vidéo {vid}"
+            return nu, ""
+        return raw, ""
+    if p.query:
+        kept = [(k, v) for k, vs in parse_qs(p.query, keep_blank_values=True).items() for v in vs
+                if not any(k.lower() == t or (t.endswith("_") and k.lower().startswith(t)) for t in _TRACK_KEYS)]
+        nq = urlencode(kept, doseq=True)
+        if len(kept) < len(parse_qs(p.query, keep_blank_values=True)):
+            return p._replace(query=nq).geturl(), ""
+    return raw, ""
+
+
+def youtube_id(url: str) -> str:
+    m = re.search(r"[?&]v=(" + _YT_ID + r")", resolve_media_url(url)[0])
+    return m.group(1) if m else ""
+
+
 # ---------------------------------------------------------------- doublons
 def normalize_url(url: str) -> str:
     """Clé canonique d'une URL (YouTube id, X status id, sinon hôte+chemin)."""
-    url = (url or "").strip()
+    url = resolve_media_url((url or "").strip())[0]
     if not url:
         return ""
     if not re.match(r"^https?://", url, re.I):

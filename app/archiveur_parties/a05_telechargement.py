@@ -377,6 +377,9 @@ def archive_url(
         raise ValueError("URL vide")
     if not re.match(r"^https?://", url, re.I):
         url = "https://" + url
+    url, _note = resolve_media_url(url)  # v5.1 : lien Google → vraie vidéo YouTube
+    if _note:
+        log("🔎 " + _note)
     os.makedirs(root, exist_ok=True)
     platform = detect_platform(url)
     log(f"> Archivage ({platform}): {url}")
@@ -402,12 +405,23 @@ def archive_url(
         if tags or notes:
             info = update_tags_notes(root, str(info["folder"]), tags or [], notes or "")
         return info
+    _yt_kw = dict(cookies_browser=cookies_browser, progress_hook=progress_hook, quality=quality,
+                  subtitles=subtitles, storyboard=storyboard, cancel_event=cancel_event, auto_convert=auto_convert)
     try:
-        info = archive_with_ytdlp(
-            url, root, log, cookies_browser=cookies_browser, progress_hook=progress_hook,
-            quality=quality, subtitles=subtitles, storyboard=storyboard, cancel_event=cancel_event,
-            auto_convert=auto_convert,
-        )
+        try:
+            info = archive_with_ytdlp(url, root, log, **_yt_kw)
+        except ArchiveCancelled:
+            raise
+        except Exception as e0:  # v5.1 : yt-dlp périmé → mise à jour + 1 nouvel essai
+            if platform not in ("youtube",) and not ytdlp_stale_error(e0):
+                raise
+            if not ytdlp_stale_error(e0):
+                raise
+            log(f"⬆ {friendly_error(e0)}")
+            if not ytdlp_auto_update(log, force=True):
+                raise
+            log("🔁 Nouvel essai avec le yt-dlp à jour…")
+            info = archive_with_ytdlp(url, root, log, **_yt_kw)
     except ArchiveCancelled:
         raise
     except Exception as e1:

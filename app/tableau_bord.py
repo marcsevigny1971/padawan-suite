@@ -10,9 +10,9 @@ import os, sys, re, json, time, zipfile, threading, queue, subprocess, webbrowse
 import urllib.request
 
 APP = "Tableau de bord"
-VERSION = "1.5.0"
-SUITE_VERSION = "2026.11.18"   # comparaison texte avec padawan_version.json (toujours AAAA.MM.JJ)
-SUITE_LABEL = "1.5.0"
+VERSION = "1.6.0"
+SUITE_VERSION = "2026.11.23"   # comparaison texte avec padawan_version.json (toujours AAAA.MM.JJ)
+SUITE_LABEL = "1.6.0"
 SUITE_AFFICHE = f"{SUITE_LABEL} ({SUITE_VERSION})"
 HERE = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"

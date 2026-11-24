@@ -27,3 +27,11 @@ atelier_known_hosts
 .atelier_chat.json
 prompts.json
 memory.json
+
+# Studio d'images (v1.6.0) : jamais le moteur, les modeles ni les reglages
+studio.json
+*.safetensors
+*.ckpt
+*.gguf
+ComfyUI/
+lecteur.html

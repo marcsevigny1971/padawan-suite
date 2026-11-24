@@ -1075,7 +1075,7 @@ class _ArchiveurAppPartie3:
         wcb.bind("<<ComboboxSelected>>", _wset)
         section("ℹ Informations")
         info_lines = [
-            f"Archiveur v{APP_FILE_VER} · Python {sys.version.split()[0]} · Tk {self.tk.call('info', 'patchlevel')}",
+            f"Archiveur v{APP_SUB_VER} · Python {sys.version.split()[0]} · Tk {self.tk.call('info', 'patchlevel')}",
             f"yt-dlp : {ytdlp_version() or 'non installé'}",
             f"ffmpeg : {find_ffmpeg() or 'introuvable'}",
             f"ffplay : {find_ffplay() or 'introuvable'}",

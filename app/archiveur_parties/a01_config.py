@@ -35,6 +35,7 @@ except Exception:  # CLI sans Tk
 
 APP_NAME = "Archiveur"
 APP_FILE_VER = 5
+APP_SUB_VER = "5.1"  # 2026-11-18 : liens Google/YouTube normalisés, yt-dlp auto à jour, erreurs claires, 🧩 Embed
 BASE = os.path.dirname(os.path.abspath(__file__))
 # 2026-11-17 : réglages et journal privés hors de FTP_HOME -> C:\web_private\Archiveur (PC de Marc),
 # sinon %APPDATA%\Padawan\Archiveur. Les archives restent dans DEFAULT_ROOT (C:\web\FTP_HOME\ARCHIVEUR).

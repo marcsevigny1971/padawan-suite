@@ -125,6 +125,60 @@ class _ArchiveurAppEmbeds:
         elif note.winfo_ismapped():
             note.pack_forget()
 
+    # ── v5.1 🧩 code embed ──
+    def _build_embed_menu(self):
+        m = self._menu()
+        has = bool(self._preview_entry)
+        url = self._entry_url() if has else ""
+        vid = youtube_id(url) if url else ""
+        main = find_main_media(self._preview_path) if has and self._preview_path else None
+        m.add_command(label="📋 Copier le code embed YouTube (iframe)", command=lambda: self.copy_embed_code("youtube"),
+                      state="normal" if vid else "disabled")
+        m.add_command(label="🎬 Créer le lecteur local (lecteur.html) + copier son code",
+                      command=lambda: self.copy_embed_code("local"),
+                      state="normal" if (main and main.lower().endswith(VIDEO_EXTS + AUDIO_EXTS)) else "disabled")
+        return m
+
+    def copy_embed_code(self, kind: str = "youtube") -> str:
+        if not self._preview_entry:
+            return ""
+        title = html.escape(str((self._preview_info or {}).get("title") or "Vidéo"), quote=True)
+        if kind == "youtube":
+            vid = youtube_id(self._entry_url())
+            if not vid:
+                messagebox.showinfo(APP_NAME, "Pas une vidéo YouTube : utilise le lecteur local.", parent=self)
+                return ""
+            code = (f'<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/{vid}" '
+                    f'title="{title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; '
+                    f'gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>')
+            msg = f"🧩 Code embed YouTube copié ({vid}) — colle-le dans ta page HTML."
+        else:
+            folder = self._preview_path or ""
+            main = find_main_media(folder) if folder else None
+            if not main:
+                messagebox.showinfo(APP_NAME, "Aucune vidéo archivée dans ce dossier.", parent=self)
+                return ""
+            name = os.path.basename(main)
+            poster = next((f for f in os.listdir(folder) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+                           and not f.startswith("capture")), "")
+            tag = "audio" if main.lower().endswith((".mp3", ".m4a", ".ogg", ".wav", ".flac", ".opus")) else "video"
+            src = quote(name)
+            pst = (f' poster="{quote(poster)}"' if poster and tag == "video" else "")
+            page = ("<!doctype html><html lang=\"fr\"><head><meta charset=\"utf-8\"><title>" + title + "</title>"
+                    "<style>html,body{margin:0;background:#000;height:100%}" + tag + "{width:100%;height:100%;object-fit:contain}</style>"
+                    "</head><body><" + tag + " controls preload=\"metadata\" src=\"" + src + "\"" + pst + "></" + tag + "></body></html>\n")
+            with open(os.path.join(folder, "lecteur.html"), "w", encoding="utf-8") as fh:
+                fh.write(page)
+            root = self.archive_root_path()
+            rel = os.path.relpath(os.path.join(folder, "lecteur.html"), os.path.dirname(root)).replace("\\", "/")
+            code = (f'<iframe src="{rel}" width="640" height="360" title="{title}" frameborder="0" allowfullscreen></iframe>')
+            msg = f"🎬 lecteur.html créé dans l'archive + code iframe copié (chemin relatif à {os.path.dirname(root)})."
+        self.clipboard_clear()
+        self.clipboard_append(code)
+        self.status.set(msg)
+        self.log(msg)
+        return code
+
     def embed_play(self):
         """▶ Lecteur en ligne : lecteur officiel de la plateforme (rien n'est téléchargé)."""
         if not self._preview_entry:
