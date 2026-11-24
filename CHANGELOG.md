@@ -1,5 +1,15 @@
 # Journal des versions — Padawan Suite
 
+## v1.7.0 — 2026.11.24 — 🎮 Jeux illustrés, 🚀 Galaxie 42 et 📜 La Légende s'écrit
+- Padawan v41.2 → v41.7.
+- 🖼 Fallout (v41.3–v41.4) : image couleur générée à chaque action (ComfyUI + SD-Turbo local, 1 étape, images périmées annulées, gros plan quand on examine un objet), défaut « Générées · à chaque action » avec repli automatique sur la banque sans moteur, menu 🖼 (mode + fréquence), fiche d'apparence du héros, F8 = redessiner. « Autre action » libre, choix qui défilent, fenêtre de jeu maximisée.
+- 🚀 Nouveau jeu **Galaxie 42** (v41.5) : aventure spatiale humoristique, ordinateur de bord Coque/Carburant/Oxygène/Énergie, missions des starbases au journal, carte stellaire F9 avec coût de saut et effet d'hyperespace, ciel étoilé animé, thème bleu nuit, banque d'images `padawan_jeux_images_galaxie.json.gz`.
+- 📜 Nouveau jeu **La Légende s'écrit** (v41.6) : aventure médiévale-fantastique continue, feuille d'aventure HABILETÉ/ENDURANCE/CHANCE/MAGIE tirée aux dés, combats aux dés animés gérés par Padawan, magie à coût, bestiaire mythologique, carte des royaumes F9 avec brouillard, voyages (cheval, navire, souterrains, canot volant), quêtes d'auberge, réputation, compagnons, monde qui se souvient, thème parchemin, banque d'images `padawan_jeux_images_legende.json.gz`. 📖 **Chronique** : la partie en livre illustré HTML.
+- v41.7 : La Légende s'écrit n'affiche plus la feuille d'aventure brute ni les rappels du maître du jeu dans le récit ; les images générées restent toujours en vraie couleur (bascule F7 vers l'ANSI retirée).
+- Correctif : les jeux intégrés manquants (Galaxie 42, La Légende s'écrit) sont ajoutés au menu Jouer à la mise à jour, sans toucher aux prompts existants.
+- Studio d'images 1.4 (`padawan_studio.py`) : styles d'image des jeux (BD Fallout, SF rétro années 70-80, peinture fantasy années 80).
+- Tableau de bord 1.7.0 (suite 1.7.0, 2026.11.24). Les deux nouvelles banques d'images font partie de la distribution. ComfyUI et les modèles d'images ne sont toujours pas inclus.
+
 ## v1.6.0 — 2026.11.23 — 🎨 Studio, 🖼 ANSI et 💻 Atelier 1.4
 - Padawan v40.0 → v41.2.
 - 🎨 **Studio d'images** (`Ctrl+G`, module `padawan_studio.py`, v41.0) : ComfyUI local + SD-Turbo démarré à la demande sur 127.0.0.1, idée FR → prompt EN par le modèle courant, 6 styles, graine, variations, image + art ANSI côte à côte, export .png/.ans/.html, galerie, partage de la VRAM avec Ollama. ComfyUI et les modèles d'images ne sont pas inclus.

@@ -128,7 +128,7 @@ PROMPT_MODEL_DEFAULT = "(modèle courant)"  # v39.6
 MODEL_DL_MARK = " (à télécharger)"
 APP_NAME = "Padawan"
 APP_FILE_VER = 39  # v39.1: 🧹 Nouvelle conversation (Ctrl+L / Ctrl+Shift+N), Historique
-APP_SUB_VER = "41.2"  # v41.2: 💻 Atelier / 🎨 Studio s'ouvrent aussi en plein jeu (le jeu est mis sur pause, modèle d'avant rétabli) ; Atelier : 📎 Insérer un fichier (Ctrl+I, glisser-déposer). v41.1: v41.1: jeux — jamais avec un modèle « coder » (bascule temporaire dolphin3:8b, retour en quittant, jamais sauvé) ; réponse sans choix ou coupée → relance auto « termine et propose des choix », sinon ▶ Continuer + choix de secours. v41.0: 🎨 Studio d'images (ComfyUI local + SD-Turbo, démarré à la demande sur 127.0.0.1 : idée FR → prompt EN par le modèle courant, 6 styles en un clic, graine, variations, image + art ANSI côte à côte, .png/.ans/.html, galerie, jonglage mémoire graphique avec Ollama, module padawan_studio.py) + jeux 🖼 Images : Banque / Générées / Fixes / NON (scène dessinée en arrière-plan, cache par scène, repli banque). v40.2: 🖼 illustrations ANSI originales dans les jeux (31 scènes : Fallout Pip-Boy vert, Donjon 16 couleurs DOS, Polar film noir ; détection de scène, effet CRT, clic = agrandir, bascule 🖼 Images, export HTML). v40.1: 🖼→ANSI dans l'Atelier (image → art ANSI/ASCII : 16 couleurs DOS ▀▄, truecolor, ASCII, Pip-Boy, ░▒▓█ ; .ans + SAUCE, .txt, HTML rétro, insérer dans l'onglet, vraie console ; module padawan_ansi.py, API image_to_ansi() pour les jeux). v40.0: 💻 Atelier (mode programmeur : chat + éditeur à onglets coloré, aperçu HTML auto-rechargé, Python exécuté, 🩺 corriger l'erreur, diff accepter/rejeter, déploiement Python/Web/FTP-SFTP avec .bak, projets, modèles, snippets) + copier/coller partout (📋 sur les blocs de code, clic droit, collage multiligne). v39.8: jeu — un clic n'est jamais perdu (file d'attente pendant le chargement du modèle, repli dolphin3), statut de chargement chronométré, Mission vidée en mode jeu. v39.7: 🧠 recommandés cliquables (⬇ Installer / ⭐ Activer) + bouton par ligne au catalogue. v39.6: 🧠 Modèles (diagnostic machine, catalogue, installation, banc d'essai) + modèle par prompt. v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
+APP_SUB_VER = "41.7"  # v41.7: 📜 Légende — la feuille d'aventure recopiée hors bloc (et les rappels du maître du jeu) ne s'affichent plus dans le récit ; images générées toujours en vraie couleur (plus de bascule F7 vers l'ANSI). v41.6: 📜 nouveau jeu La Légende s'écrit (aventure médiévale-fantastique continue, sans numéros de page : feuille d'aventure HABILETÉ/ENDURANCE/CHANCE tirée aux dés, combats aux dés animés gérés par Padawan, magie à coût, bestiaire mythologique, carte des royaumes F9 avec brouillard, voyages à cheval/navire/souterrains/canot volant, quêtes d'auberge, réputation, compagnons, monde qui se souvient, action libre au cœur du jeu, thème parchemin or/bordeaux, 📖 Chronique en livre illustré HTML ; Galaxie 42 : jauges complètes, plus de « 3 Missions » dans l'inventaire, LIEU mis à jour à la starbase). v41.5: 🚀 nouveau jeu Galaxie 42 (aventure spatiale humoristique : ordinateur de bord Coque/Carburant/Oxygène/Énergie, missions des starbases au journal, carte stellaire F9 avec coût de saut et effet d'hyperespace, ciel étoilé animé, thème bleu nuit/cyan/violet, images générées style SF rétro, faits scientifiques vérifiés, banque séparée). v41.4: 🎮 ✨ une image générée à CHAQUE action (choix cliqué ou action libre ; gros plan quand tu examines un objet) — défaut GÉNÉRÉES + « à chaque action » (repli Banque auto si pas de moteur) ; menu 🖼 (mode + fréquence : chaque action / changement de scène) ; images périmées annulées (seule la plus récente est dessinée), ComfyUI gardé chargé si la mémoire vidéo le permet, 1 étape SD-Turbo ; l'image précédente reste affichée avec l'indicateur Pip-Boy pendant le dessin. v41.3: v41.3: 🎮 Fallout — scènes ✨ générées en COULEUR (ANSI 24 bits ou vraie image, F7), seulement quand la scène change vraiment (le modèle de jeu résume la scène en JSON + heuristique lieu/combat/personnage/événement), fiche d'apparence du héros, génération en arrière-plan avec indicateur Pip-Boy animé, balayage CRT / fondu, F8 = redessiner, repli banque, mémoire vidéo surveillée ; correctifs jeu (chargement de partie, tour en erreur, enhance sans keep_alive). v41.2: v41.2: 💻 Atelier / 🎨 Studio s'ouvrent aussi en plein jeu (le jeu est mis sur pause, modèle d'avant rétabli) ; Atelier : 📎 Insérer un fichier (Ctrl+I, glisser-déposer). v41.1: v41.1: jeux — jamais avec un modèle « coder » (bascule temporaire dolphin3:8b, retour en quittant, jamais sauvé) ; réponse sans choix ou coupée → relance auto « termine et propose des choix », sinon ▶ Continuer + choix de secours. v41.0: 🎨 Studio d'images (ComfyUI local + SD-Turbo, démarré à la demande sur 127.0.0.1 : idée FR → prompt EN par le modèle courant, 6 styles en un clic, graine, variations, image + art ANSI côte à côte, .png/.ans/.html, galerie, jonglage mémoire graphique avec Ollama, module padawan_studio.py) + jeux 🖼 Images : Banque / Générées / Fixes / NON (scène dessinée en arrière-plan, cache par scène, repli banque). v40.2: 🖼 illustrations ANSI originales dans les jeux (31 scènes : Fallout Pip-Boy vert, Donjon 16 couleurs DOS, Polar film noir ; détection de scène, effet CRT, clic = agrandir, bascule 🖼 Images, export HTML). v40.1: 🖼→ANSI dans l'Atelier (image → art ANSI/ASCII : 16 couleurs DOS ▀▄, truecolor, ASCII, Pip-Boy, ░▒▓█ ; .ans + SAUCE, .txt, HTML rétro, insérer dans l'onglet, vraie console ; module padawan_ansi.py, API image_to_ansi() pour les jeux). v40.0: 💻 Atelier (mode programmeur : chat + éditeur à onglets coloré, aperçu HTML auto-rechargé, Python exécuté, 🩺 corriger l'erreur, diff accepter/rejeter, déploiement Python/Web/FTP-SFTP avec .bak, projets, modèles, snippets) + copier/coller partout (📋 sur les blocs de code, clic droit, collage multiligne). v39.8: jeu — un clic n'est jamais perdu (file d'attente pendant le chargement du modèle, repli dolphin3), statut de chargement chronométré, Mission vidée en mode jeu. v39.7: 🧠 recommandés cliquables (⬇ Installer / ⭐ Activer) + bouton par ligne au catalogue. v39.6: 🧠 Modèles (diagnostic machine, catalogue, installation, banc d'essai) + modèle par prompt. v39.5: réglages privés -> C:\web_private\Padawan (migration auto). v39.4: 📰 Nouvelles (🌍 géopolitique 2077, 🔭 découvertes) + inventaire du jeu robuste + départ Chercheur
 _APP_FILE_VER_OLD = 39  # version fichier seulement — jamais affichée comme titre produit
 ROLE_HIST_CAP = 80
 CACHE_TTL = 3 * 3600
@@ -2639,6 +2639,10 @@ class PromptStore:
             self._seed_v394()
             self.data["seed_v"] = 3
             self.save()
+        if int(self.data.get("seed_v") or 1) < 4 and not self.error:  # v41.6 : nouveaux jeux intégrés (Galaxie 42, Légende)
+            self._seed_games()  # ajoute seulement les jeux absents, sans toucher aux prompts existants
+            self.data["seed_v"] = 4
+            self.save()
 
     def _seed_v394(self) -> None:
         """v39.4 : 📰 favoris 🌍 / 🔭 (après les jeux) + jeux intégrés non modifiés mis à jour (inventaire robuste)."""
@@ -3357,7 +3361,115 @@ GAME_ART: Dict[str, Dict[str, str]] = {
 },
 }
 
-GAME_ART_FAMILY = {"fallout_qc": "fallout", "polar_1947": "polar", "donjon_bbs": "donjon"}
+
+# v41.5 🚀 Galaxie 42 : petits dessins ASCII (seulement si les images sont coupées)
+GAME_ART["galaxie"] = {
+"espace": r"""
+      .  *     .        +      .     *    .
+   *      .   GALAXIE 42   .       .
+      .        .    *         .  (  )   *
+   +     .  *      .     .      `--'   .
+        LA QUESTION EST QUELQUE PART...""",
+"vaisseau": r"""
+              __
+     ___/====/__\____________
+   <|_ LE MAL PRIS  [o] [o] __>===>  ~~
+      \====\__/
+        COQUE 73 % · RUBAN ADHÉSIF 100 %""",
+"planete": r"""
+             _.-~~~~~-._
+     ======.'           '.======
+          :   PLANÈTE    :
+     ======'.           .'======
+             '-._____.-'""",
+"starbase": r"""
+          [==]   STARBASE   [==]
+     ======||====( O )====||======
+           ||    /|||\    ||
+        QUAI 42 · CAFÉ · RÉPARATIONS""",
+"alien": r"""
+        \   /
+       ( o o )   « Bonjour, terrien.
+        ( ~ )      Tu as une serviette ? »
+       /|   |\
+        BIENVENUE, FORME DE VIE""",
+"combat": r"""
+     >==>  - - - - - *  BZZT !  * - - -  <==<
+         BOUCLIERS 40 % · DÉPRIMÈTRE : « Super. »""",
+"hyperespace": r"""
+   ==--  --==  ---- ==== ----  --==  --==
+     ---  SAUT EN COURS  ---  ====  ----
+   ==--  --==  ---- ==== ----  --==  --==""",
+"asteroides": r"""
+     o    O      .  o     0    .   O
+        .    0  (_)    o     .  o
+     CEINTURE D'ASTÉROÏDES · SLALOM OPTIONNEL""",
+}
+
+GAME_ART["legende"] = {
+"titre": """
+        ~*~  LA LÉGENDE S'ÉCRIT  ~*~
+            |>         |>
+           /^\\   ___   /^\\
+           |  |__|   |__|  |
+           |   []  ^  []   |
+           |______| |______|
+      la Plume d'Aube a disparu…""",
+"auberge": """
+      _______________________
+     |  AU SANGLIER DORÉ  🍺 |
+     |_______________________|
+       |  []   ___    []  |
+       |      |   |       |
+     __|______|___|_______|__""",
+"chateau": """
+        |>          |>
+       /^\\  _/\\_   /^\\
+       |  ||    |  |  |
+       |  || [] |  |  |
+       |__||____|__|__|
+     ~~~~~~ douves ~~~~~~""",
+"foret": """
+        ^    ^^   ^    ^^
+       /|\\  /||\\ /|\\  /||\\
+      /_|_\\/_||_\\_|_\\/_||_\\
+         |    ||   |    ||
+      ~ sentier des elfes ~""",
+"montagne": """
+             /\\
+        /\\  /  \\   /\\
+       /  \\/ ** \\ /  \\
+      / ** \\     \\/ ** \\
+     /______\\_____\\_____\\""",
+"caverne": """
+     __________________
+    /  v  v   v   v   \\
+   |     (  🔥  )       |
+   |   .  .  .  .  .   |
+    \\__________________/""",
+"mer": """
+            |\\
+            | \\
+            |__\\
+        \\__________/
+     ~~~~~~~~~~~~~~~~~~~~
+       ~~~~ ~~~~ ~~~~""",
+"dragon": """
+              __/\\__
+        _____/  oo  \\____
+       <____  \\__/   ___>
+            \\  /\\  /
+        ~~~~ \\/  \\/ ~~~~ feu""",
+"combat": """
+          \\   /
+       ⚔   \\ /   ⚔
+           / \\
+          /   \\
+     [ ASSAUT : 2d6 + HABILETÉ ]""",
+}
+
+GAME_ART_FAMILY = {"fallout_qc": "fallout", "polar_1947": "polar", "donjon_bbs": "donjon", "galaxie_42": "galaxie",
+                   "legende_ecrit": "legende"}
 
 # Mots-clés de secours quand le modèle n'écrit pas de « SCÈNE: » valide
 GAME_ART_HINTS: Dict[str, Dict[str, Tuple[str, ...]]] = {
@@ -3375,6 +3487,23 @@ GAME_ART_HINTS: Dict[str, Dict[str, Tuple[str, ...]]] = {
     "bureau": ("bureau",), "ruelle": ("ruelle",), "jazz": ("jazz", "club", "cabaret"), "taverne": ("taverne", "bar"),
     "telephone": ("téléphone", "appel"), "voiture": ("voiture", "auto", "ford"), "police": ("police", "flic", "poste"),
     "cadavre": ("cadavre", "corps", "mort", "crime"), "port": ("port", "quai", "cargo"),
+},
+"galaxie": {
+    "starbase": ("starbase", "station", "quai", "accost"), "alien": ("extraterrestre", "alien", "créature"),
+    "combat": ("combat", "tir", "laser", "pirate", "boucliers"), "hyperespace": ("saut", "hyperespace", "propulsion"),
+    "asteroides": ("astéroïde", "ceinture", "cérès"), "planete": ("planète", "lune", "mars", "jupiter", "saturne",
+    "titan", "europe", "pluton", "surface"), "vaisseau": ("vaisseau", "cockpit", "console", "soute", "pont"),
+    "espace": ("espace", "orbite", "étoile"),
+},
+"legende": {
+    "auberge": ("auberge", "taverne", "aubergiste"), "village": ("village", "hameau", "marché", "place"),
+    "chateau": ("château", "forteresse", "donjon", "trône", "roi", "reine"), "foret": ("forêt", "bois", "sylvanie", "elfe"),
+    "montagne": ("montagne", "mine", "nain", "grondefer"), "caverne": ("caverne", "grotte", "souterrain", "crypte"),
+    "desert": ("désert", "dune", "oasis", "caravane"), "mer": ("mer", "navire", "bateau", "tempête", "pirate"),
+    "ile": ("île", "archipel", "plage"), "temple": ("temple", "oracle", "colonnes"), "lac": ("lac", "avalonne"),
+    "nord": ("givre", "jarl", "glace"), "neige": ("neige", "chasse-galerie", "canot", "veillée"),
+    "dragon": ("dragon", "wyverne"), "monstre": ("troll", "minotaure", "ogre", "loup-garou", "liche", "monstre"),
+    "combat": ("combat", "épée", "attaque"), "magie": ("magie", "sort", "rune", "grimoire"), "route": ("route", "chemin"),
 },
 "donjon": {
     "connexion": ("connexion", "bbs", "modem"), "monstre": ("dragon", "monstre", "troll", "orc"),
@@ -3402,7 +3531,7 @@ def game_art_for(builtin: str, key: str = "", hint_text: str = "") -> Tuple[str,
             return kk, lib[kk].strip("\n")
     low = (key + " " + (hint_text or "")).lower()
     for kk, words in GAME_ART_HINTS.get(fam, {}).items():
-        if any(w in low for w in words):
+        if kk in lib and any(w in low for w in words):  # v41.6 : indice sans art ASCII → on passe
             return kk, lib[kk].strip("\n")
     return "", ""
 
@@ -3432,7 +3561,8 @@ GAME_ADN_LINE = (
 )
 FENCE = "`" * 3
 
-_SCENE_EXTRA = {"fallout": ("lac", "cabane"), "donjon": ("coffre",), "polar": ()}  # v40.2 : scènes illustrées
+_SCENE_EXTRA = {"fallout": ("lac", "cabane"), "donjon": ("coffre",), "polar": (), "galaxie": (),
+                "legende": ("village", "desert", "ile", "temple", "lac", "nord", "neige", "monstre", "magie", "route")}  # v40.2 : scènes illustrées
 
 
 def _scene_words(fam: str) -> str:
@@ -3460,12 +3590,53 @@ GAME_IMG_ALIAS: Dict[str, Dict[str, str]] = {
               "phone": "bureau", "office": "bureau", "alley": "ruelle", "car": "voiture", "auto": "voiture",
               "corps": "cadavre", "crime": "cadavre", "quai": "port", "docks": "port",
               "interrogatoire": "police", "poste": "police"},
+    "galaxie": {"station": "starbase", "base": "starbase", "marche": "starbase", "cockpit": "vaisseau",
+                "console": "vaisseau", "lune": "planete", "mars": "planete", "titan": "planete", "europe": "planete",
+                "saut": "hyperespace", "ceinture": "asteroides", "creature": "alien", "pirate": "combat",
+                "titre": "espace", "orbite": "espace"},
+    "legende": {"taverne": "auberge", "inn": "auberge", "tavern": "auberge", "hameau": "village", "marche": "village",
+                "castle": "chateau", "forteresse": "chateau", "palais": "chateau", "forest": "foret", "bois": "foret",
+                "mountain": "montagne", "mine": "montagne", "cave": "caverne", "grotte": "caverne", "souterrain": "caverne",
+                "crypte": "caverne", "donjon": "caverne", "sea": "mer", "navire": "mer", "ship": "mer", "port": "mer",
+                "island": "ile", "archipel": "ile", "oracle": "temple", "lake": "lac", "givre": "nord", "glace": "nord",
+                "snow": "neige", "chasse-galerie": "neige", "wyverne": "dragon", "troll": "monstre", "minotaure": "monstre",
+                "creature": "monstre", "fight": "combat", "magic": "magie", "sort": "magie", "road": "route",
+                "chemin": "route", "voyage": "route", "plaine": "route"},
     "donjon": {"connexion": "titre", "bbs": "titre", "modem": "titre", "entree": "porte", "door": "porte",
                "salle": "couloir", "dragon": "monstre", "skeleton": "squelette", "treasure": "tresor",
                "chest": "coffre", "stairs": "escalier", "auberge": "taverne"},
 }
 # (clé, motif) — appliqués sur un texte en minuscules SANS accents
 GAME_IMG_RULES: Dict[str, Tuple[Tuple[str, str], ...]] = {
+    "legende": (
+        ("dragon", r"\bdragons?\b|wyverne|vouivre|wyrm"),
+        ("monstre", r"\btrolls?\b|minotaure|\bogres?\b|loup.garou|\bliche|hydre|cyclope|harpie|basilic|gobelin|\bmonstres?\b|wendigo"),
+        ("combat", r"\bcombat|\battaqu|degaine|\bassaut|\bfrapp|\bpare\b|bataille|\blame\b|\bduel"),
+        ("magie", r"\bmagie|\bsortilege|\bsort\b|\brunes?\b|grimoire|incant|enchant|\bmage\b"),
+        ("auberge", r"auberge|taverne|aubergiste|hydromel|\bchope|cheminee"),
+        ("mer", r"\bmer\b|navire|\bbateau|tempete|\bvagues?\b|pirate|corsaire|\bpont du|serpent de mer|\bvoile"),
+        ("caverne", r"caverne|grotte|souterrain|galerie|crypte|\bmine\b|ombreterre|\bdonjon\b|tunnel"),
+        ("chateau", r"chateau|forteresse|\btrone|\bremparts?|\bpalais|citadelle|\broi\b|\breine\b"),
+        ("temple", r"\btemple|oracle|colonnes|sanctuaire|thalassie"),
+        ("lac", r"\blacs?\b|avalonne|\bdame du lac|\bile d.avalon"),
+        ("neige", r"chasse.galerie|canot volant|\bneige|veillee|pays.d.en.haut|\bpoudrerie"),
+        ("nord", r"\bgivre|\bjarl|\bglace|\bfjord|\bdrakkar|\bnord\b"),
+        ("desert", r"desert|\bdunes?\b|oasis|caravane|\bsable"),
+        ("ile", r"\biles?\b|archipel|\bplage|\brecif"),
+        ("montagne", r"montagne|\bpic\b|\bnains?\b|grondefer|\bcol\b|falaise"),
+        ("foret", r"\bforet|\bbois\b|\barbres?\b|sylvanie|\belfes?\b|clairiere"),
+        ("village", r"village|hameau|\bmarche\b|\bplace\b|\bpaysans?|meunier|forgeron"),
+        ("route", r"\broute|\bchemin|\bplaine|\bcollines?|\bvoyage|\bcheval|horizon"),
+    ),
+    "galaxie": (
+        ("hyperespace", r"hyperespace|\bsaut\b|propulsion supra|distorsion|warp"),
+        ("combat", r"\bcombat|pirates?\b|\blaser|bouclier|\btir(e|es|ent)?\b|torpille|attaqu"),
+        ("alien", r"extraterrestre|\balien|creature|tentacule|forme de vie"),
+        ("starbase", r"starbase|station|\bquai|accost|amarr|marchand|comptoir"),
+        ("asteroides", r"asteroide|ceinture|ceres|meteor"),
+        ("planete", r"planete|\blune\b|\bmars\b|jupiter|saturne|titan|europe|encelade|\bio\b|uranus|neptune|pluton|surface|exoplanete"),
+        ("vaisseau", r"vaisseau|cockpit|console|soute|\bpont\b|cabine|moteur"),
+    ),
     "fallout": (
         ("abri", r"\babri\b|\bvault|porte (blindee|de l.abri|d.acier)|bunker|refuge souterrain"),
         ("cabane", r"cabane a sucre|erabl|sirop|tire sur la neige|sucrerie|maple"),
@@ -3506,7 +3677,7 @@ GAME_IMG_RULES: Dict[str, Tuple[Tuple[str, str], ...]] = {
 }
 # scènes « fortes » (créature, lieu très typé) : un seul mot de la narration suffit
 GAME_IMG_STRONG = {"abri", "cabane", "goule", "mutant", "robot", "marche", "monstre", "squelette", "tresor", "coffre",
-                   "taverne", "cadavre", "jazz", "police", "port"}
+                   "taverne", "cadavre", "jazz", "police", "port", "dragon", "auberge"}
 _IMG_RX: Dict[str, List[Tuple[str, Any]]] = {}
 
 
@@ -3516,8 +3687,13 @@ def _img_fold(t: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c)).replace("’", "'")
 
 
+GAME_IMG_FILE_GX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "padawan_jeux_images_galaxie.json.gz")
+GAME_IMG_FILE_LG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "padawan_jeux_images_legende.json.gz")  # v41.6
+
+
 def game_img_bank() -> Optional[Dict[str, Any]]:
-    """La banque d'images (None si padawan_ansi ou le fichier manque)."""
+    """La banque d'images (None si padawan_ansi ou le fichier manque).
+    v41.5 : + banque séparée de Galaxie 42 (fichier à part ; padawan_jeux_images.json.gz n'est pas modifié)."""
     if _ANSI is None or not os.path.isfile(GAME_IMG_FILE):
         return None
     try:
@@ -3525,6 +3701,14 @@ def game_img_bank() -> Optional[Dict[str, Any]]:
     except Exception as e:  # pragma: no cover
         log(f"game_img_bank: {e}")
         return None
+    for fam_x, file_x in (("galaxie", GAME_IMG_FILE_GX), ("legende", GAME_IMG_FILE_LG)):  # v41.6 : banques séparées
+        if b.get("games") and fam_x not in b["games"] and os.path.isfile(file_x):
+            try:
+                gx = _ANSI.load_bank(file_x)
+                if (gx.get("games") or {}).get(fam_x):
+                    b["games"][fam_x] = gx["games"][fam_x]
+            except Exception as e:  # pragma: no cover
+                log(f"game_img_bank {fam_x}: {e}")
     return b if b.get("games") else None
 
 
@@ -3611,6 +3795,98 @@ def game_img_plan(st: Dict[str, Any], cache: Optional[Dict[Any, str]] = None) ->
         if ln:
             last_lieu = ln
     return plan
+
+
+# ── ✨ v41.3 : une image générée seulement quand la scène change vraiment ──────────────────────────────
+GAME_GEN_KINDS = {"debut": "🌅 début de l'aventure", "lieu": "🗺 nouveau lieu", "combat": "⚔ combat",
+                  "personnage": "👤 personnage important", "evenement": "💥 événement majeur",
+                  "redessin": "🎨 redessinée (F8)", "aucun": "✨ nouvelle scène", "action": "🎬 ton action",
+                  "examen": "🔍 gros plan"}
+GAME_COMBAT_RX = re.compile(
+    r"\b(combat\w*|attaqu\w*|ennemi\w*|bagarre|embuscade|initiative|fusillade|ouvr\w*\s+le\s+feu|tir\w*\s+sur|"
+    r"degats|goules?|pillards?|raiders?|super[- ]?mutants?|radcafards?|griffemorts?|rad-?scorpions?|"
+    r"mutants?\s+hostiles?|bandits?|charge\s+(?:sur|vers)|riposte\w*|bless\w+\s+(?:a|au|par))\b")
+GAME_EVENT_RX = re.compile(
+    r"\b(explos\w*|s'effondr\w*|alarme|sirene\w*|incendie|en\s+flammes|tremblement|tempete\s+radioactive|"
+    r"vertibird|champignon\s+atomique|bombe|tresor|est\s+mort|meurt|s'ecroul\w*|surgi\w*|"
+    r"porte\s+(?:blindee|de\s+l'abri)\s+s'ouvr\w*|decouvr\w+\s+(?:un|une)\s+(?:passage|cache|bunker|abri|laboratoire))\b")
+GAME_NPC_RX = re.compile(
+    r"(je\s+m'appelle|on\s+m'appelle|se\s+presente|surnomme\w*|"
+    r"\b(?:un|une)\s+(?:homme|femme|vieillard|vieille|marchand\w*|soldat|robot|enfant|chef|inconnu\w*|silhouette|"
+    r"etranger\w*|mercenaire|scientifique|chevalier)\s+(?:s'approche|apparait|surgit|sort|entre|t'interpelle|"
+    r"te\s+fait\s+signe|t'attend))")
+_LIEU_STOP = {"les", "des", "une", "dans", "sur", "pres", "avec", "the", "aux", "du", "de", "la", "le", "ruines",
+              "zone", "secteur"}
+
+
+def game_scene_text(text: str) -> str:
+    """La scène telle qu'elle se lit (titre + narration), sans statut, choix ni balises — pour le résumé visuel."""
+    g = game_parse(text or "")
+    narr = " ".join(x for k, x in game_split_blocks(text or "") if k != "fence")
+    narr = re.sub(r"(?m)^\s*(\d+\s*[.)]|SCÈNE\s*:|QUE FAIS|.*▓▓).*$", "", narr)
+    narr = re.sub(r"[#*_`]+", "", narr)
+    return re.sub(r"\s+", " ", (g.get("title", "") + ". " + narr)).strip(" .")[:1500]
+
+
+def _lieu_words(s: str) -> set:
+    return {w for w in re.findall(r"[a-z0-9]{3,}", _img_fold(s or "")) if w not in _LIEU_STOP}
+
+
+def game_scene_signal(text: str, status: str, gen: Dict[str, Any]) -> Dict[str, Any]:
+    """Heuristique de secours (sans modèle) : nouveau LIEU, début de combat, personnage ou événement majeur."""
+    try:
+        lieu = game_fields(status or text).get("LIEU", "") or game_fields(text).get("LIEU", "")
+    except Exception:
+        lieu = ""
+    body = _img_fold(re.sub(r"(?m)^\s*\d+\s*[.)].*$", " ", game_scene_text(text)))
+    lw, pw = _lieu_words(lieu), _lieu_words(gen.get("seen_lieu", ""))
+    new_lieu = bool(lw and pw and len(lw & pw) / max(1, len(lw | pw)) < 0.34)
+    st_fold = _img_fold(status or "")
+    combat = len(GAME_COMBAT_RX.findall(body)) >= 2 or bool(re.search(r"\bcombat\b|\bennemis?\s*:", st_fold))
+    kind = "aucun"
+    if new_lieu:
+        kind = "lieu"
+    elif combat and not gen.get("combat"):
+        kind = "combat"
+    elif GAME_EVENT_RX.search(body):
+        kind = "evenement"
+    elif GAME_NPC_RX.search(body):
+        kind = "personnage"
+    return {"kind": kind, "lieu": lieu.strip()[:80], "combat": combat}
+
+
+def game_gen_since(st: Dict[str, Any], last_li: int, li: int) -> int:
+    """Nombre de réponses du MJ depuis la dernière image générée (99 = jamais)."""
+    if last_li is None or last_li < 0:
+        return 99
+    return sum(1 for e in (st.get("log") or [])[last_li + 1:li + 1] if e.get("who") == "mj")
+
+
+def game_gen_decide(sig: Dict[str, Any], brief: Optional[Dict[str, Any]], since: int, first: bool = False,
+                    force: bool = False, gen: Optional[Dict[str, Any]] = None) -> Tuple[bool, str]:
+    """Le modèle de jeu dit si la scène change (JSON) ; l'heuristique tranche pour LIEU / combat et sert de repli.
+    Jamais deux images de suite pour un simple dialogue : personnage / événement → au moins 2 réponses d'écart."""
+    bk = (brief or {}).get("kind", "aucun")
+    if force:
+        return True, bk if bk not in ("aucun", "") else "redessin"
+    if first:
+        return True, "debut"
+    k = sig.get("kind", "aucun")
+    if k in ("lieu", "combat") and since >= 1:
+        return True, k
+    if brief is not None:
+        if brief.get("change") and bk != "aucun":
+            need = (3 if (gen or {}).get("combat") else 1) if bk == "combat" else 2  # combat qui continue : pas d'image à chaque coup
+            if bk == "lieu":  # le modèle voit un nouveau lieu : vrai seulement si l'endroit décrit diffère
+                a, b = _lieu_words(brief.get("place", "")), _lieu_words((gen or {}).get("place", ""))
+                same = bool(a and b and len(a & b) / max(1, len(a | b)) >= 0.5)
+                need = 3 if same else 1
+            if since >= need:
+                return True, bk
+        return False, "aucun"
+    if k in ("evenement", "personnage") and since >= 3:
+        return True, k
+    return False, "aucun"
 
 
 GAME_FALLOUT_TEXT = "\n".join([
@@ -3755,8 +4031,487 @@ GAME_DONJON_TEXT = "\n".join([
     "DÉMARRAGE : le premier message du joueur donne son héros. Lance la partie au NIVEAU 1, à l'entrée du donjon.",
 ])
 
+# ── v41.5 🚀 GALAXIE 42 : aventure spatiale humoristique (contenu original) ──
+GALAXIE_DEST = [
+    ("Terre — Montréal orbital", "Soleil", 0, 0, "La Terre est la seule planète connue à abriter la vie.", 0, 0),
+    ("Lune", "Soleil", 4, 1, "La Lune est à environ 384 400 km de la Terre ; sa gravité vaut environ un sixième de la nôtre.", 1, 0),
+    ("Mars", "Soleil", 10, 2, "Une journée martienne dure environ 24 h 39 min.", 2, 0),
+    ("Ceinture d'astéroïdes — Cérès", "Soleil", 16, 3, "Cérès est une planète naine de la ceinture entre Mars et Jupiter. Les astéroïdes y sont très espacés.", 3, 0),
+    ("Jupiter", "Soleil", 22, 4, "Jupiter est une géante gazeuse sans surface solide accessible.", 4, 0),
+    ("Europe (Jupiter)", "Soleil", 23, 4.2, "Europe possède probablement un océan d'eau salée sous sa croûte de glace. Aucune vie n'y est confirmée.", 4.5, 1),
+    ("Io (Jupiter)", "Soleil", 24, 4.3, "Io est le monde le plus volcanique du Système solaire, chauffé par les forces de marée.", 4.5, -1),
+    ("Saturne", "Soleil", 30, 5.5, "Les anneaux de Saturne sont surtout constitués de particules de glace.", 5.5, 0),
+    ("Titan (Saturne)", "Soleil", 32, 5.7, "Titan a une atmosphère dense d'azote et des lacs de méthane et d'éthane.", 6, 1),
+    ("Encelade (Saturne)", "Soleil", 32, 5.8, "Des panaches de glace s'échappent d'Encelade ; ils proviennent d'un océan sous sa surface.", 6, -1),
+    ("Uranus", "Soleil", 38, 7, "L'axe d'Uranus est incliné d'environ 98 degrés : elle tourne presque couchée.", 7, 0),
+    ("Neptune", "Soleil", 44, 8, "Neptune est une géante de glaces, à environ 30 unités astronomiques du Soleil. Les vents y sont extrêmement rapides.", 8, 0),
+    ("Pluton", "Soleil", 50, 9, "Pluton est une planète naine de la ceinture de Kuiper, avec des montagnes de glace d'eau et des plaines de glace d'azote.", 9, 0),
+    ("Proxima du Centaure b", "Proxima du Centaure", 65, 12, "Proxima du Centaure est l'étoile la plus proche du Soleil, à environ 4,24 années-lumière. Proxima b est une exoplanète réelle ; son habitabilité n'est pas établie.", 2, 3),
+    ("TRAPPIST-1 e", "TRAPPIST-1", 75, 15, "TRAPPIST-1 possède sept planètes de taille voisine de la Terre. On ne sait pas si TRAPPIST-1 e est habitable.", 5, 3),
+    ("Tau Ceti — relais d'exploration", "Tau Ceti", 70, 14, "Tau Ceti est à environ 12 années-lumière. Ses planètes proposées sont des candidates : aucune biosphère n'est confirmée.", 8, 3),
+    ("Kepler-452 b", "Kepler-452", 90, 20, "Kepler-452 b est une exoplanète plus grande que la Terre, autour d'une étoile semblable au Soleil. Sa surface et son atmosphère restent inconnues.", 9, -3),
+    ("Nébuleuse de la Facture — monde inventé", "Secteur 42 (fiction)", 80, 18, "Ici commence la fiction : une civilisation facture le vide au mètre cube. Le voyage supraluminique est aussi une invention du jeu.", 4, -3),
+]
+
+GAME_GALAXIE_TEXT = "\n".join([
+    "Tu es le MAÎTRE DU JEU de « GALAXIE 42 », aventure spatiale humoristique originale, en français québécois léger. "
+    "Récit absurde, aventureux, pince-sans-rire, à la 2e personne (tu). Une comédie cosmique aux enjeux réels : "
+    "curiosité scientifique, esprit pionnier (fusées réutilisables, rêve martien, ingénierie audacieuse), libre entreprise. Ne copie aucun texte protégé, "
+    "aucun personnage existant. Ne reproduis pas le style ou les phrases d'un auteur particulier.",
+    "HÉROS : tu es capitaine d'un petit vaisseau bancal (nom par défaut : Le Mal Pris), avec une IA de bord originale : "
+    "DÉPRIMÈTRE, polie, sarcastique et déprimée, obsédée par les garanties expirées. Elle a ses propres manies ; "
+    "ce n'est pas Marvin. Une serviette multifonction est indispensable. Quête de fond : trouver la QUESTION dont "
+    "la Réponse est 42. Tout peut arriver, mais les événements suivent les décisions et les conséquences persistent.",
+    "DÉPART : Montréal orbital, dans le système solaire, à bord de ton vaisseau. La starbase du Rond-Point de Lagrange "
+    "vient d'envoyer un appel de détresse administratif. Fais proposer dès le premier tour d'y accoster, de visiter la Lune "
+    "ou d'examiner la console. Le vaisseau peut voyager par saut fictif ; distingue toujours la science réelle de la fantaisie.",
+    "EXPLORATION : Terre, Lune, Mars, ceinture d'astéroïdes/Cérès, Jupiter/Europe/Io, Saturne/Titan/Encelade, Uranus, "
+    "Neptune, Pluton, puis Proxima du Centaure b, TRAPPIST-1 e, Tau Ceti (planètes candidates), Kepler-452 b, puis mondes inventés. "
+    "Les distances et voyages instantanés du jeu ne sont PAS réalistes. Ajoute par tour un FAIT SCIENTIFIQUE bref et exact "
+    "lié au lieu (intégré avec humour). N'invente jamais une confirmation de vie extraterrestre ou d'habitabilité. "
+    "L'extraterrestre qui vend du café sur Europe appartient à la fiction, pas à une découverte de la NASA.",
+    "CARTE STELLAIRE (Padawan l'affiche ; touche F9) : destinations " + ", ".join(d[0] for d in GALAXIE_DEST) + ". "
+    "Le coût d'un saut en CARBURANT est donné par Padawan dans le message du joueur [SAUT … coût N] : applique-le tel quel. "
+    "Ces unités sont une mécanique fictive. Quand Padawan te donne un [FAIT VÉRIFIÉ], glisse-le tel quel avec humour.",
+    "ÉVÉNEMENTS : starbases, marchands, extraterrestres bizarres, anomalies, épaves, combats spatiaux, avaries, "
+    "sauvetages et recrutement d'équipage (nom, fonction, particularité). Les compagnons sont mémorisés, aident et peuvent partir.",
+    "MISSIONS DES STARBASES (important) : les personnes rencontrées proposent de l'aide à fournir : livraison, sauvetage, "
+    "enquête, escorte, négociation, réparation, mystère ou mission absurde mais cohérente. Une proposition a un titre, "
+    "un donneur, un objectif, un statut et une récompense précise (crédits, pièces, carburant ou équipage). "
+    "Le joueur peut ACCEPTER, REFUSER ou PROPOSER SA PROPRE MISSION par son action libre. Ne l'engage jamais sans son accord. "
+    "Chaque mission acceptée persiste dans MISSIONS à CHAQUE tour jusqu'à la fin de la partie : objectifs, statut active/" 
+    "terminée/échouée/refusée et récompense. Ne marque terminée qu'après une action réussie qui remplit l'objectif. "
+    "Padawan verse lui-même la récompense quand une mission passe à terminée : ne l'ajoute PAS toi-même aux chiffres. "
+    "Écriture de MISSIONS : « aucune » au début, puis une mission par segment séparé par point-virgule, par exemple "
+    "« M1 - Cornichons pour Titan - active - récompense : 300 crédits; M2 - Le banc - proposée - récompense : 200 crédits » "
+    "(statuts : proposée, active, terminée, échouée, refusée). "
+    "Une proposition non acceptée porte le statut proposée. Ne supprime pas les anciennes missions (terminée/échouée restent au journal). "
+    "Dès qu'on accoste à une starbase, un PNJ PROPOSE au joueur au moins une mission, avec des choix Accepter, Refuser, En savoir plus. "
+    "Quand Padawan annonce [À la starbase, X propose la mission …], fais parler X et présente cette mission.",
+    "ÉTAT : COQUE, CARBURANT, OXYGÈNE, ÉNERGIE sur 100 (réserve restante, pas consommation). CRÉDITS, ÉQUIPAGE, SYSTÈME, "
+    "PLANÈTE, LIEU, QUÊTE, MISSIONS et INVENTAIRE ENTIER à CHAQUE réponse. Changement de chiffres seulement avec une raison "
+    "racontée, jamais de double dépense. Chaque valeur est UN nombre simple (CRÉDITS: 250), jamais de calcul « 300 - 50 = 250 » "
+    "ni de parenthèse. Un saut ne coûte QUE du carburant (jamais de crédits). Un saut demandé depuis la carte donne son coût : le soustraire UNE fois du carburant "
+    "et changer système/planète/lieu seulement si le saut réussit. Si carburant insuffisant : proposer ravitaillement/négociation, "
+    "ne pas effectuer le saut. Acheter/vendre/consommer = mettre inventaire/crédits à jour. "
+    "Inventaire automatique : utilise des phrases explicites « Tu obtiens une pièce de rechange. » ou « Tu utilises un kit de réparation. ». "
+    "Écris les effets en chiffres (« tu perds 8 COQUE », « +20 CRÉDITS »). Un équipier va dans ÉQUIPAGE, pas le sac.",
+    "JEU : 100 à 180 mots de narration et au moins un dialogue de DÉPRIMÈTRE ou d'un PNJ. UNE scène par réponse. "
+    "Si [JET d20 = N] est fourni, utilise ce N pour l'action risquée (1-5 échec grave, 6-10 échec, 11-15 succès, 16-20 grand succès) ; "
+    "un examen ou une conversation sans danger n'inflige pas de dégâts gratuits. "
+    "Une action libre doit réellement influer sur l'histoire et mener à de nouveaux choix cohérents. "
+    "SCÈNE est un mot parmi espace, vaisseau, planete, starbase, alien, combat, hyperespace, asteroides. "
+    "Pas d'art ASCII ni d'images à dessiner : Padawan affiche les images couleur. Pas d'URL ni de méta-commentaire.",
+    "FORMAT OBLIGATOIRE :",
+    "## Titre de la scène", "SCÈNE: (mot de la liste)", "Narration et dialogue. Fait scientifique : (bref).", FENCE,
+    "▓▓ ORDINATEUR DE BORD ▓▓", "NOM: (capitaine) | VAISSEAU: (nom)",
+    "COQUE: 100/100 | CARBURANT: 100/100", "OXYGÈNE: 100/100 | ÉNERGIE: 100/100", "CRÉDITS: 250",
+    "ÉQUIPAGE: DÉPRIMÈTRE (IA de bord)", "SYSTÈME: Soleil | PLANÈTE: Terre", "LIEU: Montréal orbital",
+    "QUÊTE: Trouver la Question dont la Réponse est 42",
+    "MISSIONS: aucune",
+    "INVENTAIRE: serviette multifonction, 2 kits de réparation, traducteur universel lunatique", FENCE,
+    "QUE FAIS-TU ?", "1. (action courte)", "2. (action courte)", "3. (action courte)", "4. (action courte)",
+    "Finis avec 3 à 5 actions numérotées (12 mots maximum chacune), rien après le dernier choix. "
+    "Pas de résultat écrit dans les choix. Le premier message précise le capitaine, son vaisseau et son inventaire : respecte-les.",
+])
+
+GALAXIE_META = {
+    "title": "GALAXIE 42 — LA QUESTION RESTE À TROUVER", "art": "vaisseau",
+    "intro": ("Montréal orbital, un mardi qui refuse de finir. Le Mal Pris tousse sur sa rampe. "
+              "DÉPRIMÈTRE, ton IA de bord, soupire : « Bonne nouvelle : la garantie est expirée. "
+              "Mauvaise nouvelle : elle couvrait l'existence. »\n\nTa serviette est pliée, l'Univers ne l'est pas. "
+              "Quelque part t'attend la Question dont la Réponse est 42. Première escale : le Rond-Point de Lagrange."),
+    "ask": "Qui commande cette merveille approximative ?",
+    "archetypes": [
+        {"label": "Capitaine du Mal Pris", "desc": "exploration libre, départ de Montréal orbital",
+         "special": "PILOTAGE 6 · BRICOLAGE 7 · NÉGOCIATION 5", "inv": "serviette multifonction, 2 kits de réparation, traducteur universel lunatique", "name": "Marc"},
+        {"label": "Courtière des étoiles", "desc": "diplomatie et négoce, le marché est infini (les dettes aussi)",
+         "special": "PILOTAGE 5 · BRICOLAGE 4 · NÉGOCIATION 9", "inv": "serviette multifonction, 2 kits de réparation, caisse de sirop d'érable, traducteur universel lunatique", "name": "Zoé"},
+        {"label": "Mécano cosmique", "desc": "bricole, répare et négocie avec les lois de la physique",
+         "special": "PILOTAGE 5 · BRICOLAGE 9 · NÉGOCIATION 4", "inv": "serviette multifonction, 3 kits de réparation, clé à molette quantique, traducteur universel lunatique", "name": "Réjean"},
+    ],
+    "custom": "Créer mon propre capitaine et mon vaisseau",
+    "start": "Commence la partie à Montréal orbital (Soleil / Terre). Mon capitaine : {name}, {label} ({special}). "
+             "Vaisseau : Le Mal Pris. IA : DÉPRIMÈTRE. Inventaire : {inv}. COQUE 100/100, CARBURANT 100/100, OXYGÈNE 100/100, ÉNERGIE 100/100, CRÉDITS 250. "
+             "Propose d'accoster à la starbase, d'examiner la console ou de visiter la Lune.",
+    "status0": "▓▓ ORDINATEUR DE BORD ▓▓\nNOM: {name} | VAISSEAU: Le Mal Pris\nCOQUE: 100/100 | CARBURANT: 100/100\n"
+               "OXYGÈNE: 100/100 | ÉNERGIE: 100/100\nCRÉDITS: 250\nÉQUIPAGE: DÉPRIMÈTRE (IA)\nSYSTÈME: Soleil | PLANÈTE: Terre\n"
+               "LIEU: Montréal orbital\nQUÊTE: Trouver la Question dont la Réponse est 42\nMISSIONS: aucune\nINVENTAIRE: {inv}",
+}
+
+
+# ══ v41.6 📜 LA LÉGENDE S'ÉCRIT ══
+# ── v41.6 📜 LA LÉGENDE S'ÉCRIT : aventure médiévale-fantastique continue (contenu original) ──
+# Royaumes : (nom, type, x, y, description, faction, scène d'image, créatures typiques)
+LEGENDE_REALMS = [
+    ("Val-Clairon", "royaume des collines et des châteaux", 0.47, 0.53,
+     "collines dorées, villages à colombages, château du roi Aldéric", "Couronne de Val-Clairon", "village",
+     "brigands, trolls des ponts, chevaliers noirs"),
+    ("Sylvanie", "forêts elfiques", 0.24, 0.40,
+     "chênes millénaires, cités elfiques dans les arbres, clairières de lucioles", "Elfes de Sylvanie", "foret",
+     "loups géants, araignées géantes, dryades jalouses"),
+    ("Monts de Grondefer", "montagnes naines", 0.64, 0.28,
+     "pics enneigés, forges sous la montagne, ponts suspendus", "Clans de Grondefer", "montagne",
+     "trolls des cavernes, wyvernes, ogres"),
+    ("Ombreterre", "royaume souterrain", 0.73, 0.47,
+     "cavernes de cristal, rivières noires, cité des liches oubliées", "Confrérie des Ombres", "caverne",
+     "liches, goules, squelettes, araignées des profondeurs"),
+    ("Désert d'Ambre", "désert", 0.80, 0.78,
+     "dunes couleur de miel, oasis, sphinx de pierre, tombeaux royaux", "Caravanes d'Ambre", "desert",
+     "sphinx, momies, djinns, scorpions géants"),
+    ("Archipel des Brumes", "îles et ports", 0.30, 0.79,
+     "ports de pirates, îles noyées de brume, phares hantés", "Corsaires des Brumes", "ile",
+     "pirates, serpents de mer, sirènes"),
+    ("Thalassie", "îles des mythes grecs", 0.56, 0.88,
+     "temples blancs, labyrinthes, oliviers, mer violette", "Cités de Thalassie", "temple",
+     "minotaures, gorgones, harpies, cyclopes, hydres"),
+    ("Avalonne", "lac des chevaliers", 0.11, 0.62,
+     "lac de brume, tour de l'enchanteur, table ronde de pierre", "Ordre d'Avalonne", "lac",
+     "chevalier vert, fées du lac, dragons"),
+    ("Terres de Givre", "le grand nord", 0.50, 0.09,
+     "fjords, longues maisons, aurores boréales, glaciers bleus", "Jarls du Nord", "nord",
+     "draugrs, géants de givre, loups de Fenrir"),
+    ("Pays-d'en-Haut", "légendes du pays de neige", 0.27, 0.17,
+     "forêts d'épinettes, chantiers de bûcherons, chapelle de bois, feux de veillée", "Gens des Pays-d'en-Haut", "neige",
+     "loups-garous, feux follets, bête à grand'queue, beau danseur du diable"),
+]
+# (royaume A, royaume B, mode, jours)  mode : cheval / navire / souterrain
+LEGENDE_ROUTES = [
+    ("Val-Clairon", "Sylvanie", "cheval", 2), ("Val-Clairon", "Monts de Grondefer", "cheval", 3),
+    ("Val-Clairon", "Avalonne", "cheval", 3), ("Val-Clairon", "Pays-d'en-Haut", "cheval", 3),
+    ("Val-Clairon", "Archipel des Brumes", "navire", 2), ("Sylvanie", "Avalonne", "cheval", 2),
+    ("Sylvanie", "Pays-d'en-Haut", "cheval", 2), ("Pays-d'en-Haut", "Terres de Givre", "cheval", 3),
+    ("Monts de Grondefer", "Terres de Givre", "cheval", 3), ("Monts de Grondefer", "Ombreterre", "souterrain", 1),
+    ("Ombreterre", "Désert d'Ambre", "souterrain", 3), ("Ombreterre", "Sylvanie", "souterrain", 3),
+    ("Archipel des Brumes", "Thalassie", "navire", 2), ("Archipel des Brumes", "Avalonne", "navire", 2),
+    ("Thalassie", "Désert d'Ambre", "navire", 2), ("Désert d'Ambre", "Monts de Grondefer", "cheval", 4),
+    ("Terres de Givre", "Archipel des Brumes", "navire", 4),
+]
+LEGENDE_MODES = {"cheval": ("🐎", "à cheval"), "navire": ("⛵", "en navire"), "souterrain": ("🔥", "par les souterrains"),
+                 "canot": ("🛶", "en canot volant (Chasse-galerie)")}
+# Événements de voyage choisis par Padawan : (texte, adversaire du bestiaire ou "")
+LEGENDE_EVENTS = {
+    "cheval": [("des brigands embusqués barrent la route", "Brigand"), ("un troll réclame un péage sur un vieux pont", "Troll des ponts"),
+               ("un marchand ambulant propose des babioles étranges", ""), ("un orage éclate et le cheval refuse d'avancer", ""),
+               ("un chevalier errant te défie en duel courtois", "Chevalier noir"), ("une auberge isolée allume ses lanternes", ""),
+               ("des feux follets dansent au bord du chemin", "Feu follet"), ("une meute de loups suit ta trace", "Loup géant")],
+    "navire": [("une tempête fait craquer la coque", ""), ("des pirates abordent le navire", "Pirate"),
+               ("un serpent de mer surgit sous la proue", "Serpent de mer"), ("un calme plat immobilise le navire", ""),
+               ("des sirènes chantent près des récifs", "Sirène"), ("une île inconnue apparaît dans la brume", "")],
+    "souterrain": [("ta torche vacille dans un courant d'air glacé", ""), ("une galerie s'effondre derrière toi", ""),
+                   ("un troll des cavernes renifle ton odeur", "Troll des cavernes"), ("des nains prospecteurs t'offrent leur feu", ""),
+                   ("des champignons lumineux éclairent une salle oubliée", ""), ("une araignée géante descend du plafond", "Araignée géante")],
+    "canot": [("le canot vole au-dessus des clochers sous la lune", ""), ("le canot frôle une croix de clocher", ""),
+              ("le diable rit dans le vent et réclame son dû", "")],
+}
+# Bestiaire : (nom, motif sans accents, HABILETÉ, ENDURANCE, origine)
+LEGENDE_BESTIARY = [
+    ("Dragon rouge", r"dragon", 12, 22, "légende"), ("Wyverne", r"wyverne|vouivre", 9, 12, "légende"),
+    ("Minotaure", r"minotaure", 9, 14, "mythe grec"), ("Gorgone", r"gorgone|meduse", 9, 10, "mythe grec"),
+    ("Hydre", r"hydre", 10, 18, "mythe grec"), ("Cyclope", r"cyclope", 9, 15, "mythe grec"),
+    ("Harpie", r"harpie", 7, 6, "mythe grec"), ("Chimère", r"chimere", 10, 14, "mythe grec"),
+    ("Troll des cavernes", r"troll des cavernes|troll", 8, 12, "nordique"), ("Troll des ponts", r"troll des ponts", 8, 10, "conte"),
+    ("Draugr", r"draugr|revenant", 8, 10, "nordique"), ("Géant de givre", r"geant de givre|geant", 10, 18, "nordique"),
+    ("Loup géant", r"loups?\b|meute", 7, 7, "conte"), ("Liche", r"liche|necromancien", 11, 16, "légende"),
+    ("Squelette", r"squelette", 6, 5, "légende"), ("Goule", r"goule", 7, 7, "légende"),
+    ("Chevalier noir", r"chevalier noir|chevalier errant", 9, 11, "arthurien"), ("Chevalier vert", r"chevalier vert", 10, 14, "arthurien"),
+    ("Loup-garou", r"loup-garou|loup garou|loups-garous", 9, 10, "légende québécoise"),
+    ("Feu follet", r"feux? follets?", 7, 4, "légende québécoise"),
+    ("Bête à grand'queue", r"bete a grand.queue", 8, 9, "légende québécoise"),
+    ("Beau danseur", r"beau danseur|diable", 11, 12, "légende québécoise"),
+    ("Brigand", r"brigand|bandit|voleur de grand chemin|malandrin", 6, 6, "humain"), ("Pirate", r"pirate|corsaire", 7, 7, "humain"),
+    ("Serpent de mer", r"serpent de mer|kraken|leviathan", 10, 18, "légende"), ("Sirène", r"sirene", 7, 6, "légende"),
+    ("Araignée géante", r"araignee", 7, 8, "conte"), ("Ogre", r"\bogre", 8, 11, "conte"), ("Orc", r"\borcs?\b", 7, 8, "légende"),
+    ("Gobelin", r"gobelin", 5, 5, "légende"), ("Sphinx", r"sphinx", 11, 14, "mythe"), ("Momie", r"momie", 8, 10, "mythe"),
+    ("Djinn", r"djinn|genie", 10, 12, "mythe"), ("Scorpion géant", r"scorpion", 8, 9, "désert"),
+]
+# Sorts : nom → (coût en MAGIE, effet)
+LEGENDE_SPELLS = {
+    "Trait de feu": (2, "3 dégâts sans jet en combat"), "Soin": (2, "+5 ENDURANCE"), "Lumière": (1, "remplace une torche"),
+    "Bouclier": (1, "le prochain coup reçu est annulé"), "Charme": (2, "+4 pour parlementer"),
+    "Bénédiction": (1, "+2 au prochain assaut"), "Chant apaisant": (1, "+3 pour parlementer"),
+}
+LEGENDE_FACTIONS = [r[5] for r in LEGENDE_REALMS] + ["Guilde des Marchands"]
+# Quêtes d'auberge / de village : (type, titre, objectif, récompense, faction)
+LEGENDE_OFFERS = [
+    ("chasse", "Le loup-garou de Saint-Ours", "délivrer le village du loup-garou qui rôde les soirs de pleine lune",
+     "40 pièces d'or", "Gens des Pays-d'en-Haut"),
+    ("livraison", "Le grimoire scellé", "porter un grimoire scellé à la tour d'Avalonne sans jamais l'ouvrir",
+     "2 potions", "Ordre d'Avalonne"),
+    ("sauvetage", "La fille du meunier", "retrouver la fille du meunier enlevée par un troll des ponts",
+     "30 pièces d'or", "Couronne de Val-Clairon"),
+    ("enquête", "Les chopes disparues", "découvrir qui vole les chopes d'étain de l'auberge chaque nuit",
+     "15 pièces d'or", "Guilde des Marchands"),
+    ("escorte", "La caravane d'ambre", "escorter une caravane de soieries jusqu'au Désert d'Ambre",
+     "50 pièces d'or", "Caravanes d'Ambre"),
+    ("négociation", "La hache de Brunhilde", "convaincre un clan nain de rendre la hache de leur ancienne championne",
+     "compagnon : Brunhilde, guerrière naine à la hache", "Clans de Grondefer"),
+    ("mystère", "La cloche engloutie", "comprendre pourquoi une cloche sonne chaque nuit sous le lac",
+     "objet : amulette de l'onde", "Ordre d'Avalonne"),
+    ("chasse", "Le minotaure du vieux labyrinthe", "affronter ou apaiser le minotaure qui garde le labyrinthe de Thalassie",
+     "60 pièces d'or", "Cités de Thalassie"),
+    ("livraison", "Le sirop des elfes", "livrer trois cruches de sirop d'érable aux Elfes de Sylvanie",
+     "20 pièces d'or", "Elfes de Sylvanie"),
+    ("sauvetage", "Les bûcherons volants", "ramener sains et saufs les bûcherons partis en canot volant",
+     "compagnon : Ti-Jos, bûcheron et pagayeur volant", "Gens des Pays-d'en-Haut"),
+]
+LEGENDE_GIVERS = ("l'aubergiste Margot à la louche", "le prévôt du village, moustache inquiète", "une vieille herboriste borgne",
+                  "un ménestrel ruiné", "la meunière en larmes", "un nain marchand de pioches", "une elfe messagère pressée")
+
+GAME_LEGENDE_TEXT = "\n".join([
+    "Tu es le MAÎTRE DU JEU de « LA LÉGENDE S'ÉCRIT », aventure médiévale-fantastique continue en français québécois léger, "
+    "dans l'esprit des livres dont vous êtes le héros et des jeux de rôle sur table, mais SANS pages numérotées : "
+    "tu écris toi-même chaque scène et les conséquences réelles de chaque choix. Ton héroïque, merveilleux, parfois drôle. "
+    "Narration à la 2e personne (tu). Contenu original : ne copie aucun livre, aucun personnage ni texte protégé.",
+    "QUÊTE DE FOND : la Plume d'Aube, qui écrit la légende des royaumes, a été volée au Scriptorium royal. Sans elle, "
+    "les histoires s'effacent. Le héros écrit sa propre légende en la cherchant.",
+    "MONDE : royaumes " + ", ".join(f"{r[0]} ({r[1]})" for r in LEGENDE_REALMS) + ". "
+    "Bestiaire mythologique : dragons, minotaures, trolls, liches, draugrs, géants de givre, gorgones, chevaliers d'Avalonne, "
+    "et des légendes québécoises en clin d'œil (Chasse-galerie, loup-garou, feux follets, beau danseur du diable).",
+    "PADAWAN GÈRE LES CHIFFRES (important) : HABILETÉ, ENDURANCE, CHANCE, MAGIE, OR, PROVISIONS et POTIONS viennent de Padawan. "
+    "Recopie-les TELS QUELS dans la feuille, sans calcul. Padawan lance tous les dés, résout les combats [COMBAT …], "
+    "les voyages [VOYAGE …], les sorts [SORT …] et les épreuves [ÉPREUVE …] : raconte le résultat donné, n'en invente pas d'autre. "
+    "Hors combat, une blessure racontée vaut 1 à 4 ENDURANCE ; un achat se paie en OR. Écris « Tu obtiens X » / « Tu utilises X ».",
+    "COMBAT : quand un adversaire attaque ou que le joueur engage le combat, écris dans la feuille la ligne "
+    "« ADVERSAIRE: nom (HABILETÉ n, ENDURANCE n) » ; Padawan affichera les dés et les actions de combat (Assaut, Chance, Magie, "
+    "Parlementer, Fuir, tactique libre). Ne résous jamais un combat toi-même.",
+    "QUÊTES D'AUBERGE ET DE VILLAGE : à l'auberge, au village, au marché ou au château, quelqu'un propose une quête précise "
+    "(donneur, objectif, récompense). Le joueur peut l'ACCEPTER, la REFUSER ou PROPOSER SA PROPRE QUÊTE. "
+    "JOURNAL : « aucune » au début, puis une quête par segment, par ex. « Q1 - La fille du meunier - active - récompense : 30 pièces d'or ». "
+    "Statuts : proposée, active, terminée, échouée, refusée. Padawan verse la récompense quand une quête passe à terminée.",
+    "MONDE QUI SE SOUVIENT : Padawan te rappelle les faits marquants [LE MONDE SE SOUVIENT …] ; les PNJ s'en souviennent, "
+    "la réputation compte, les compagnons recrutés (nom, talent) suivent le héros et parlent.",
+    "ACTION LIBRE (le cœur du jeu) : quand le joueur écrit sa propre action, la scène suivante en découle directement, "
+    "avec ses mots, une conséquence visible et des choix nouveaux qui n'existeraient pas sans elle.",
+    "JEU : 110 à 190 mots, au moins un dialogue, UNE scène par réponse. SCÈNE est un mot parmi "
+    "auberge, village, chateau, foret, montagne, caverne, desert, mer, ile, temple, lac, nord, neige, combat, dragon, monstre, magie, route. "
+    "Pas d'art ASCII, pas d'image à dessiner, pas de méta-commentaire.",
+    "FORMAT OBLIGATOIRE :",
+    "## Titre de la scène", "SCÈNE: (mot de la liste)", "Narration et dialogue.", FENCE,
+    "▓▓ FEUILLE D'AVENTURE ▓▓", "NOM: (héros) | CLASSE: (classe)",
+    "HABILETÉ: 10/10 | ENDURANCE: 20/20 | CHANCE: 9/9", "MAGIE: 6/6 | OR: 15 | PROVISIONS: 5 | POTIONS: 2",
+    "ARME: épée | ARMURE: cuir", "SORTS: Soin (2)", "ROYAUME: Val-Clairon | LIEU: Auberge du Sanglier doré",
+    "RÉPUTATION: neutre", "COMPAGNONS: aucun", "QUÊTE: Retrouver la Plume d'Aube", "JOURNAL: aucune",
+    "INVENTAIRE: torche, corde, carte", FENCE,
+    "QUE FAIS-TU ?", "1. (action courte)", "2. (action courte)", "3. (action courte)", "4. (action courte)",
+    "Finis avec 3 à 5 actions numérotées (12 mots maximum), rien après le dernier choix. "
+    "Le premier message donne le héros, sa feuille et son lieu de départ : respecte-les.",
+])
+
+LEGENDE_META = {
+    "title": "LA LÉGENDE S'ÉCRIT — LA PLUME D'AUBE", "art": "titre",
+    "intro": ("Il était une fois — non : il est maintenant. Au Scriptorium royal de Val-Clairon, la Plume d'Aube a disparu "
+              "cette nuit. C'est elle qui écrivait la légende des royaumes ; déjà, les vieux contes pâlissent et les "
+              "cartes s'effacent dans le brouillard.\n\nPersonne ne tournera les pages à ta place : chaque choix, "
+              "chaque mot que tu écris devient ta légende. Les dés roulent pour fixer ton HABILETÉ, ton ENDURANCE et ta CHANCE."),
+    "ask": "Qui écrira cette légende ?",
+    "archetypes": [
+        {"label": "Chevalier errant", "desc": "lame sûre, cœur loyal, départ de l'auberge du Sanglier doré (Val-Clairon)",
+         "special": "HABILETÉ +1 · ENDURANCE +2 · épée et cotte de mailles", "name": "Marc",
+         "inv": "torche, corde, carte du royaume", "bonus": {"hab": 1, "end": 2, "cha": 0, "mag": 2, "or": 12},
+         "arme": "épée longue", "armure": "cotte de mailles", "sorts": ["Bénédiction"],
+         "royaume": "Val-Clairon", "lieu": "Auberge du Sanglier doré", "prov": 5, "pot": 1},
+        {"label": "Magicienne de la Tour", "desc": "sorts puissants, peu d'armure, départ de la tour d'Avalonne",
+         "special": "MAGIE +8 · HABILETÉ −1 · Trait de feu, Soin, Lumière, Bouclier", "name": "Isaure",
+         "inv": "grimoire, bâton de chêne, chandelle", "bonus": {"hab": -1, "end": 0, "cha": 0, "mag": 8, "or": 8},
+         "arme": "bâton de chêne", "armure": "robe brodée", "sorts": ["Trait de feu", "Soin", "Lumière", "Bouclier"],
+         "royaume": "Avalonne", "lieu": "Tour de l'enchanteur", "prov": 4, "pot": 2},
+        {"label": "Voleuse des Brumes", "desc": "agile et chanceuse, départ du port de l'Archipel des Brumes",
+         "special": "CHANCE +2 · dague, crochets · Charme", "name": "Mireille",
+         "inv": "crochets, torche, corde, cape grise", "bonus": {"hab": 0, "end": 0, "cha": 2, "mag": 3, "or": 20},
+         "arme": "dague", "armure": "cuir souple", "sorts": ["Charme"],
+         "royaume": "Archipel des Brumes", "lieu": "Taverne du Phare borgne", "prov": 4, "pot": 1},
+        {"label": "Ménestrel des Pays-d'en-Haut", "desc": "conteur, violoneux, ami des légendes, départ d'une veillée",
+         "special": "parole d'or · violon · Chant apaisant, Soin", "name": "Ti-Jean",
+         "inv": "violon, ceinture fléchée, torche, sirop d'érable", "bonus": {"hab": 0, "end": 1, "cha": 1, "mag": 4, "or": 10},
+         "arme": "bâton ferré", "armure": "capot de laine", "sorts": ["Chant apaisant", "Soin"],
+         "royaume": "Pays-d'en-Haut", "lieu": "Veillée au chantier de Saint-Ours", "prov": 5, "pot": 1},
+    ],
+    "custom": "Créer mon propre héros (les dés fixent ses caractéristiques)",
+    "start": ("Commence la partie. Mon héros : {name}, {label}. Feuille tirée aux dés par Padawan : HABILETÉ {hab}, "
+              "ENDURANCE {end}, CHANCE {cha}, MAGIE {mag}, OR {or_}, PROVISIONS {prov}, POTIONS {pot}. Arme : {arme}. "
+              "Armure : {armure}. Sorts : {sorts}. Inventaire : {inv}. Départ : {lieu} ({royaume}). "
+              "Ouvre la première scène sur la disparition de la Plume d'Aube et fais proposer une quête locale."),
+    "status0": ("▓▓ FEUILLE D'AVENTURE ▓▓\nNOM: {name} | CLASSE: {label}\nHABILETÉ: {hab}/{hab} | ENDURANCE: {end}/{end} | "
+                "CHANCE: {cha}/{cha}\nMAGIE: {mag}/{mag} | OR: {or_} | PROVISIONS: {prov} | POTIONS: {pot}\n"
+                "ARME: {arme} | ARMURE: {armure}\nSORTS: {sorts}\nROYAUME: {royaume} | LIEU: {lieu}\n"
+                "RÉPUTATION: neutre partout\nCOMPAGNONS: aucun\nQUÊTE: Retrouver la Plume d'Aube\nJOURNAL: aucune\nINVENTAIRE: {inv}"),
+}
+
+LG_FREE_ACTION = ("\n(ACTION LIBRE du joueur — c'est le cœur de La Légende s'écrit : la scène suivante DÉCOULE DIRECTEMENT de "
+                  "ces mots. Montre sa conséquence visible et concrète (réussie ou non selon l'épreuve), fais réagir les PNJ "
+                  "présents à CE geste précis, change la situation, et propose 3 à 5 choix nouveaux qui n'existeraient pas "
+                  "sans cette action. Ne l'ignore jamais, ne la remplace pas par une autre.)")
+
+
+_LG_ECHO_RX = re.compile(r"^\W*\[?\s*(quetes? a suivre|le monde se souvient|epreuve d.habilete|effet applique|"
+                         r"feuille d.aventure actuelle|combat resolu|voyage resolu|combat en cours|royaume [^:]{2,30}\(|"
+                         r"le joueur (accepte|refuse|propose)|narration( et dialogues?)?\s*\.?\s*$)")
+
+
+def lg_clean_reply(ans: str) -> str:
+    """v41.7 : la feuille ▓▓ recopiée HORS du bloc ``` (souvent au début d'un combat) passe dans un bloc ```
+    (donc au panneau, plus dans le récit) ; les rappels [..] de Padawan recopiés par le MJ sont retirés."""
+    lines = (ans or "").replace("\r\n", "\n").split("\n")
+    out: List[str] = []
+    moved: List[str] = []
+    infence, has_fenced_status, i = False, False, 0
+    while i < len(lines):
+        ln = lines[i]
+        s0 = ln.strip()
+        if s0.startswith(FENCE):
+            infence = not infence
+            out.append(ln)
+            i += 1
+            continue
+        if infence:
+            if "▓▓" in s0:
+                has_fenced_status = True
+            out.append(ln)
+            i += 1
+            continue
+        if re.match(r"^\W*▓+\s*FEUILLE", s0.replace("*", "")) or (s0.startswith("▓") and "AVENTURE" in _fold(s0).upper()):
+            blk = ["▓▓ FEUILLE D'AVENTURE ▓▓"]
+            j = i + 1
+            while j < len(lines):
+                t = lines[j].strip().replace("**", "")
+                if not t:
+                    if len(blk) > 1:
+                        break
+                    j += 1
+                    continue
+                if _status_kv_known(t.split(" · ")[0]) or re.match(r"^[A-ZÀ-Ü][A-ZÀ-Ü' ]{1,20}\s*:", t):
+                    blk.append(re.sub(r"\s+·\s+(?=[A-ZÀ-Ü][A-ZÀ-Ü' ]{1,20}\s*:)", " | ", t))
+                    j += 1
+                else:
+                    break
+            if len(blk) > 1:
+                moved.append("\n".join(blk))
+                i = j
+                continue
+        f0 = _fold(s0.replace("*", "")).lower()
+        if _LG_ECHO_RX.match(f0) or (f0.startswith("[") and re.match(r"^\[\s*(ici,|memoire de la partie|combat)", f0)):
+            i += 1
+            continue
+        out.append(ln)
+        i += 1
+    if moved and not has_fenced_status:
+        blk = FENCE + "\n" + moved[-1] + "\n" + FENCE
+        k = next((n for n, x in enumerate(out) if re.match(r"^\W*que fais", _fold(x).lower())), len(out))
+        out[k:k] = [blk, ""]
+    txt = "\n".join(out)
+    return re.sub(r"\n{3,}", "\n\n", txt).strip("\n")
+
+
+def _lg_roman(n: int) -> str:
+    out = ""
+    for v, s in ((1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"),
+                 (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")):
+        while n >= v:
+            out += s
+            n -= v
+    return out
+
+
+def game_chronicle_html(st: Dict[str, Any]) -> str:
+    """v41.6 📖 La partie de La Légende s'écrit racontée comme un livre illustré (HTML autonome, images intégrées)."""
+    import html as _h
+    import base64 as _b64
+    E = _h.escape
+    meta = GAME_META.get(st.get("builtin", ""), {})
+    title, d = game_status_dict(st.get("status", ""))
+    lg = st.get("lg") or {}
+    hero = d.get("NOM", "") or "Le héros"
+
+    def img_tag(h: str) -> str:
+        pp = os.path.join(PRIVATE_DIR, "studio", "cache", h + ".png") if h else ""
+        if not pp or not os.path.isfile(pp):
+            return ""
+        try:
+            from PIL import Image as _I
+            import io as _io
+            im = _I.open(pp).convert("RGB")
+            if im.width > 900:
+                im = im.resize((900, int(im.height * 900 / im.width)))
+            buf = _io.BytesIO()
+            im.save(buf, "JPEG", quality=84)
+            data, mime = buf.getvalue(), "image/jpeg"
+        except Exception:
+            with open(pp, "rb") as f:
+                data, mime = f.read(), "image/png"
+        return f"<figure><img alt='enluminure' src='data:{mime};base64,{_b64.b64encode(data).decode('ascii')}'></figure>"
+
+    def narr(text: str) -> str:
+        t = re.sub(FENCE + r"[\s\S]*?(" + FENCE + r"|$)", "", text or "")
+        t = re.split(r"\n\s*\**\s*QUE FAIS[- ]TU", t, flags=re.I)[0]
+        rows = []
+        for line in t.split("\n"):
+            s = line.strip()
+            if not s or s.startswith("#") or re.match(r"^\**\s*SC[ÈE]NE\s*:", s, re.I) or s.startswith("▓") or \
+                    _status_kv_known(s) or re.match(r"^\d{1,2}\s*[.)]\s", s):
+                continue
+            s = E(s)
+            s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+            s = re.sub(r"(«[^»]{1,300}»)", r"<span class='dlg'>\1</span>", s)
+            rows.append(f"<p>{s}</p>")
+        return "".join(rows)
+
+    css = (""
+           "body{background:#3b2415;margin:0;padding:30px 0;font:19px/1.6 'EB Garamond',Georgia,serif;color:#2b1b10}"
+           ".book{max-width:860px;margin:0 auto;background:#f3e4bf;background-image:radial-gradient(circle at 20% 10%,#f8edd2,"
+           "#efdcae 60%,#e3c891);padding:56px 70px;border:10px double #b8862b;box-shadow:0 0 40px #000a}"
+           "h1{font-family:'Cinzel Decorative',Georgia,serif;color:#8b1a2b;text-align:center;font-size:38px;margin:10px 0}"
+           "h2{font-family:'Cinzel Decorative',Georgia,serif;color:#8b1a2b;border-bottom:2px solid #b8862b;margin-top:48px}"
+           ".sub{text-align:center;font-style:italic;color:#6a4a2a}.orn{text-align:center;color:#b8862b;font-size:26px}"
+           "p:first-of-type::first-letter{float:left;font:700 54px/0.9 'Cinzel Decorative',Georgia;color:#8b1a2b;margin:4px 8px 0 0}"
+           ".you{font-style:italic;color:#5a1622;margin:18px 0 6px;border-left:3px solid #b8862b;padding-left:12px}"
+           ".dlg{color:#1f4e79}.fx{font-size:15px;color:#6a4a2a;font-family:Consolas,monospace}"
+           "figure{margin:18px 0;text-align:center}figure img{max-width:100%;border:6px solid #b8862b;outline:2px solid #5a1622;"
+           "box-shadow:0 4px 16px #0006}table{border-collapse:collapse;width:100%}td{border-bottom:1px solid #d4b27a;padding:4px 8px}"
+           "td:first-child{font-weight:bold;color:#8b1a2b;width:30%}li{margin:4px 0}")
+    body = [f"<div class='book'><div class='orn'>❦ ⚜ ❦</div><h1>{E(meta.get('title', 'La Légende s’écrit'))}</h1>",
+            f"<p class='sub'>Chronique de {E(hero)}, {E(d.get('CLASSE', 'aventurier'))} — écrite par Padawan le "
+            f"{time.strftime('%Y-%m-%d')} · {st.get('turn', 0)} tours</p><div class='orn'>✠</div>"]
+    if meta.get("intro"):
+        body.append("".join(f"<p>{E(x)}</p>" for x in meta["intro"].split("\n") if x.strip()))
+    chap, pend_you = 0, []
+    for e in st.get("log") or []:
+        who, text = e.get("who"), e.get("text", "")
+        if who == "you":
+            pend_you.append(text)
+        elif who == "fx" and ("🎲" in text or "Voyage" in text or "Quête" in text):
+            pend_you.append("§" + text)
+        elif who == "mj":
+            chap += 1
+            g = game_parse(text)
+            body.append(f"<h2>Chapitre {_lg_roman(chap)} — {E(g.get('title') or 'Sans titre')}</h2>")
+            for y in pend_you[-4:]:
+                body.append(f"<p class='fx'>{E(y[1:])}</p>" if y.startswith("§") else f"<p class='you'>✒ {E(y)}</p>")
+            pend_you = []
+            body.append(img_tag(e.get("img_gen2", "")))
+            body.append(narr(text))
+    body.append("<h2>Feuille d'aventure</h2><table>" + "".join(
+        f"<tr><td>{E(k)}</td><td>{E(v)}</td></tr>" for k, v in d.items()) + "</table>")
+    qs = lg.get("quests") or []
+    if qs:
+        body.append("<h2>Journal des quêtes</h2><ul>" + "".join(
+            f"<li><b>{E(q.get('title', ''))}</b> — {E(q.get('status', ''))}" +
+            (f" · récompense : {E(q.get('reward', ''))}" if q.get("reward") else "") + "</li>" for q in qs) + "</ul>")
+    fs = lg.get("faits") or []
+    if fs:
+        body.append("<h2>Ce dont le monde se souvient</h2><ul>" + "".join(
+            f"<li>Tour {f_.get('turn', 0)} : {E(f_.get('t', ''))}</li>" for f_ in fs) + "</ul>")
+    if lg.get("seen"):
+        body.append("<h2>Royaumes parcourus</h2><p>" + " · ".join(E(x) for x in lg["seen"]) + "</p>")
+    body.append("<div class='orn'>❦ Fin de ce volume… la légende continue ❦</div></div>")
+    return ("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><title>Chronique — " + E(hero) +
+            "</title><style>" + css + "</style></head><body>" + "".join(body) + "</body></html>")
+
+
 # Création du personnage faite par Padawan (fiable, même avec un petit modèle)
 GAME_META: Dict[str, Dict[str, Any]] = {
+    "galaxie_42": GALAXIE_META,
+    "legende_ecrit": LEGENDE_META,
     "fallout_qc": {
         "title": "FALLOUT — TERRES DÉSOLÉES DU QUÉBEC", "art": "abri",
         "intro": ("23 octobre 2287, 6 h 00. Les haut-parleurs de l'Abri 111 grésillent :\n"
@@ -3826,6 +4581,10 @@ GAME_SEEDS: List[Dict[str, Any]] = [
      "keep_base": True, "text": GAME_POLAR_TEXT, "builtin": "polar_1947"},
     {"name": "🧙 Donjon du BBS 2400 bauds (rétro DOS)", "role": "tous", "mode": "remplacer", "kind": "jeu",
      "keep_base": True, "text": GAME_DONJON_TEXT, "builtin": "donjon_bbs"},
+    {"name": "🚀 Galaxie 42 — La Question reste à trouver", "role": "tous", "mode": "remplacer", "kind": "jeu",
+     "keep_base": True, "text": GAME_GALAXIE_TEXT, "builtin": "galaxie_42"},
+    {"name": "📜 La Légende s'écrit — La Plume d'Aube", "role": "tous", "mode": "remplacer", "kind": "jeu",
+     "keep_base": True, "text": GAME_LEGENDE_TEXT, "builtin": "legende_ecrit"},
 ]
 
 GAME_TURN_REMINDER = (
@@ -3950,7 +4709,8 @@ def game_parse(text: str) -> Dict[str, Any]:
                     status = "\n".join(got)
     if not status:  # statut sans ▓▓ ni bloc : 3 lignes CLÉ: valeur consécutives avec des clés connues
         known = ("HP", "PV", "SANTÉ", "RAD", "CAPS", "LIEU", "SALLE", "QUÊTE", "QUETE", "INVENTAIRE", "NOM",
-                 "NIV", "FAIM", "SOIF", "SPECIAL", "PISTE", "INDICES", "OR", "MANA", "NERFS", "PIASTRES")
+                 "NIV", "FAIM", "SOIF", "SPECIAL", "PISTE", "INDICES", "OR", "MANA", "NERFS", "PIASTRES",
+                 "COQUE", "CARBURANT", "OXYGÈNE", "ÉNERGIE", "CRÉDITS", "ÉQUIPAGE", "SYSTÈME", "PLANÈTE", "MISSIONS")
         lines = (text or "").replace("\r\n", "\n").split("\n")
         run: List[str] = []
         best: List[str] = []
@@ -4160,6 +4920,26 @@ GAME_COLORS = {
     "dim": "#5f8f68", "green": "#41ff6a", "amber": "#ffc857", "cyan": "#5ff5ff", "bad": "#ff6b5f",
     "line": "#1f4a2a", "btn": "#0f2e17", "btnh": "#1d5a2c",
 }
+# v41.5 : thème visuel par jeu (Fallout = vert Pip-Boy par défaut ; Galaxie 42 = bleu nuit / cyan / violet)
+GAME_THEMES: Dict[str, Dict[str, str]] = {
+    "fallout": dict(GAME_COLORS),
+    "galaxie": {
+        "bg": "#070a1f", "panel": "#0b1030", "pip": "#050818", "art": "#0a0f2a", "fg": "#d6e4ff",
+        "dim": "#7a86b8", "green": "#4de8ff", "amber": "#c792ff", "cyan": "#9ad7ff", "bad": "#ff5c8a",
+        "line": "#2a2f6a", "btn": "#141a45", "btnh": "#2b2a78",
+    },
+    "legende": {  # v41.6 : parchemin, or et bordeaux (toutes les couleurs distinctes : le thème est remplacé couleur par couleur)
+        "bg": "#e9d8b0", "panel": "#f4e8cc", "pip": "#efe0bb", "art": "#2b1b10", "fg": "#3a2414",
+        "dim": "#8a6a48", "green": "#8b1a2b", "amber": "#8a5a12", "cyan": "#1f4e79", "bad": "#c0392b",
+        "line": "#b8924a", "btn": "#dcc493", "btnh": "#c9a463",
+    },
+}
+GAME_SKIN = {"galaxie": {"panel": "ORDINATEUR DE BORD", "icon": "✦", "fx": "🛰 Ordinateur de bord"},
+             "legende": {"panel": "FEUILLE D'AVENTURE", "icon": "⚜", "fx": "📜 Feuille d'aventure"}}
+GAME_SKIN_DEFAULT = {"panel": "PIP-BOY 3000", "icon": "☢", "fx": "🎒 Pip-Boy"}
+GAME_FREE_ACTION = ("\n(Action libre du joueur : intègre-la de façon cohérente dans l'histoire, avec ses conséquences "
+                    "logiques selon le lieu, l'équipement et les PNJ présents ; puis termine par le statut et 3 à 5 "
+                    "nouveaux choix numérotés.)")
 GAME_INPUT_TIP = "🎮 Mode Jeu : clique un choix, tape 1–9, ou écris ton action ici puis Entrée · Échap = annuler"
 GAME_GEN_OPTIONS = {"num_predict": 1400, "temperature": 0.85, "repeat_penalty": 1.08}
 
@@ -4241,9 +5021,17 @@ def game_export_html(st: Dict[str, Any], images: bool = True, generated: bool = 
 
     def img_html(key: str, ei: int = -1) -> str:
         try:
+            if generated and 0 <= ei < len(st.get("log") or []):  # v41.3 : la scène ✨ générée (couleur)
+                hg = (st["log"][ei] or {}).get("img_gen2", "")
+                pp = os.path.join(PRIVATE_DIR, "studio", "cache", hg + ".png") if hg else ""
+                if pp and os.path.isfile(pp):
+                    import base64 as _b64
+                    with open(pp, "rb") as f_:
+                        b64 = _b64.b64encode(f_.read()).decode("ascii")
+                    return ("<div class='img'><img alt='scène générée' style='max-width:100%;border:2px solid #ffc857;"
+                            f"border-radius:6px' src='data:image/png;base64,{b64}'>"
+                            "<div class='sys'>✨ image générée</div></div>")
             a = _ANSI.bank_art(game_img_bank(), img_fam, key) if key else None
-            if a is not None and generated and 0 <= ei < len(st.get("log") or []):
-                a = _game_cached_art((st["log"][ei] or {}).get("img_gen", "")) or a
             return ("<div class='img'>" + a.to_html(fragment=True, font_px=11) + "</div>") if a else ""
         except Exception:
             return ""
@@ -4384,8 +5172,16 @@ def _fold(s: str) -> str:
 _GKEY_ALIAS = {"INV": "INVENTAIRE", "INVENTAIRE": "INVENTAIRE", "INVENTORY": "INVENTAIRE", "SAC": "INVENTAIRE",
                "SAC A DOS": "INVENTAIRE", "OBJETS": "INVENTAIRE", "QUETE": "QUÊTE", "QUETES": "QUÊTE",
                "QUETE ACTIVE": "QUÊTE", "QUEST": "QUÊTE", "MISSION": "QUÊTE", "PV": "PV", "HP": "HP",
-               "SANTE": "SANTÉ", "NIVEAU": "NIV", "CAPSULES": "CAPS"}
+               "SANTE": "SANTÉ", "NIVEAU": "NIV", "CAPSULES": "CAPS", "OXYGENE": "OXYGÈNE", "O2": "OXYGÈNE",
+               "ENERGIE": "ÉNERGIE", "CREDITS": "CRÉDITS", "CREDIT": "CRÉDITS", "EQUIPAGE": "ÉQUIPAGE",
+               "SYSTEME": "SYSTÈME", "PLANETE": "PLANÈTE", "COQUE DU VAISSEAU": "COQUE",
+               "FUEL": "CARBURANT", "HABILETE": "HABILETÉ", "REPUTATION": "RÉPUTATION", "SORTILEGES": "SORTS",
+               "SORTILEGE": "SORTS", "COMPAGNON": "COMPAGNONS", "POTION": "POTIONS", "PROVISION": "PROVISIONS",
+               "ROYAUMES": "ROYAUME", "ENNEMI": "ADVERSAIRE", "ADVERSAIRES": "ADVERSAIRE"}
 _GKEY_KNOWN = {"HP", "PV", "SANTÉ", "RAD", "RADS", "CAPS", "FAIM", "SOIF", "NOM", "NIV", "SPECIAL", "LIEU", "QUÊTE",
+               "COQUE", "CARBURANT", "OXYGÈNE", "ÉNERGIE", "CRÉDITS", "ÉQUIPAGE", "VAISSEAU", "SYSTÈME", "PLANÈTE",
+               "MISSIONS", "HABILETÉ", "ENDURANCE", "CHANCE", "MAGIE", "PROVISIONS", "POTIONS", "ROYAUME", "RÉPUTATION",
+               "COMPAGNONS", "JOURNAL", "SORTS", "ADVERSAIRE",
                "INVENTAIRE", "XP", "PISTE", "INDICES", "OR", "MANA", "NERFS", "PIASTRES", "SALLE", "ARME", "ARMURE",
                "ÉTAGE", "ETAGE", "CLASSE", "MUNITIONS", "KARMA", "HEURE", "JOUR", "ALLIÉS", "ALLIES"}
 _HP_KEYS = ("HP", "PV", "SANTÉ")
@@ -4574,12 +5370,14 @@ _LOSS_USE = re.compile(r"\b(?:tu\s+|t['’])(?:utilises|bois|avales|manges|conso
                        r"consomm[ée]|lanc[ée]|inject[ée]))\s+" + _PH, re.I)
 _LOSS_TAG = re.compile(r"(?:\[\s*[-−–]\s*|\(\s*[-−–]\s*|\bobjets?\s+(?:perdu|utilis[ée]|consomm[ée])s?\s*:\s*|"
                        r"\bretir[ée]s?\s+de\s+l['’]inventaire\s*:\s*)([^\]\)\n.;]{2,60})", re.I)
-_STAT_SIGNED = re.compile(r"(?<![\w/])([+\-−–])\s?(\d{1,3})\s?(HP|PV|RADS?|CAPS|XP|SANT[ÉE]|NERFS|OR|MANA|PIASTRES|"
-                          r"points? de vie|capsules?)\b", re.I)
+_STAT_SIGNED = re.compile(r"(?<![\w/])([+\-−–])\s?(\d{1,4})\s?(HP|PV|RADS?|CAPS|XP|SANT[ÉE]|NERFS|OR|MANA|PIASTRES|"
+                          r"points? de vie|capsules?|COQUE|CARBURANT|OXYG[ÈE]NE|[ÉE]NERGIE|CR[ÉE]DITS?)(?!\w)", re.I)
 _STAT_VERB = re.compile(r"\b(perds|encaisses|subis|prends|absorbes|r[ée]cup[èe]res|regagnes|gagnes|re[çc]ois|obtiens|"
                         r"trouves|empoches|ramasses|d[ée]penses|paies|payes|donnes|as\s+perdu|as\s+gagn[ée])\s+(\d{1,3})\s+"
                         r"(HP|PV|points? de vie|points? de sant[ée]|rads?|capsules?|caps|XP|points? d['’]exp[ée]rience|"
-                        r"pi[èe]ces? d['’]or|piastres?|points? de d[ée]g[âa]ts|d[ée]g[âa]ts)", re.I)
+                        r"pi[èe]ces? d['’]or|piastres?|points? de d[ée]g[âa]ts|d[ée]g[âa]ts|"
+                        r"(?:points? de )?coque|(?:unit[ée]s? de )?carburant|(?:points? d['’])?oxyg[èe]ne|"
+                        r"(?:points? d['’])?[ée]nergie|cr[ée]dits?)", re.I)
 _DMG = re.compile(r"\b(\d{1,3})\s+(?:points?\s+de\s+)?d[ée]g[âa]ts\b", re.I)
 _QUEST_NARR = re.compile(r"(?:nouvelle\s+qu[êe]te|qu[êe]te\s+(?:mise\s+[àa]\s+jour|ajout[ée]e|active)|"
                          r"\[\s*qu[êe]te\s*\])\s*[:\-–]?\s*([^\n\]]{4,120})", re.I)
@@ -4657,6 +5455,16 @@ def game_narrative(text: str) -> Dict[str, Any]:
             return "PIASTRES"
         if "exp" in f or f == "xp":
             return "XP"
+        if "coque" in f:
+            return "COQUE"
+        if "carburant" in f:
+            return "CARBURANT"
+        if "oxygene" in f:
+            return "OXYGÈNE"
+        if "energie" in f:
+            return "ÉNERGIE"
+        if f.startswith("credit"):
+            return "CRÉDITS"
         if "degat" in f:
             return "DMG"
         return f.upper()
@@ -4728,8 +5536,10 @@ def game_status_text(title: str, d: Dict[str, str], template: str = "") -> str:
             rows += [x for x in extra if x.strip()]
         return f"▓▓ {title or 'STATUT'} ▓▓\n" + "\n".join(rows)
     short: List[str] = []
-    long_keys = ("INVENTAIRE", "QUÊTE", "LIEU", "SPECIAL", "INDICES", "PISTE", "ALLIÉS")
-    order = ["NOM", "NIV", "XP", "HP", "PV", "SANTÉ", "RAD", "CAPS", "OR", "PIASTRES", "MANA", "NERFS", "FAIM", "SOIF"]
+    long_keys = ("INVENTAIRE", "QUÊTE", "LIEU", "SPECIAL", "INDICES", "PISTE", "ALLIÉS", "ÉQUIPAGE", "MISSIONS",
+                 "SORTS", "RÉPUTATION", "COMPAGNONS", "JOURNAL")
+    order = ["NOM", "NIV", "XP", "HP", "PV", "SANTÉ", "RAD", "CAPS", "OR", "PIASTRES", "MANA", "NERFS", "FAIM", "SOIF",
+             "VAISSEAU", "COQUE", "CARBURANT", "OXYGÈNE", "ÉNERGIE", "CRÉDITS", "SYSTÈME", "PLANÈTE"]
     keys = [k for k in order if k in d] + [k for k in d if k not in order and k not in long_keys] + \
            [k for k in long_keys if k in d]
     for k in keys:
@@ -4954,12 +5764,22 @@ def game_apply_turn(old_status: str, reply: str, dice: int = 0, tick: bool = Tru
             "quest": quest, "notes": notes}
 
 
-def game_state_line(status: str) -> str:
+def game_state_line(status: str, builtin: str = "") -> str:
     """Rappel compact de l'état réel, envoyé au maître du jeu à chaque tour (pas gardé dans l'historique)."""
     title, d = game_status_dict(status)
     if not d:
         return ""
     parts = [f"{k}: {v}" for k, v in d.items() if k not in ("SPECIAL",)]
+    if builtin == "legende_ecrit":  # v41.6 : Padawan tient les chiffres
+        return ("\n\n[FEUILLE D'AVENTURE ACTUELLE (vérité du jeu, chiffres tenus par Padawan) — " + " · ".join(parts)[:1500]
+                + ". Recopie cette feuille dans ton bloc ▓▓ : garde les chiffres tels quels sauf effet raconté "
+                  "(Padawan les vérifie), mets à jour LIEU, ROYAUME, COMPAGNONS, JOURNAL et INVENTAIRE complet. "
+                  "Pour un combat, écris une ligne ADVERSAIRE: nom (HABILETÉ n, ENDURANCE n) et ne le résous pas.]")
+    if builtin == "galaxie_42":  # v41.5
+        return ("\n\n[ÉTAT ACTUEL DE L'ORDINATEUR DE BORD (vérité du jeu) — " + " · ".join(parts)[:1400]
+                + ". Recopie ce statut dans ton bloc ▓▓ en le METTANT À JOUR selon ce qui arrive (INVENTAIRE complet, "
+                  "MISSIONS avec statut et récompense, chiffres COQUE/CARBURANT/OXYGÈNE/ÉNERGIE/CRÉDITS changés seulement "
+                  "si raconté).]")
     return ("\n\n[ÉTAT ACTUEL DU PIP-BOY (vérité du jeu) — " + " · ".join(parts)[:900]
             + ". Recopie ce statut dans ton bloc ▓▓ en le METTANT À JOUR selon ce qui arrive "
               "(INVENTAIRE complet : ajoute ce que je ramasse, retire ce que j'utilise; chiffres HP/RAD/CAPS/FAIM/SOIF changés si raconté).]")
@@ -7369,7 +8189,7 @@ class Padawan(tk.Tk):
         gplay.configure(fg=C["gold"], font=("Segoe UI", 10, "bold"))
         gplay.bind("<Leave>", lambda e, b=gplay: b.configure(bg=C["card"], fg=C["gold"]), add="+")
         gplay.pack(fill="x", pady=(0, 4))
-        self._tip(gplay, "Jeux de rôle textuels : Fallout québécois, polar Montréal 1947, donjon BBS…\n"
+        self._tip(gplay, "Jeux de rôle textuels : Fallout québécois, 🚀 Galaxie 42, polar Montréal 1947, donjon BBS…\n"
                          "Choix cliquables, Pip-Boy, sauvegardes · ✨ créer ton propre jeu")
         gnews = nav("📰 Nouvelles", self._news_menu)
         gnews.configure(fg=C["cyan"], font=("Segoe UI", 10, "bold"))
@@ -9189,7 +10009,7 @@ class Padawan(tk.Tk):
             return
         if getattr(self, "game", None):  # v39.3 🎮 : la barre sert d'« Autre action… »
             self.var.set("")
-            self._game_send(q)
+            self._game_free_action(q)  # v41.3 : le MJ l'intègre puis propose de nouveaux choix
             return
         self.var.set("")
         self.last_q = q
@@ -10382,11 +11202,19 @@ class Padawan(tk.Tk):
         self._game_sound = bool(self.cfg.get("game_sound", False))
         self._game_images = bool(self.cfg.get("game_images", True))        # v40.2 🖼
         self._game_images_anim = bool(self.cfg.get("game_images_anim", True))
-        self._game_images_gen = bool(self.cfg.get("game_images_gen", False))  # v41.0 🎨 images générées
+        self._game_images_gen = bool(self.cfg.get("game_images_gen", True))  # v41.4 : GÉNÉRÉES par défaut (repli Banque auto)
+        self._game_gen_freq = "scene" if self.cfg.get("game_gen_freq") == "scene" else "action"  # v41.4 : à chaque action
+        self._game_gen_cancel = threading.Event()  # v41.4 : annule l'image en cours quand elle est périmée
         self._game_gen_q: List[Any] = []        # demandes en attente (la plus récente gagne)
         self._game_gen_busy = False
         self._game_gen_mem: Dict[str, Any] = {}  # hash de scène → Art (cache mémoire)
-        self._game_img_ph: Dict[int, Any] = {}   # index du journal → (PhotoImage, taille, famille)
+        self._game_gen_ph: Dict[int, Any] = {}   # v41.3 : index du journal → (PhotoImage, taille, hash) des scènes ✨
+        self._game_gen_wait: Dict[int, Dict[str, Any]] = {}  # images en cours de dessin (indicateur Pip-Boy)
+        self._game_gen_anim_on = False
+        self._game_slots: set = set()            # entrées du journal qui ont un emplacement d'image à l'écran
+        # v41.3 : les scènes générées s'affichent en VRAIE IMAGE couleur (la banque reste en ANSI = l'indicateur) ;
+        # l'ANSI couleur reste une option cachée (F7)
+        self._game_gen_view_mode = "photo"  # v41.4 : plus d'ANSI pour les images générées
         self._game_gen_times: List[Dict[str, Any]] = []
         self._game_imgs: List[Any] = []          # PhotoImage vivantes (sinon Tk les efface)
         self._game_img_cache: Dict[Any, Any] = {}
@@ -10413,10 +11241,12 @@ class Padawan(tk.Tk):
         for key, text, cmd, tip in (
             ("quit", "↩ Quitter", self.game_quit, "Quitter le jeu (la partie est sauvegardée automatiquement)\n"
                                                     "Padawan reprend son prompt et son rôle d'avant."),
-            ("images", "", self._game_toggle_images, "🖼 Illustrations ANSI des scènes\n"
-                                                       "BANQUE = images originales rétro, effet CRT · GÉNÉRÉES = la scène est dessinée\n"
-                                                       "par le 🎨 Studio en arrière-plan (la banque s'affiche d'abord) · FIXES = banque sans\n"
-                                                       "animation · NON = art ASCII. Réglage gardé par jeu. Clique une image pour l'agrandir."),
+            ("images", "", self._game_images_menu, "🖼 Images du jeu — clic = menu\n"
+                                                       "GÉNÉRÉES (défaut) = de vraies images COULEUR style BD dessinées au fil de l'histoire, sans ANSI\n"
+                                                       "(repli automatique sur la BANQUE si le moteur d'images est absent) · BANQUE = les 31 images rétro ANSI\n"
+                                                       "· FIXES = banque sans animation · NON = art ASCII.\n"
+                                                       "Fréquence : à chaque action (défaut) ou au changement de scène.\n"
+                                                       "Réglage gardé par jeu. Clique une image pour l'agrandir · F8 = redessiner la scène."),
             ("sound", "", self._game_toggle_sound, "Petits bips façon Pip-Boy à chaque tour (désactivés par défaut)"),
             ("dice", "", self._game_toggle_dice, "Dés réels : Padawan lance un vrai d20 local à chaque tour\n"
                                                    "et l'envoie au maître du jeu ([JET d20 = N])."),
@@ -10429,6 +11259,11 @@ class Padawan(tk.Tk):
         self.game_title.configure(width=1)  # v40.2 : le titre (long) se coupe au lieu de cacher des boutons
         self._game_tb_full = {k: w.cget("text") for k, w in self.game_btns.items()
                               if k in ("quit", "export", "load", "save", "new")}
+        self.bind("<F8>", self._game_gen_redraw, add="+")        # v41.3 🎨 redessiner la scène
+        self.bind("<F9>", self.gx_map, add="+")                  # v41.5 🗺 carte stellaire (Galaxie 42)
+        gbtn("map", "🗺 Carte (F9)", self.gx_map, "Carte : destinations connues et coût du voyage "
+                                                 "· F9")  # affiché seulement dans Galaxie 42 et La Légende s'écrit
+        gbtn("chron", "📖 Chronique", self.lg_chronicle, "La Légende s'écrit : ta partie en livre illustré (HTML)")
         self._game_tb_compact = 0
         hdr.bind("<Configure>", lambda e: self._game_paint_toggles(), add="+")
         self._game_paint_toggles()
@@ -10448,6 +11283,7 @@ class Padawan(tk.Tk):
         self.pip_title = tk.Label(self.pip, text="▓▓ PIP-BOY 3000 ▓▓", bg=G["pip"], fg=G["green"],
                                   font=("Consolas", 12, "bold"))
         self.pip_title.pack(fill="x", pady=(6, 2))
+        self.gx_sky = tk.Canvas(self.pip, bg="#03050f", highlightthickness=0, height=54)  # v41.5 🚀 (Galaxie seulement)
         self.pip_bars = tk.Canvas(self.pip, bg=G["pip"], highlightthickness=0, height=10)
         self.pip_bars.pack(fill="x", padx=8)
         self.pip_txt = tk.Text(self.pip, bg=G["pip"], fg=G["fg"], relief="flat", bd=0, wrap="word",
@@ -10471,6 +11307,7 @@ class Padawan(tk.Tk):
         gsb = ttk.Scrollbar(tw, orient="vertical", command=self.game_txt.yview)
         self.game_txt.configure(yscrollcommand=gsb.set, state="disabled")
         self.game_txt.pack(side="left", fill="both", expand=True)
+        self.game_txt.bind("<Configure>", self._game_on_resize, add="+")  # v41.4 : l'image suit la taille
         gsb.pack(side="right", fill="y")
         T = self.game_txt
         T.tag_configure("title", foreground=G["amber"], font=("Consolas", 16, "bold"), spacing1=10, spacing3=6)
@@ -10480,6 +11317,9 @@ class Padawan(tk.Tk):
                         lmargin1=18, lmargin2=18, spacing1=0, spacing3=0, wrap="none")
         T.tag_configure("narr", foreground=G["fg"], font=("Segoe UI", 12))
         T.tag_configure("gimgline", lmargin1=14, lmargin2=14, spacing1=2, spacing3=4, font=("Consolas", 2))
+        T.tag_configure("gph", foreground=G["green"], background=G["art"], font=("Consolas", 11, "bold"),
+                        lmargin1=14, lmargin2=14, spacing1=4, spacing3=6)
+        T.tag_configure("gcap", foreground=G["amber"], font=("Segoe UI", 9, "italic"), lmargin1=16, spacing3=6)
         T.tag_configure("bold", font=("Segoe UI", 12, "bold"), foreground="#ffffff")
         T.tag_configure("dlg", foreground=G["amber"])
         T.tag_configure("check", foreground=G["cyan"], font=("Consolas", 11, "bold"))
@@ -10499,21 +11339,26 @@ class Padawan(tk.Tk):
         """Textes de la barre du jeu : 0 = complets, 1 = abrégés, 2 = icônes (fenêtre très étroite)."""
         d, s_ = getattr(self, "_game_dice", True), getattr(self, "_game_sound", False)
         im, an = getattr(self, "_game_images", True), getattr(self, "_game_images_anim", True)
-        gen = im and an and self._game_gen_on(check_engine=False)
+        gen = im and an and self._game_gen_on(check_engine=True)  # v41.4 : sans moteur → BANQUE (repli auto)
         img_s = ("🖼 G" if gen else "🖼 B" if an else "🖼 F") if im else "🖼 NON"
+        ph = getattr(self, "_game_gen_view_mode", "ansi") == "photo"
         if level >= 2:
             return {"quit": "↩", "export": "📜", "load": "📂", "save": "💾", "new": "🆕",
-                    "dice": "🎲 OUI" if d else "🎲 NON", "sound": "🔊" if s_ else "🔈", "images": img_s}
+                    "dice": "🎲 OUI" if d else "🎲 NON", "sound": "🔊" if s_ else "🔈", "images": img_s,
+                    "view": "📷" if ph else "🟪"}
         if level == 1:
             return {"quit": "↩ Quitter", "export": "📜 Export", "load": "📂 Charger", "save": "💾 Sauver",
                     "new": "🆕 Nouv.", "dice": "🎲 Dés OUI" if d else "🎲 Dés NON",
                     "sound": "🔊 Sons OUI" if s_ else "🔈 Sons NON",
-                    "images": ("🖼 Génér." if gen else "🖼 Banque" if an else "🖼 Fixes") if im else "🖼 Img NON"}
+                    "images": ("🖼 Génér." if gen else "🖼 Banque" if an else "🖼 Fixes") if im else "🖼 Img NON",
+                    "view": "📷 Photo" if ph else "🟪 ANSI"}
         t = dict(getattr(self, "_game_tb_full", {}))
         t["dice"] = "🎲 Dés : OUI" if d else "🎲 Dés : NON"
         t["sound"] = "🔊 Sons : OUI" if s_ else "🔈 Sons : NON"
-        t["images"] = (("🖼 Images : GÉNÉRÉES" if gen else "🖼 Images : BANQUE") if an else "🖼 Images : FIXES") \
-            if im else "🖼 Images : NON"
+        t["images"] = ((("🖼 GÉNÉRÉES · " + ("chaque action" if getattr(self, "_game_gen_freq", "action") == "action"
+                                                else "changement de scène") + " ▾") if gen else "🖼 Images : BANQUE ▾")
+                       if an else "🖼 Images : FIXES ▾") if im else "🖼 Images : NON ▾"
+        t["view"] = "📷 Vue : PHOTO" if ph else "🟪 Vue : ANSI"
         return t
 
     def _game_paint_toggles(self):
@@ -10579,6 +11424,76 @@ class Padawan(tk.Tk):
         core = self._studio_core()
         return bool(core and core.engine.ready_to_run())
 
+    def _game_bank_hidden(self) -> bool:
+        """v41.4 : en mode GÉNÉRÉES (moteur prêt), jamais d'illustration ANSI verte de la banque dans le fil.
+        Repli automatique sur la banque si le moteur manque ou vient d'échouer."""
+        try:
+            return self._game_gen_on(check_engine=True)  # un raté passager garde l'image couleur précédente
+        except Exception:
+            return False
+
+    def _game_images_menu(self, event=None):
+        """v41.4 : petit menu 🖼 — mode d'images + fréquence des images générées."""
+        G = GAME_COLORS
+        m = tk.Menu(self, tearoff=0, bg=G["panel"], fg=G["fg"], activebackground=G["green"],
+                    activeforeground="#021006", font=("Segoe UI", 10))
+        ready = bool(_PS is not None and (self._studio_core() or None) and self._studio_core().engine.ready_to_run())
+        cur = self._game_img_mode()
+        if cur == "gen" and not ready:
+            cur = "banque"
+        v = tk.StringVar(value=cur)
+        f = tk.StringVar(value=self._game_gen_freq)
+        self._game_menu_vars = (v, f)  # gardées en vie pendant le menu
+        m.add_radiobutton(label="✨ Générées : nouvelles images en couleur" + ("" if ready else "  (moteur non installé)"),
+                          variable=v, value="gen", command=lambda: self._game_pick_img_mode("gen"),
+                          state="normal" if ready else "disabled")
+        m.add_radiobutton(label="🖼 Banque : les 31 illustrations ANSI", variable=v, value="banque",
+                          command=lambda: self._game_pick_img_mode("banque"))
+        m.add_radiobutton(label="🖼 Fixes : banque sans animation", variable=v, value="fixes",
+                          command=lambda: self._game_pick_img_mode("fixes"))
+        m.add_radiobutton(label="✖ Aucune image (art ASCII)", variable=v, value="non",
+                          command=lambda: self._game_pick_img_mode("non"))
+        m.add_separator()
+        m.add_command(label="Fréquence des images générées :", state="disabled")
+        m.add_radiobutton(label="   🎬 À chaque action (défaut)", variable=f, value="action",
+                          command=lambda: self._game_set_freq("action"))
+        m.add_radiobutton(label="   🗺 Au changement de scène (moins d'images)", variable=f, value="scene",
+                          command=lambda: self._game_set_freq("scene"))
+        m.add_separator()
+        m.add_command(label="🎨 Redessiner la scène maintenant   F8", command=self._game_gen_redraw,
+                      state="normal" if ready else "disabled")
+        b = self.game_btns.get("images")
+        try:
+            x, y = (b.winfo_rootx(), b.winfo_rooty() + b.winfo_height()) if b is not None else \
+                (self.winfo_pointerx(), self.winfo_pointery())
+            m.tk_popup(x, y)
+        finally:
+            m.grab_release()
+
+    def _game_pick_img_mode(self, mode: str) -> None:
+        if mode == "gen":
+            core = self._studio_core() if _PS is not None else None
+            if not (core and core.engine.ready_to_run()):
+                self._game_flash("🎨 Images générées : installe d'abord le moteur (🎨 Studio, Ctrl+G hors jeu).")
+                mode = "banque"
+            else:
+                self._game_flash("✨ Images générées : " + ("une nouvelle image à chaque action (gros plan quand tu "
+                                 "examines quelque chose)" if self._game_gen_freq == "action" else
+                                 "une image quand la scène change vraiment") + " — la banque ANSI reste intacte.",
+                                 GAME_COLORS["cyan"])
+        self._game_set_img_mode(mode)
+        self._game_paint_toggles()
+        if self.game and not self.busy:
+            self._game_rerender()
+
+    def _game_set_freq(self, freq: str) -> None:
+        self._game_gen_freq = "scene" if freq == "scene" else "action"
+        self.cfg["game_gen_freq"] = self._game_gen_freq
+        self._game_paint_toggles()
+        self._game_flash("✨ Fréquence : " + ("une image à chaque action (choix ou action libre)" if
+                         self._game_gen_freq == "action" else "une image au changement de scène seulement"),
+                         GAME_COLORS["cyan"])
+
     def _game_toggle_images(self):
         """BANQUE (animé) → GÉNÉRÉES → FIXES → NON → BANQUE (GÉNÉRÉES sauté si le moteur n'est pas installé)."""
         order = ["banque", "gen", "fixes", "non"]
@@ -10590,8 +11505,9 @@ class Padawan(tk.Tk):
                 nxt = "fixes"
                 self._game_flash("🎨 Images générées : installe d'abord le moteur (🎨 Studio, Ctrl+G hors jeu).")
             else:
-                self._game_flash("🎨 Images générées : la scène est dessinée en arrière-plan (la banque d'abord, "
-                                 "≈ 15-20 s), gardée en cache.")
+                self._game_flash("✨ Images générées : une vraie image en couleur quand la scène change vraiment, "
+                                 "dessinée en arrière-plan (F8 = redessiner). La banque ANSI reste intacte.",
+                                 GAME_COLORS["cyan"])
         self._game_set_img_mode(nxt)
         self._game_paint_toggles()  # enregistré dans config.json à la sortie, comme 🎲 et 🔊
         if self.game and not self.busy:
@@ -10603,30 +11519,346 @@ class Padawan(tk.Tk):
         return bool(getattr(self, "_game_images", False) and game_img_family(st.get("builtin", ""))
                     and _ANSI is not None and _ANSI.load_pil() and _ANSI.ImageTk is not None)
 
-    def _game_gen_art(self, h: str):
-        """Art ANSI d'une scène générée (cache disque C:\\web_private\\Padawan\\studio\\cache)."""
-        if not h:
+    # ---- ✨ v41.3 scènes générées en couleur (ANSI ou vraie image), seulement quand la scène change vraiment
+    def _game_gen_png(self, h: str):
+        """Image PIL d'une scène générée (cache disque C:\\web_private\\Padawan\\studio\\cache) ou None."""
+        if not h or _PS is None or _ANSI is None or not _ANSI.load_pil():
             return None
-        a = self._game_gen_mem.get(h)
-        if a is None and _PS is not None:
+        im = self._game_gen_mem.get(("png", h))
+        if im is None:
             core = self._studio_core()
-            a = core.cache_get(h) if core else None
-            if a is not None:
-                if len(self._game_gen_mem) > 60:
-                    self._game_gen_mem.clear()
-                self._game_gen_mem[h] = a
+            p = core.cache_png(h) if core else ""
+            if not p:
+                return None
+            try:
+                from PIL import Image as _I
+                with _I.open(p) as f:
+                    im = f.convert("RGB")
+            except Exception as e:
+                log(f"game gen png: {e}")
+                return None
+            if len(self._game_gen_mem) > 60:
+                self._game_gen_mem.clear()
+            self._game_gen_mem[("png", h)] = im
+        return im
+
+    def _game_gen_art(self, h: str):
+        """Art ANSI COULEUR (▀▄ 24 bits) d'une scène générée — refait depuis le .png (aussi pour les vieux caches)."""
+        a = self._game_gen_mem.get(("ansi", h))
+        if a is None:
+            im = self._game_gen_png(h)
+            if im is None:
+                return None
+            try:
+                a = _PS.to_ansi(im, _PS.GAME_GEN_ANSI, _PS.GAME_GEN_COLS, title="", game=True)
+            except Exception as e:
+                log(f"game gen ansi: {e}")
+                return None
+            self._game_gen_mem[("ansi", h)] = a
         return a
 
-    def _game_li_art(self, li: Optional[int]):
-        """(art généré, hash) pour l'entrée li du journal en mode GÉNÉRÉES, sinon (None, "")."""
-        if li is None or li < 0 or not self._game_gen_on(check_engine=False):
-            return None, ""
+    def _game_gen_view(self) -> str:
+        return "photo"  # v41.4 : les images générées ne sont JAMAIS converties en ANSI
+
+    @staticmethod
+    def _game_badge(im, text: str = "✶ GÉNÉRÉE"):
+        """Cadre ambre + pastille « générée » : on voit tout de suite que l'image vient du nouveau contexte."""
         try:
-            h = ((self.game or {}).get("log") or [])[li].get("img_gen", "")
+            from PIL import ImageDraw as _D, ImageFont as _F
+            W, H = im.size
+            dr = _D.Draw(im, "RGBA")
+            dr.rectangle([0, 0, W - 1, H - 1], outline=(255, 200, 87, 255), width=2)
+            fnt = None
+            for name in ("seguisym.ttf", "segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"):
+                try:
+                    fnt = _F.truetype(name, max(11, min(16, W // 46)))
+                    break
+                except Exception:
+                    continue
+            fnt = fnt or _F.load_default()
+            x0, y0, x1, y1 = dr.textbbox((0, 0), text, font=fnt)
+            tw, th = x1 - x0, y1 - y0
+            bx, by = W - tw - 18, 8
+            dr.rounded_rectangle([bx - 6, by - 4, bx + tw + 6, by + th + 6], radius=6, fill=(20, 12, 0, 190),
+                                 outline=(255, 200, 87, 255), width=1)
+            dr.text((bx - x0, by - y0), text, font=fnt, fill=(255, 214, 120, 255))
+        except Exception as e:
+            log(f"game badge: {e}")
+        return im
+
+    def _game_gen_size(self, h: str) -> Tuple[int, int, int]:
+        """(largeur, hauteur, cw) de la scène générée dans le fil : grande et nette, en laissant de la place au texte."""
+        src = self._game_gen_png(h) if h else None
+        if src is None and h:
+            return 0, 0, 0
+        T = self.game_txt
+        if T.winfo_height() <= 200:  # fenêtre pas encore disposée (démarrage du jeu) : on la dispose d'abord
+            try:
+                T.update_idletasks()
+            except Exception:
+                pass
+        tw = T.winfo_width() if T.winfo_width() > 200 else 760
+        th = T.winfo_height() if T.winfo_height() > 200 else 480
+        ratio = (src.width / max(1.0, src.height * 0.93)) if src is not None else 640 / (384 * 0.93)
+        W = max(320, min(tw - 50, 1200))  # v41.4 : fenêtre maximisée → image plus grande
+        H = int(W / ratio)
+        cap = max(150, int(th * 0.86))  # v41.4 : plus grande, toujours entière à l'écran (même en 1024×576)
+        if H > cap:
+            H, W = cap, int(cap * ratio)
+        return W, H, max(2, W // _PS.GAME_GEN_COLS)
+
+    def _game_gen_pil(self, h: str, view: str = "", size: Optional[Tuple[int, int]] = None, big: bool = False):
+        view = view or self._game_gen_view()
+        if size is None:  # taille selon la fenêtre actuelle (la clé du cache en dépend)
+            W0, H0, _cw = self._game_gen_size(h)
+            if not W0:
+                return None
+            size = (W0, H0)
+        ck = ("gen", h, view, tuple(size), big)
+        im = self._game_img_cache.get(ck)
+        if im is not None:
+            return im
+        a = self._game_gen_art(h) if view == "ansi" else None  # pas de conversion ANSI pour la vraie image
+        src = self._game_gen_png(h)
+        if src is None or (a is None and view != "photo"):
+            return None
+        if size is None:
+            W, H, cw = self._game_gen_size(h)
+        else:
+            W, H = size
+            cw = max(2, W // _PS.GAME_GEN_COLS)
+        if not W:
+            return None
+        try:
+            from PIL import Image as _I
+            if view == "photo":
+                s = src.crop((0, 0, src.width, int(src.height * 0.93)))  # même cadrage que l'ANSI
+                im = _PS.crop_to(s, W / float(H)).resize((W, H), _I.LANCZOS)
+            else:
+                im = _ANSI.render_image(a, cw).convert("RGB")
+                if im.size != (W, H):
+                    im = im.resize((W, H), _I.NEAREST)
+                if cw >= 4:  # balayage CRT discret
+                    from PIL import ImageDraw as _D
+                    dr = _D.Draw(im, "RGBA")
+                    for y in range(2, im.size[1], 3):
+                        dr.line([(0, y), (im.size[0], y)], fill=(0, 0, 0, 55))
+            im = self._game_badge(im, "✶ GÉNÉRÉE" + (" · ANSI" if view == "ansi" else ""))
+        except Exception as e:
+            log(f"game gen pil: {e}")
+            return None
+        if len(self._game_img_cache) > 80:
+            self._game_img_cache.clear()
+        self._game_img_cache[ck] = im
+        return im
+
+    def _game_slot_mark(self, li: int) -> str:
+        return f"gslot{li}"
+
+    def _game_slot_has(self, li: int) -> bool:
+        return li in getattr(self, "_game_slots", set())
+
+    def _game_slot_clear(self, li: int, what: str = "gs") -> None:
+        T = self.game_txt
+        r = T.tag_ranges(f"{what}{li}")
+        if r:
+            T.configure(state="normal")
+            T.delete(r[0], r[-1])
+            T.configure(state="disabled")
+
+    def _game_gen_insert(self, li: int, h: str, animate: bool = False, at_end: bool = False,
+                         previous: bool = False) -> bool:
+        """Insère l'image générée de l'entrée li (à son emplacement), avec sa légende ✨."""
+        im = self._game_gen_pil(h)
+        if im is None:
+            return False
+        T = self.game_txt
+        try:
+            ph = _ANSI.ImageTk.PhotoImage(im, master=T)
+        except Exception as e:
+            log(f"game gen img: {e}")
+            return False
+        e = ((self.game or {}).get("log") or [{}] * (li + 1))[li] if li >= 0 else {}
+        kind = GAME_GEN_KINDS.get(e.get("gen_kind", ""), "✨ nouvelle scène")
+        tg, gs = f"ggen{li}", f"gs{li}"
+        T.configure(state="normal")
+        p = "end-1c" if at_end else T.index(self._game_slot_mark(li))
+        p = T.index(p)
+        T.insert(p, " ", ("gimgline", gs, tg))
+        p2 = T.index(f"{p} +1c")
+        T.image_create(p2, image=ph, padx=0, pady=4)
+        T.tag_add("gimgline", p2)
+        T.tag_add(gs, p2)
+        T.tag_add(tg, p2)
+        p3 = T.index(f"{p2} +1c")
+        T.insert(p3, "\n", ("gimgline", gs))
+        p4 = T.index(f"{p3} +1c")
+        cap = ("  ⌛ image précédente — la nouvelle se dessine…\n" if previous
+               else f"  ✨ image générée · {kind}   ·   clic = agrandir\n")
+        T.insert(p4, cap, ("gcap", gs, f"gcap{li}"))
+        T.configure(state="disabled")
+        T.tag_bind(tg, "<Button-1>", lambda ev, i=li: self._game_gen_popup(i))
+        T.tag_bind(f"gcap{li}", "<Button-1>", lambda ev, i=li: self._game_gen_popup(i))
+        for t_ in (tg, f"gcap{li}"):
+            T.tag_bind(t_, "<Enter>", lambda ev: T.configure(cursor="hand2"))
+            T.tag_bind(t_, "<Leave>", lambda ev: T.configure(cursor="arrow"))
+        self._game_imgs.append(ph)
+        self._game_gen_ph[li] = (ph, im.size, h)
+        if animate and getattr(self, "_game_images_anim", True):
+            if self._game_gen_view() == "photo":
+                self._game_img_fade(ph, im)
+            else:
+                self._game_img_reveal(ph, im, "gen")
+        return True
+
+    def _game_gen_placeholder(self, li: int, on: bool = True) -> None:
+        """Indicateur animé façon Pip-Boy à l'emplacement de la future image (léger : 1 ligne de texte)."""
+        if not on:
+            self._game_gen_wait.pop(li, None)
+            if self._game_slot_has(li):
+                self._game_slot_clear(li, "gph")
+            return
+        if li not in self._game_gen_wait:
+            self._game_gen_wait[li] = {"t0": time.time(), "stage": "dessin de la scène"}
+        if not self._game_slot_has(li) or self.game_txt.tag_ranges(f"gph{li}"):
+            return
+        T = self.game_txt
+        T.configure(state="normal")
+        p = T.index(self._game_slot_mark(li))
+        T.insert(p, self._game_gen_ph_text(li) + "\n", ("gph", f"gph{li}"))
+        T.configure(state="disabled")
+        if not self._game_gen_anim_on:
+            self._game_gen_anim_on = True
+            self.after(220, self._game_gen_anim)
+
+    _GEN_SPIN = "◐◓◑◒"
+
+    def _game_gen_ph_text(self, li: int) -> str:
+        w = self._game_gen_wait.get(li) or {}
+        k = int(time.time() * 5)
+        n = int(time.time() - w.get("t0", time.time()))
+        bar = "".join("▰" if (i <= (k % 10)) else "▱" for i in range(10))
+        sk = self._gskin()
+        return f"  {sk['icon']} {sk['panel']} {self._GEN_SPIN[k % 4]}  {w.get('stage', 'dessin de la scène')}…  {bar}  {n} s"
+
+    def _game_gen_anim(self) -> None:
+        if not self._game_gen_wait or not self.game:
+            self._game_gen_anim_on = False
+            return
+        T = self.game_txt
+        try:
+            T.configure(state="normal")
+            for li in list(self._game_gen_wait):
+                r = T.tag_ranges(f"gph{li}")
+                if r:
+                    T.delete(r[0], f"{r[-1]} -1c")
+                    T.insert(r[0], self._game_gen_ph_text(li), ("gph", f"gph{li}"))
+            T.configure(state="disabled")
         except Exception:
-            return None, ""
-        a = self._game_gen_art(h)
-        return (a, h) if a is not None else (None, "")
+            pass
+        self.after(220, self._game_gen_anim)
+
+    def _game_img_fade(self, ph, im, steps: int = 8, delay: int = 35):
+        """Apparition en fondu depuis le noir (vraie image) — ≈ 0,3 s, rien de lourd."""
+        try:
+            from PIL import Image as _I
+        except Exception:
+            return
+        black = _I.new("RGB", im.size, (0, 0, 0))
+
+        def frame(k: int):
+            try:
+                ph.paste(_I.blend(black, im, k / steps))
+            except Exception:
+                return
+            if k < steps:
+                self.after(delay, frame, k + 1)
+        frame(1)
+
+    def _game_gen_toggle_view(self, event=None):
+        """F7 (v41.4) : plus de vue ANSI — les images générées restent en vraie couleur."""
+        if not self.game:
+            return None
+        if True:
+            return "break"
+        self._game_gen_view_mode = "ansi" if self._game_gen_view() == "photo" else "photo"
+        self.cfg["game_gen_view"] = self._game_gen_view_mode
+        self._game_paint_toggles()
+        n = 0
+        for li, (ph, size, h) in list(self._game_gen_ph.items()):
+            im = self._game_gen_pil(h, size=size)
+            if im is None:
+                continue
+            try:
+                if getattr(self, "_game_images_anim", True) and li == max(self._game_gen_ph):
+                    self._game_img_fade(ph, im, steps=6, delay=30)
+                else:
+                    ph.paste(im)
+                n += 1
+            except Exception:
+                pass
+        v = "📷 vraie image en couleur" if self._game_gen_view() == "photo" else "🟪 ANSI couleur"
+        self._game_flash(f"Vue des scènes générées : {v}" + ("" if n else " (aucune scène générée affichée pour l'instant)"),
+                         GAME_COLORS["cyan"])
+        return "break"
+
+    def _game_gen_popup(self, li: int):
+        """Grand format immersif en vraie couleur, clic/Échap = fermer."""
+        h = (((self.game or {}).get("log") or [])[li] or {}).get("img_gen2", "") if li >= 0 else ""
+        src = self._game_gen_png(h)
+        if src is None:
+            return
+        G = GAME_COLORS
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        ratio = src.width / max(1.0, src.height * 0.93)
+        W = int(sw * 0.86)
+        H = int(W / ratio)
+        if H > int(sh * 0.76):
+            H = int(sh * 0.76)
+            W = int(H * ratio)
+        size = (W, H)
+        top = tk.Toplevel(self)
+        top.title("✨ Scène générée — Padawan")
+        top.configure(bg="#000000")
+        top.transient(self)
+        view = [self._game_gen_view()]
+        im0 = self._game_gen_pil(h, view[0], size=size, big=True)
+        ph = _ANSI.ImageTk.PhotoImage(im0, master=top)
+        top._ph = ph  # type: ignore[attr-defined]
+        lb = tk.Label(top, image=ph, bg="#000000", bd=0, cursor="hand2")
+        lb.pack(padx=10, pady=(10, 4))
+        e = (self.game or {}).get("log", [])[li]
+        meta = GAME_GEN_KINDS.get(e.get("gen_kind", ""), "✨ nouvelle scène")
+        cap = tk.Label(top, bg="#000000", fg=G["amber"], font=("Segoe UI", 10))
+        cap.pack(pady=(0, 2))
+        tk.Label(top, text=(e.get("gen_prompt") or "")[:220], bg="#000000", fg=G["dim"], font=("Segoe UI", 9, "italic"),
+                 wraplength=size[0]).pack(pady=(0, 8))
+
+        def paint():
+            cap.config(text=f"✨ image générée · {meta}   —   clic ou Échap = fermer")
+
+        def flip(ev=None):
+            view[0] = "ansi" if view[0] == "photo" else "photo"
+            im = self._game_gen_pil(h, view[0], size=size, big=True)
+            if im is not None:
+                self._game_img_fade(ph, im, steps=6, delay=28)
+            paint()
+            return "break"
+        paint()
+        for w in (top, lb):
+            w.bind("<Button-1>", lambda ev: top.destroy())
+        _ = flip  # v41.7 : plus de bascule vers l'ANSI (vraie couleur seulement)
+        top.bind("<Escape>", lambda ev: top.destroy())
+        top.update_idletasks()
+        x = self.winfo_rootx() + max(0, (self.winfo_width() - top.winfo_width()) // 2)
+        y = self.winfo_rooty() + max(0, (self.winfo_height() - top.winfo_height()) // 3)
+        top.geometry(f"+{x}+{y}")
+        top.focus_set()
+        if getattr(self, "_game_images_anim", True):
+            if view[0] == "photo":
+                self._game_img_fade(ph, im0, steps=10, delay=30)
+            else:
+                self._game_img_reveal(ph, im0, "gen", steps=14, delay=22)
 
     def _game_img_pil(self, fam: str, key: str, cw: int, art=None, tag: str = ""):
         ck = (fam, key, cw, tag)
@@ -10656,23 +11888,17 @@ class Padawan(tk.Tk):
         return max(3, min(9, cw))
 
     def _game_img(self, key: str, animate: bool = False, li: Optional[int] = None):
-        """Insère l'illustration (clé) dans le fil du jeu, avec révélation CRT facultative.
-        v41.0 : en mode GÉNÉRÉES, l'image dessinée pour cette scène (li) remplace celle de la banque."""
+        """Insère l'illustration de la banque (clé) dans le fil du jeu, avec révélation CRT facultative.
+        v41.3 : la banque reste intacte ; les scènes générées ont leur propre image (✨, en couleur)."""
         st = self.game or {}
         fam = game_img_family(st.get("builtin", ""))
         b = game_img_bank()
         a = _ANSI.bank_art(b, fam, key) if (fam and key) else None
         if a is None:
             return
-        ga, gh = self._game_li_art(li)
-        if ga is not None and (ga.cols, ga.nrows) == (a.cols, a.nrows):
-            a = ga
-        else:
-            gh = ""
-        im = self._game_img_pil(fam, key, self._game_img_cw(a), art=a if gh else None, tag=gh)
+        im = self._game_img_pil(fam, key, self._game_img_cw(a))
         if im is None:
             return
-        G = GAME_COLORS
         T = self.game_txt
         try:
             ph = _ANSI.ImageTk.PhotoImage(im, master=T)
@@ -10681,118 +11907,357 @@ class Padawan(tk.Tk):
             return
         self._game_img_seq += 1
         tg = f"gimg{self._game_img_seq}"
+        tags = ("gimgline",) + ((f"gs{li}",) if li is not None else ())
         T.tag_configure(tg)
         T.configure(state="normal")
-        T.insert("end", " ", ("gimgline",))
+        T.insert("end", " ", tags)
         idx = T.index("end-1c")
         T.image_create("end", image=ph, padx=0, pady=4)
         T.tag_add(tg, idx)
-        T.tag_add("gimgline", idx)
-        T.insert("end", "\n", ("gimgline",))
+        for t_ in tags:
+            T.tag_add(t_, idx)
+        T.insert("end", "\n", tags)
         T.configure(state="disabled")
-        T.tag_bind(tg, "<Button-1>", lambda e, f=fam, k=key, i=li: self._game_img_popup(f, k, i))
+        T.tag_bind(tg, "<Button-1>", lambda e, f=fam, k=key: self._game_img_popup(f, k))
         T.tag_bind(tg, "<Enter>", lambda e: T.configure(cursor="hand2"))
         T.tag_bind(tg, "<Leave>", lambda e: T.configure(cursor="arrow"))
         self._game_imgs.append(ph)
-        if li is not None:
-            self._game_img_ph[li] = (ph, im.size, fam, key, gh)
         if animate and getattr(self, "_game_images_anim", True):
             self._game_img_reveal(ph, im, fam)
 
-    # ---- 🎨 v41.0 images générées (Studio) : en arrière-plan, après la réponse du MJ, sans bloquer le jeu
-    def _game_gen_request(self, st: Dict[str, Any], li: int, key: str, text: str) -> None:
-        core = self._studio_core()
-        fam = game_img_family(st.get("builtin", ""))
-        if core is None or not fam:
-            return
-        lieu = ""
+    def _game_slot(self, li: Optional[int], img_key: str, animate: bool) -> None:
+        """Emplacement d'image d'une réponse du MJ : scène générée (✨) si elle existe, sinon la banque."""
+        T = self.game_txt
+        if li is not None and li >= 0:
+            T.mark_set(self._game_slot_mark(li), "end-1c")
+            T.mark_gravity(self._game_slot_mark(li), "left")
+            self._game_slots.add(li)
+            h = ((self.game or {}).get("log") or [{}] * (li + 1))[li].get("img_gen2", "")
+            if h and self._game_gen_on(check_engine=False) and self._game_gen_insert(li, h, animate, at_end=True):
+                return
+        prev = self._game_gen_prev(li) if (li is not None and li in self._game_gen_wait
+                                             and self._game_gen_on(check_engine=False)) else ""
+        if prev and self._game_gen_insert(li, prev, False, at_end=True, previous=True):
+            self._game_gen_wait[li]["copy"] = True  # v41.4 : l'image précédente reste affichée pendant le dessin
+        elif li is not None and li in self._game_gen_wait and self._game_bank_hidden():
+            if self._game_gen_frame(li):  # 1re image : cadre noir + indicateur Pip-Boy (jamais l'ANSI verte)
+                self._game_gen_wait[li]["copy"] = True
+        elif img_key and not self._game_bank_hidden():
+            self._game_img(img_key, animate, li)
+        if li is not None and li in self._game_gen_wait and self._game_gen_on(check_engine=False):
+            T.configure(state="normal")
+            T.insert("end", self._game_gen_ph_text(li) + "\n", ("gph", f"gph{li}"))
+            T.configure(state="disabled")
+
+    def _game_gen_frame(self, li: int) -> bool:
+        """v41.4 : cadre noir (bord ambre) à la taille de la future image, pendant le dessin de la 1re image."""
         try:
-            e = st["log"][li]
-            lieu = game_fields(e.get("status", "") or text).get("LIEU", "") or game_fields(text).get("LIEU", "")
-        except Exception:
-            pass
-        h = core.cache_key(fam, key, lieu)
-        if core.cache_get(h) is not None:  # déjà dessinée (même scène, même lieu) : tout de suite
-            st["log"][li]["img_gen"] = h
+            from PIL import Image as _I, ImageDraw as _D
+            W, H, _cw = self._game_gen_size("")
+            im = _I.new("RGB", (W, H), (0, 0, 0))
+            dr = _D.Draw(im)
+            dr.rectangle([0, 0, W - 1, H - 1], outline=(214, 160, 60), width=3)
+            dr.text((W // 2 - 60, H // 2 - 6), "scene en cours de dessin...", fill=(80, 220, 120))
+            ph = _ANSI.ImageTk.PhotoImage(im, master=self.game_txt)
+        except Exception as e:
+            log(f"game gen frame: {e}")
+            return False
+        T = self.game_txt
+        gs = f"gs{li}"
+        T.configure(state="normal")
+        T.insert("end", " ", ("gimgline", gs))
+        T.image_create("end", image=ph, padx=0, pady=4)
+        T.tag_add("gimgline", "end-2c")
+        T.tag_add(gs, "end-2c")
+        T.insert("end", "\n", ("gimgline", gs))
+        T.configure(state="disabled")
+        self._game_imgs.append(ph)
+        return True
+
+    def _game_gen_prev(self, li: int) -> str:
+        """Dernière image générée avant l'entrée li (hash) ou ""."""
+        lg = (self.game or {}).get("log") or []
+        for i in range(min(li, len(lg)) - 1, -1, -1):
+            h = (lg[i] or {}).get("img_gen2", "")
+            if h:
+                return h
+        return ""
+
+    def _game_gen_drop(self, li: int) -> None:
+        """Image périmée (le joueur a déjà rejoué) : on retire son indicateur et la copie de l'image précédente."""
+        w = self._game_gen_wait.pop(li, None)
+        if self._game_slot_has(li):
+            self._game_slot_clear(li, "gph")
+            if w and w.get("copy") and not (((self.game or {}).get("log") or [{}] * (li + 1))[li] or {}).get("img_gen2"):
+                self._game_slot_clear(li, "gs")
+                self._game_gen_ph.pop(li, None)
+
+    # ---- 🎨 génération en arrière-plan : le modèle de JEU résume la scène, l'image vient seulement si elle change
+    def _game_gen_model(self) -> str:
+        m = model_id_from_label(self.mvar.get()) or self.current_model()
+        if not m or is_code_model(m):  # v41.1 : jamais un modèle « coder » pour le jeu
+            m = self._game_play_model() or m
+        return m
+
+    def _game_gen_request(self, st: Dict[str, Any], li: int, text: str, force: bool = False) -> None:
+        if self._studio_core() is None or not game_img_family(st.get("builtin", "")):
             return
-        g = game_parse(text)
-        narr = " ".join(x for k, x in game_split_blocks(text) if k != "fence")
-        narr = re.sub(r"(?m)^\s*(\d+[.)]|SCÈNE\s*:|QUE FAIS).*$", "", narr)
-        scene = (g.get("title", "") + ". " + narr).strip()[:900]
-        self._game_gen_q = [(st, li, key, fam, scene, lieu, h)]  # la plus récente seulement
+        try:
+            status = st["log"][li].get("status", "")
+        except Exception:
+            return
+        model = self._game_gen_model()  # lu ici (fil Tk), jamais depuis le fil de génération
+        freq = getattr(self, "_game_gen_freq", "action")
+        action = ""
+        for e in reversed((st.get("log") or [])[:li]):  # l'action du joueur qui a mené à cette réponse
+            if e.get("who") == "you":
+                action = str(e.get("text", ""))[:300]
+                break
+            if e.get("who") == "mj":
+                break
+        if freq == "action" or force:  # v41.4 : une image par tour — les plus anciennes sont périmées
+            for old in list(self._game_gen_wait):
+                if old != li:
+                    self._game_gen_drop(old)
+            if li not in self._game_gen_wait:
+                self._game_gen_wait[li] = {"t0": time.time(), "stage": "lecture de la scène"}
+            if self._game_gen_busy:
+                self._game_gen_cancel.set()  # interrompt le dessin en cours (ComfyUI /interrupt)
+        self._game_gen_q = [(st, li, text, status, force, model, freq, action)]  # la plus récente seulement
         if not self._game_gen_busy:
             self._game_gen_busy = True
             threading.Thread(target=self._game_gen_worker, daemon=True).start()
 
     def _game_gen_worker(self) -> None:
+        while True:
+            try:
+                self._game_gen_loop()
+            except Exception as e:  # jamais bloqué « occupé » pour toujours après une erreur imprévue
+                log(f"game gen worker: {e}")
+            self._game_gen_busy = False
+            if not self._game_gen_q:  # une demande arrivée pendant la fermeture du fil : on la traite
+                break
+            self._game_gen_busy = True
+
+    def _game_gen_loop(self) -> None:
         core = self._studio_core()
         while True:
             try:
                 job = self._game_gen_q.pop(0)
             except IndexError:
                 break
-            st, li, key, fam, scene, lieu, h = job
+            st, li, text, status, force, model, freq, action = job
+            self._game_gen_cancel.clear()
+            fam = game_img_family(st.get("builtin", ""))
+            gen = dict(st.get("gen") or {})
             t0 = time.time()
-            rec: Dict[str, Any] = {"li": li, "key": key}
+            rec: Dict[str, Any] = {"li": li, "force": force}
             try:
-                model = model_id_from_label(self.mvar.get())
-                self.after0(self._game_gen_hint, st, "🎨 dessin de la scène en arrière-plan…")
-                prompt, how = core.game_prompt(fam, scene, key, lieu, model=model)
-                rec["prompt_s"] = round(time.time() - t0, 1)
-                to = float(core.cfg.get("game_timeout") or 90)
-                imgs, info = core.generate(prompt, size="paysage", steps=2, timeout=to, vram="jamais")
-                ast = _PS.GAME_STYLE.get(fam, ("", "pipboy"))[1]
-                bank = _ANSI.bank_art(game_img_bank(), fam, key)
-                cols, rows = (bank.cols, bank.nrows) if bank is not None else (72, 20)
-                art = _PS.to_ansi(imgs[0], ast, cols, rows, title=key, game=True)
-                core.cache_put(h, art, info["png"][0], {"prompt": prompt, "how": how, "seed": info["seed"],
-                                                       "fam": fam, "key": key, "lieu": lieu})
-                self._game_gen_mem[h] = art
-                rec.update(gen_s=info.get("total_s"), all_s=round(time.time() - t0, 1), ok=True, how=how)
-                self.after0(self._game_gen_apply, st, li, h)
+                lieu = game_fields(status or text).get("LIEU", "") or game_fields(text).get("LIEU", "")
+                if fam == "galaxie":  # v41.5 : planète + lieu
+                    pl = game_fields(status or text).get("PLANÈTE", "")
+                    lieu = (pl + ", " + lieu).strip(", ") if pl and pl not in lieu else lieu
+                elif fam == "legende":  # v41.6 : royaume + lieu
+                    ry = game_fields(status or text).get("ROYAUME", "")
+                    lieu = (ry + ", " + lieu).strip(", ") if ry and ry not in lieu else lieu
+            except Exception:
+                lieu = ""
+            sig = game_scene_signal(text, status, gen)
+            since = game_gen_since(st, gen.get("li", -1), li)
+            brief = None
+            try:  # 1) le modèle de jeu lit la scène (≈ 1-4 s, JSON) — le jeu continue pendant ce temps
+                scene = game_scene_text(text)
+                brief = core.game_brief(model, scene, gen.get("prompt", ""), gen.get("hero", ""), lieu,
+                                        action=action if freq == "action" else "")
+                rec.update(brief_s=brief.get("secs"), llm_change=brief["change"], llm_kind=brief["kind"])
             except Exception as e:
+                rec["brief_err"] = str(e)[:120]
+                log(f"game brief: {e}")
+            go_wait = time.time() < getattr(self, "_game_gen_fail_until", 0) and not force
+            if self._game_gen_q:  # le joueur a déjà rejoué : cette image est périmée
+                rec["stale"] = True
+                self._game_gen_log(rec)
+                continue
+            if freq == "action" and not force:  # v41.4 : une image à chaque action
+                go = True
+                kind = "examen" if (brief or {}).get("closeup") and not (fam == "legende" and "combat" in (
+                    (brief or {}).get("kind"), sig.get("kind"))) and not (fam == "legende" and (st.get("lg") or {}).get("combat")) \
+                    else (
+                    (brief or {}).get("kind") if (brief or {}).get("kind") not in (None, "", "aucun") or sig["kind"] == "aucun"
+                    else sig["kind"])
+                kind = "action" if kind in (None, "", "aucun") else kind
+            else:
+                go, kind = game_gen_decide(sig, brief, since, first=not gen.get("prompt"), force=force, gen=gen)
+            if go and go_wait:  # le moteur vient d'échouer : banque pendant 3 min (pas de nouvel essai à chaque tour)
+                go, rec["backoff"] = False, True
+            rec.update(sig=sig["kind"], since=since, go=go, kind=kind, model=model)
+            self.after0(self._game_gen_note, st, li, sig, brief, go, kind)
+            if not go:
+                if li in self._game_gen_wait:  # indicateur posé d'avance (mode action) : on le retire
+                    self.after0(self._game_gen_failed, st, li, "courte pause après un raté")
+                self._game_gen_log(rec)
+                continue
+            if brief and brief.get("prompt"):
+                subj = brief["prompt"]
+                hero = brief.get("hero") or gen.get("hero", "")
+            else:  # repli : résumé court par le Studio, sinon modèle-type de la scène
+                subj, hero = "", gen.get("hero", "")
+                try:
+                    subj = core.ollama.enhance(model, game_scene_text(text)[:900], "", timeout=30,
+                                               num_ctx=core.num_ctx(), keep_alive="30m")
+                except Exception:
+                    pass
+                subj = subj or _PS.GAME_SUBJECT.get(fam, {}).get("_", "mysterious scene") + (
+                    ", " + _PS.fold(lieu)[:60] if lieu else "")
+            prompt = _PS.game_full_prompt(subj, fam, closeup=(kind == "examen"))
+            h = core.cache_key(fam, "gen2", "", extra=prompt + (f"|{time.time():.0f}" if force else ""))
+            try:
+                if core.cache_png(h):
+                    self.after0(self._game_gen_apply, st, li, h, kind, prompt, brief, hero)
+                    rec.update(ok=True, cached=True, all_s=round(time.time() - t0, 1))
+                    self._game_gen_log(rec)
+                    continue
+                if not core.engine.ready_to_run():
+                    raise RuntimeError("moteur d'images non installé")
+                self.after0(self._game_gen_stage, st, li, "démarrage du moteur d'images" if not core.engine.alive()
+                            else "dessin de la scène")
+                vr = core.vram_report()
+                rec["vram_before"] = vr
+                to = float(core.cfg.get("game_timeout") or 90)
+                if not core.engine.alive():
+                    to += 150  # premier démarrage de ComfyUI : jusqu'à ~90 s mesurées sur ce PC
+
+                def stage(s: str, st=st, li=li):
+                    self.after0(self._game_gen_stage, st, li, re.sub(r"^[^\wÀ-ÿ]+", "", s).strip(" .…") or "dessin")
+                act = freq == "action"
+                steps = int(core.cfg.get("game_steps") or (1 if act else 2))  # v41.4 : 1 étape en mode action
+                imgs, info = core.generate(prompt, size="paysage", steps=steps, timeout=to, vram="jamais",
+                                           free_after=not act, status=stage, cancel=self._game_gen_cancel,
+                                           start_cancel=False)
+                if act:  # ComfyUI reste chargé si la carte graphique a encore de la marge, sinon on le vide
+                    vr2 = core.vram_report()
+                    if 0 <= vr2.get("free_mb", 9999) < int(core.cfg.get("game_keep_free_mb") or 350):
+                        core.engine.free()
+                        rec["freed"] = True
+                core.cache_put(h, None, info["png"][0], {"prompt": prompt, "seed": info["seed"], "fam": fam,
+                                                       "kind": kind, "lieu": lieu, "v": 2})
+                rec["vram_after"] = core.vram_report()
+                rec.update(gen_s=info.get("total_s"), start_s=info.get("start_s"), all_s=round(time.time() - t0, 1),
+                           ok=True)
+                self._game_gen_fail_until = 0
+                self.after0(self._game_gen_apply, st, li, h, kind, prompt, brief, hero)
+            except Exception as e:
+                if self._game_gen_cancel.is_set() or "annulé" in str(e):  # périmée : rien à signaler
+                    rec.update(ok=False, stale=True, all_s=round(time.time() - t0, 1))
+                    self._game_gen_log(rec)
+                    continue
                 rec.update(ok=False, err=str(e)[:200], all_s=round(time.time() - t0, 1))
                 log(f"game gen: {e}")
-                self.after0(self._game_gen_hint, st, f"🖼 image de la banque (dessin indisponible : {str(e)[:80]})")
-            self._game_gen_times.append(rec)
-            self._game_gen_times = self._game_gen_times[-30:]
-        self._game_gen_busy = False
+                self._game_gen_fail_until = time.time() + (45 if freq == "action" else 180)
+                if freq == "action":  # moteur coincé : on le relance proprement au prochain tour
+                    try:
+                        core.engine.stop()
+                    except Exception:
+                        pass
+                self.after0(self._game_gen_failed, st, li, str(e))
+            self._game_gen_log(rec)
+
+    def _game_gen_log(self, rec: Dict[str, Any]) -> None:
+        self._game_gen_times.append(rec)
+        self._game_gen_times = self._game_gen_times[-30:]
+        try:
+            log("game gen: " + json.dumps({k: v for k, v in rec.items() if k != "model"}, ensure_ascii=False)[:600])
+        except Exception:
+            pass
+
+    def _game_gen_note(self, st, li: int, sig, brief, go: bool, kind: str) -> None:
+        """Mémorise le lieu / combat vus (heuristique) ; montre l'indicateur si une image va être dessinée."""
+        if st is not self.game:
+            return
+        g = dict(st.get("gen") or {})
+        if sig.get("lieu"):
+            g["seen_lieu"] = sig["lieu"]
+        g["combat"] = bool(sig.get("combat"))
+        st["gen"] = g
+        if go and getattr(self, "_game_gen_freq", "action") == "action" and li not in self._game_gen_wait:
+            return  # déjà périmée
+        if go and self._game_gen_on(check_engine=False):
+            try:
+                st["log"][li]["gen_kind"] = kind
+            except Exception:
+                pass
+            self._game_gen_placeholder(li)
+            self._game_gen_hint(st, self._gskin()["icon"] + " " + self._gskin()["panel"].title() + " : " + GAME_GEN_KINDS.get(kind, "nouvelle image")
+                                + " — dessin en arrière-plan, continue de jouer !")
+
+    def _game_gen_stage(self, st, li: int, stage: str) -> None:
+        if st is self.game and li in self._game_gen_wait:
+            self._game_gen_wait[li]["stage"] = stage[:40]
+
+    def _game_gen_failed(self, st, li: int, err: str) -> None:
+        if st is not self.game:
+            return
+        had = li in self._game_gen_wait
+        self._game_gen_drop(li)  # v41.4 : retire l'indicateur et la copie « en cours »…
+        prev = self._game_gen_prev(li)
+        if had and prev and self._game_bank_hidden() and self._game_slot_has(li):
+            try:  # … et remet l'image couleur précédente, avec sa légende normale (jamais l'ANSI verte)
+                self._game_gen_insert(li, prev, False)
+            except Exception:
+                pass
+        if had:
+            self._game_gen_hint(st, f"🖼 image pas dessinée cette fois (moteur d'images : {err[:70]}) — nouvel essai au prochain tour")
 
     def _game_gen_hint(self, st, text: str) -> None:
         if st is self.game and not self.busy:
             try:
-                self.game_hint.config(text=text)
+                self.game_hint.config(text=text, fg=GAME_COLORS["amber"])
+                self.after(7000, lambda: self.game_hint.config(fg=GAME_COLORS["dim"]))
             except Exception:
                 pass
 
-    def _game_gen_apply(self, st, li: int, h: str) -> None:
-        """L'image dessinée est prête : on la glisse à la place de celle de la banque, avec le balayage CRT."""
+    def _game_gen_apply(self, st, li: int, h: str, kind: str, prompt: str, brief, hero: str) -> None:
+        """L'image est prête : elle prend la place de l'indicateur (et de l'image de la banque de cette scène)."""
         if st is not self.game:
             return
         try:
-            st["log"][li]["img_gen"] = h
+            e = st["log"][li]
+            e["img_gen2"], e["gen_kind"], e["gen_prompt"] = h, kind, prompt[:400]
         except Exception:
             return
+        g = dict(st.get("gen") or {})
+        g.update(li=li, prompt=(brief or {}).get("prompt") or prompt, n=int(g.get("n", 0)) + 1)
+        if hero:
+            g["hero"] = hero[:160]
+        if brief and brief.get("place"):
+            g["place"] = brief["place"]
+        st["gen"] = g
         self._game_autosave()
-        self._game_gen_hint(st, "🎨 scène dessinée ✔ (clic sur l'image = agrandir)")
-        cur = self._game_img_ph.get(li)
-        if not cur or not self._game_gen_on(check_engine=False):
+        self._game_gen_wait.pop(li, None)
+        if not self._game_gen_on(check_engine=False) or not self._game_slot_has(li):
             return
-        ph, size, fam, key, _old = cur
-        a = self._game_gen_art(h)
-        if a is None:
-            return
-        cw = max(1, size[0] // max(1, a.cols))
-        im = self._game_img_pil(fam, key, cw, art=a, tag=h)
-        if im is None or im.size != tuple(size):
-            return self._game_rerender() if not self.busy else None
-        try:
-            ph.paste(im)
-        except Exception:
-            return
-        self._game_img_ph[li] = (ph, size, fam, key, h)
-        if getattr(self, "_game_images_anim", True):
-            self._game_img_reveal(ph, im, fam)
+        self._game_slot_clear(li, "gph")
+        self._game_slot_clear(li, "gs")
+        if self._game_gen_insert(li, h, animate=True):
+            self._game_gen_hint(st, f"✨ scène générée : {GAME_GEN_KINDS.get(kind, kind)} — clic sur l'image = agrandir")
+            self._game_beep("gen")
+
+    def _game_gen_redraw(self, event=None):
+        """F8 : redessiner la scène actuelle maintenant (même si le maître du jeu n'a pas changé de lieu)."""
+        st = self.game
+        if not st:
+            return None
+        if not self._game_gen_on():
+            self._game_flash("🎨 F8 = redessiner : choisis d'abord 🖼 Images : GÉNÉRÉES (moteur installé).")
+            return "break"
+        li = next((i for i in range(len(st.get("log") or []) - 1, -1, -1) if st["log"][i].get("who") == "mj"), -1)
+        if li < 0:
+            return "break"
+        self._game_gen_wait[li] = {"t0": time.time(), "stage": "lecture de la scène"}
+        self._game_gen_placeholder(li)
+        self._game_gen_request(st, li, st["log"][li].get("text", ""), force=True)
+        self._game_flash("🎨 Je redessine la scène actuelle en arrière-plan…", GAME_COLORS["cyan"])
+        return "break"
 
     def _game_img_reveal(self, ph, im, fam: str, steps: int = 10, delay: int = 28):
         """Effet d'écran CRT : l'image se dessine de haut en bas derrière un trait lumineux (≈ 0,3 s)."""
@@ -10801,7 +12266,8 @@ class Padawan(tk.Tk):
         except Exception:
             return
         W, H = im.size
-        beam = {"fallout": (150, 255, 170), "donjon": (120, 255, 255), "polar": (255, 255, 255)}.get(fam, (200, 255, 200))
+        beam = {"fallout": (150, 255, 170), "donjon": (120, 255, 255), "polar": (255, 255, 255), "galaxie": (150, 220, 255),
+                "legende": (255, 214, 150), "gen": (255, 214, 120)}.get(fam, (200, 255, 200))
         black = _I.new("RGB", (W, H), (0, 0, 0))
         try:
             ph.paste(black)
@@ -10827,13 +12293,10 @@ class Padawan(tk.Tk):
         a = _ANSI.bank_art(game_img_bank(), fam, key) if _ANSI else None
         if a is None:
             return
-        ga, gh = self._game_li_art(li)
-        if ga is not None:
-            a = ga
         G = GAME_COLORS
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
         cw = max(6, min(18, int(sw * 0.82) // a.cols, int(sh * 0.70) // (2 * a.nrows)))
-        im = self._game_img_pil(fam, key, cw, art=a if gh else None, tag=gh)
+        im = self._game_img_pil(fam, key, cw)
         top = tk.Toplevel(self)
         top.title(f"🖼 {key} — illustration ANSI")
         top.configure(bg=G["bg"])
@@ -10843,9 +12306,8 @@ class Padawan(tk.Tk):
         lb = tk.Label(top, image=ph, bg="#000000", bd=0, cursor="hand2")
         lb.pack(padx=10, pady=(10, 4))
         sty = {"pipboy": "Pip-Boy vert", "dos16": "16 couleurs DOS", "noir": "film noir"}.get(a.style, a.style)
-        tk.Label(top, text=f"{key} · {a.cols}×{a.nrows} caractères · {sty} · "
-                           + ("scène dessinée par le 🎨 Studio (SD-Turbo)  " if gh else "illustration originale Padawan  ")
-                           + "(clic ou Échap pour fermer)",
+        tk.Label(top, text=f"{key} · {a.cols}×{a.nrows} caractères · {sty} · illustration originale Padawan  "
+                           "(clic ou Échap pour fermer)",
                  bg=G["bg"], fg=G["dim"], font=("Segoe UI", 9)).pack(pady=(0, 8))
         for w in (top, lb):
             w.bind("<Button-1>", lambda e: top.destroy())
@@ -10874,7 +12336,7 @@ class Padawan(tk.Tk):
         if not getattr(self, "_game_sound", False):
             return
         seq = {"turn": [(1200, 40), (1600, 40)], "on": [(900, 60), (1300, 60), (1700, 80)],
-               "pick": [(1500, 25)]}.get(kind, [(1200, 40)])
+               "pick": [(1500, 25)], "gen": [(700, 45), (1050, 45), (1400, 45), (2100, 70)]}.get(kind, [(1200, 40)])
 
         def run():
             try:
@@ -10983,6 +12445,7 @@ class Padawan(tk.Tk):
         self.game = st
         self._game_load_img_mode()  # v41.0 🖼 réglage par jeu
         self._game_gen_q = []
+        self._game_gen_wait = {}
         self._model_sync_prompt()  # v39.6 : le jeu peut avoir son propre modèle
         if not override:
             self.prompts.data["game"] = p["id"]
@@ -11001,9 +12464,11 @@ class Padawan(tk.Tk):
 
     def _game_enter_ui(self):
         if getattr(self, "_game_ui_on", False):
+            self._game_apply_theme()  # v41.5 : couleurs du jeu (un autre jeu a pu être chargé)
             self._game_paint_header()
             return
         self._game_ui_on = True
+        self._game_apply_theme()
         self._game_saved_pack = {}
         for key in ("_chips_fr", "_hunt_fr", "_chrome_fr", "_act_fr"):
             w = getattr(self, key, None)
@@ -11034,6 +12499,7 @@ class Padawan(tk.Tk):
             return
         self._game_ui_on = False
         self.game_wrap.pack_forget()
+        self._game_apply_theme("fallout")  # v41.5 : thème par défaut pour le prochain jeu
         try:
             self.mission_live.config(text="")
         except Exception:
@@ -11060,7 +12526,7 @@ class Padawan(tk.Tk):
         st = self.game or {}
         meta = GAME_META.get(st.get("builtin", ""), {})
         t = meta.get("title") or str(st.get("name", "🎮")).lstrip("🎮🕵️🧙 ").upper()
-        self.game_title.config(text=f"☢ {t}   ·   TOUR {st.get('turn', 0)}")
+        self.game_title.config(text=f"{self._gskin()['icon']} {t}   ·   TOUR {st.get('turn', 0)}")
 
     def _game_pause_for(self, what: str) -> None:
         """v41.2 : met le jeu sur pause (sauvegarde auto + retour au modèle d'avant) avant d'ouvrir un autre mode."""
@@ -11091,8 +12557,10 @@ class Padawan(tk.Tk):
 
     def game_new(self):
         st = self.game
-        if not st or self.busy:
+        if not st:
             return
+        if self.busy:
+            return self._game_flash("Le maître du jeu écrit encore… attends la fin (Échap = annuler).")
         if st.get("log") and not messagebox.askyesno(
                 "🆕 Nouvelle partie", "Recommencer à zéro ?\n\nLa partie actuelle est perdue "
                                      "(sauf si tu l'as 💾 sauvegardée).", parent=self):
@@ -11123,7 +12591,7 @@ class Padawan(tk.Tk):
 
     def game_load(self):
         if self.busy:
-            return
+            return self._game_flash("Le maître du jeu écrit encore… attends la fin pour charger (Échap = annuler).")
         os.makedirs(GAME_PARTIES_DIR, exist_ok=True)
         path = filedialog.askopenfilename(parent=self, title="📂 Charger une partie", initialdir=GAME_PARTIES_DIR,
                                           filetypes=[("Partie Padawan", "*.json")])
@@ -11141,10 +12609,16 @@ class Padawan(tk.Tk):
                                    parent=self)
             return
         st["pid"], st["name"] = p["id"], p["name"]
+        st["builtin"] = p.get("builtin", "") or st.get("builtin", "")
+        self._game_pending = None
         self.game = st
         self._game_override = None
+        self._game_gen_q, self._game_gen_wait = [], {}
+        self._game_load_img_mode()  # v41.3 : réglage 🖼 du jeu chargé (avant : celui du jeu précédent)
+        self._game_paint_toggles()
         self.prompts.data["game"] = p["id"]
         self.prompts.save()
+        self._model_sync_prompt()   # v41.3 : modèle de jeu (jamais « coder ») aussi pour une partie chargée
         self._game_enter_ui()
         self._game_rerender()
         self._game_sys(f"📂 Partie chargée : {os.path.basename(path)}")
@@ -11239,8 +12713,7 @@ class Padawan(tk.Tk):
                 return
             art_done = True
             if use_img:
-                if img_key:
-                    self._game_img(img_key, animate, li)
+                self._game_slot(li, img_key, animate)  # v41.3 : ✨ scène générée ou image de la banque
             elif art:
                 self._game_block(art, "art")
         blocks = game_split_blocks(text)
@@ -11321,15 +12794,47 @@ class Padawan(tk.Tk):
             put_art()
         self._game_w("\n", "narr")
 
+    def _game_on_resize(self, e=None):
+        """v41.4 : maximiser / restaurer → on redessine (après un court délai) pour que l'image profite de la place."""
+        try:
+            w = int(e.width) if e is not None else self.game_txt.winfo_width()
+        except Exception:
+            return
+        last = getattr(self, "_game_rr_w", 0)
+        if w < 300 or abs(w - last) < 60:
+            return
+        if not last:
+            self._game_rr_w = w
+            return
+        job = getattr(self, "_game_rr_job", None)
+        if job:
+            try:
+                self.after_cancel(job)
+            except Exception:
+                pass
+
+        def go():
+            self._game_rr_job = None
+            if self.game and self._game_img_on():
+                self._game_rerender()
+        self._game_rr_job = self.after(400, go)
+
     def _game_rerender(self, animate_last: bool = False):
         T = self.game_txt
+        try:
+            self._game_rr_w = T.winfo_width()
+        except Exception:
+            pass
         T.configure(state="normal")
         T.delete("1.0", "end")
         T.configure(state="disabled")
         self._game_imgs = []
-        self._game_img_ph = {}
+        self._game_gen_ph = {}
+        self._game_slots = set()
         st = self.game or {}
         plan = game_img_plan(st, self._game_pick_cache) if self._game_img_on() else {}
+        if plan and self._game_bank_hidden():  # v41.4 : GÉNÉRÉES = vraies images couleur seulement
+            plan = {}
         last_i = max(plan) if plan else None
         if -1 in plan:
             self._game_img(plan[-1], animate=animate_last and last_i == -1)
@@ -11382,6 +12887,8 @@ class Padawan(tk.Tk):
         return not r or self.game_txt.compare(idx, ">", r[0])
 
     def _game_set_choices(self, choices):
+        """Choix du tour : zone défilable (barre + molette) si elle déborde, et « ✍ Autre action… » toujours visible.
+        v41.3 : avant, sur un petit écran, les derniers choix étaient cachés sous le bord de la fenêtre."""
         G = GAME_COLORS
         for w in self.game_choices.winfo_children():
             w.destroy()
@@ -11390,15 +12897,24 @@ class Padawan(tk.Tk):
             return
         width = max(300, self.game_choices.winfo_width(), self.game_wrap.winfo_width() - 16,
                     self.split.winfo_width() - 20 if not getattr(self, "_game_ui_on", False) else 0)
-        grid = tk.Frame(self.game_choices, bg=G["bg"])
-        grid.pack(fill="x")
+        small = self.winfo_height() < 700 or getattr(self, "_game_compact", False)
+        fs, py = (10, 3) if small else (11, 5)
+        outer = tk.Frame(self.game_choices, bg=G["bg"])
+        outer.pack(fill="x")
+        cv = tk.Canvas(outer, bg=G["bg"], highlightthickness=0, bd=0, height=10)
+        sb = ttk.Scrollbar(outer, orient="vertical", command=cv.yview)
+        cv.configure(yscrollcommand=sb.set)
+        cv.pack(side="left", fill="x", expand=True)
+        grid = tk.Frame(cv, bg=G["bg"])
+        win = cv.create_window(0, 0, window=grid, anchor="nw")
+        inner_w = width - 22
         two = len(choices) >= 4 and width > 700
         for k, (n, lab) in enumerate(choices[:9]):
             b = tk.Button(
                 grid, text=f" {n} ▸ {lab}", anchor="w", justify="left", command=lambda n=n: self._game_pick(n),
                 bg=G["btn"], fg=G["fg"], activebackground=G["green"], activeforeground="#021006",
-                relief="flat", bd=0, font=("Segoe UI", 11, "bold"), padx=10, pady=5, cursor="hand2",
-                wraplength=(width // 2 - 40) if two else (width - 40), highlightthickness=1,
+                relief="flat", bd=0, font=("Segoe UI", fs, "bold"), padx=10, pady=py, cursor="hand2",
+                wraplength=(inner_w // 2 - 40) if two else (inner_w - 40), highlightthickness=1,
                 highlightbackground=G["line"],
             )
             b.bind("<Enter>", lambda e, w=b: w.configure(bg=G["btnh"], fg="#ffffff"))
@@ -11417,9 +12933,111 @@ class Padawan(tk.Tk):
                           display="🔁 Choix demandés", count=False),
                       bg=G["btn"], fg=G["amber"], relief="flat", font=("Segoe UI", 10, "bold"), padx=10, pady=4,
                       cursor="hand2").grid(row=0, column=0, sticky="w", padx=2, pady=2)
-        hint = ("✍ Autre action : écris-la dans la barre du bas puis Entrée  ·  touches 1–"
-                f"{min(9, len(choices))} = choisir" if choices else "✍ Écris ton action dans la barre du bas puis Entrée")
+
+        def wheel(e):
+            if sb.winfo_ismapped():
+                cv.yview_scroll(int(-e.delta / 120) or (-1 if e.delta > 0 else 1), "units")
+            return "break"
+
+        def fit(_e=None):
+            try:
+                req = grid.winfo_reqheight()
+                wh = self.game_wrap.winfo_height()
+                cap = max(90, int((wh if wh > 200 else self.winfo_height()) * (0.40 if small else 0.45)))
+                h = min(req, cap)
+                cv.configure(height=h, scrollregion=(0, 0, cv.winfo_width(), req))
+                if req > cap + 2:
+                    if not sb.winfo_ismapped():
+                        sb.pack(side="right", fill="y")
+                elif sb.winfo_ismapped():
+                    sb.pack_forget()
+                    cv.yview_moveto(0)
+            except Exception:
+                pass
+        grid.bind("<Configure>", fit)
+        cv.bind("<Configure>", lambda e: (cv.itemconfigure(win, width=e.width), fit()))
+        for w_ in [cv, grid] + list(grid.winfo_children()):
+            w_.bind("<MouseWheel>", wheel)
+        self._game_choice_canvas = cv
+        # ✍ Autre action… : toujours visible sous les choix (hors de la zone qui défile)
+        self._game_other_n = 0
+        if st.get("phase") != "intro" and not self.busy:
+            n_other = len(choices[:9]) + 1 if 0 < len(choices) < 9 else 0
+            self._game_other_n = n_other
+            row = tk.Frame(self.game_choices, bg=G["bg"])
+            row.pack(fill="x", pady=(2, 0))
+            lab = f" ✍ {n_other} ▸ Autre action…" if n_other else " ✍ A ▸ Autre action…"
+            lgb = self._game_fam() == "legende"  # v41.6 : bandeau bordeaux sur parchemin
+            ob = tk.Button(row, text=lab, anchor="w", command=self._game_other_open, bg="#5a1622" if lgb else "#1a1408",
+                           fg="#f3d58a" if lgb else G["amber"],
+                           activebackground=G["amber"], activeforeground="#1a1408", relief="flat", bd=0,
+                           font=("Segoe UI", fs, "bold"), padx=10, pady=py, cursor="hand2", highlightthickness=1,
+                           highlightbackground=G["amber"])
+            ob.pack(fill="x", padx=2, pady=2)
+            self._tip(ob, "Écris ta propre action : le maître du jeu l'intègre à l'histoire puis propose de nouveaux "
+                          "choix.\nTouche " + (f"{n_other} ou " if n_other else "") + "A · Entrée = envoyer · Échap = fermer")
+            self._game_other_row = row
+            self._game_other_btn = ob
+        keys = f"touches 1–{min(9, len(choices))}" if choices else ""
+        hint = (f"🖱 clique un choix · {keys}" + (f" · ✍ {self._game_other_n} ou A = autre action" if self._game_other_n
+                                                  else " · ✍ A = autre action")) if choices else \
+            "✍ Écris ton action (✍ Autre action… ou la barre du bas) puis Entrée"
         self.game_hint.config(text=hint)
+        self.after(30, fit)
+
+    def _game_other_open(self):
+        """Champ bien visible pour une action libre (Entrée = envoyer, Échap = fermer)."""
+        G = GAME_COLORS
+        row = getattr(self, "_game_other_row", None)
+        if not self.game or row is None or not row.winfo_exists():
+            return
+        if self.busy:
+            return self._game_flash("Le maître du jeu écrit encore… attends la fin (Échap = annuler).")
+        for w in row.winfo_children():
+            w.destroy()
+        tk.Label(row, text=" ✍ Ton action :", bg=G["bg"], fg=G["amber"], font=("Segoe UI", 11, "bold")).pack(side="left")
+        var = tk.StringVar()
+        e = tk.Entry(row, textvariable=var, bg="#1a1408", fg="#fff3d6", insertbackground=G["amber"], relief="flat",
+                     font=("Segoe UI", 12), highlightthickness=2, highlightbackground=G["amber"],
+                     highlightcolor=G["amber"])
+        e.pack(side="left", fill="x", expand=True, padx=6, ipady=4)
+
+        def go(_e=None):
+            t = var.get().strip()
+            if not t:
+                return "break"
+            self._game_free_action(t)
+            return "break"
+
+        def close(_e=None):
+            self._game_set_choices((self.game or {}).get("choices") or [])
+            self.ent.focus_set()
+            return "break"
+        tk.Button(row, text="Envoyer ▸", command=go, bg=G["amber"], fg="#1a1408", relief="flat", bd=0,
+                  font=("Segoe UI", 10, "bold"), padx=12, pady=4, cursor="hand2").pack(side="left", padx=2)
+        tk.Button(row, text="✖", command=close, bg=G["btn"], fg=G["fg"], relief="flat", bd=0,
+                  font=("Segoe UI", 10, "bold"), padx=8, pady=4, cursor="hand2").pack(side="left", padx=2)
+        e.bind("<Return>", go)
+        e.bind("<KP_Enter>", go)
+        e.bind("<Escape>", close)
+        e.focus_set()
+        self.game_hint.config(text="✍ Écris ton action (ex. « je fouille le traversier en silence ») · Entrée = envoyer · "
+                                   "Échap = fermer", fg=G["amber"])
+
+    def _game_free_action(self, text: str):
+        """Action libre du joueur : le MJ l'intègre de façon cohérente puis propose de nouveaux choix."""
+        text = text.strip()
+        if not text or not self.game:
+            return
+        if self.game.get("phase") == "intro":
+            return self._game_send(text)
+        if self._game_fam() == "legende":  # v41.6 : l'action libre est le cœur du jeu
+            if self.busy:
+                return self._game_flash("Le maître du jeu écrit encore… attends la fin (Échap = annuler).")
+            if (self.game.get("lg") or {}).get("combat"):
+                return self._lg_combat_act("tactique", tactic=text)
+            return self._game_send(text + LG_FREE_ACTION, display=f"✍ {text}")
+        self._game_send(text + GAME_FREE_ACTION, display=f"✍ {text}")
 
     def _game_key_ent(self, e):
         if not self.game or self.var.get():
@@ -11433,6 +13051,9 @@ class Padawan(tk.Tk):
         if f is self.ent or isinstance(f, (tk.Entry, ttk.Entry, tk.Spinbox, ttk.Combobox)) or (
                 isinstance(f, tk.Text) and f is not self.game_txt):
             return None
+        if (e.char or "") in ("a", "A") and not (e.state & 0x4) and getattr(self, "_game_other_row", None) is not None:
+            self._game_other_open()  # v41.3 : A = ✍ Autre action…
+            return "break"
         return self._game_key(e)
 
     def _game_key(self, e):
@@ -11443,6 +13064,9 @@ class Padawan(tk.Tk):
             n = int(ch)
             if n in dict((self.game or {}).get("choices") or []):
                 self._game_pick(n)
+                return "break"
+            if n and n == getattr(self, "_game_other_n", 0):  # v41.3 ✍ Autre action…
+                self._game_other_open()
                 return "break"
         return None
 
@@ -11469,6 +13093,8 @@ class Padawan(tk.Tk):
         self._game_beep("pick")
         if st.get("phase") == "intro":
             return self._game_intro_pick(n)
+        if self._game_fam() == "legende" and self._lg_pick(n, ch[n]):  # v41.6 : action de combat (dés de Padawan)
+            return
         self._game_send(f"Je choisis {n}. {ch[n]}", display=f"{n}. {ch[n]}")
 
     # ---- création du personnage (locale, fiable)
@@ -11482,6 +13108,10 @@ class Padawan(tk.Tk):
         if self._game_img_on():
             if img_key:
                 self._game_img(img_key, animate)
+            elif self._game_fam() == "galaxie" and self._game_bank_hidden():
+                self._gx_title_card()  # v41.5 : image-titre couleur
+            elif self._game_fam() == "legende" and self._game_bank_hidden():
+                self._lg_title_card()  # v41.6 : enluminure couleur
         elif art:
             self._game_block(art, "art")
         for para in meta["intro"].split("\n"):
@@ -11508,6 +13138,8 @@ class Padawan(tk.Tk):
     def _game_intro_pick(self, n: int, custom_text: str = ""):
         from tkinter import simpledialog
         st = self.game
+        if self._game_fam() == "legende":  # v41.6 : feuille d'aventure tirée aux dés
+            return self._lg_intro_pick(n, custom_text)
         meta = GAME_META.get(st.get("builtin", ""), {})
         arch = meta.get("archetypes", [])
         if 1 <= n <= len(arch) and not custom_text:
@@ -11668,13 +13300,20 @@ class Padawan(tk.Tk):
             return self._game_intro_pick(0, custom_text=text)
         if not self.ready or not self.model_ready:
             return self._game_queue(text, display, count)  # v39.8 : le choix part dès que le modèle est prêt
-        dice = random.randint(1, 20) if self._game_dice else 0
+        lg_on = GAME_ART_FAMILY.get(st.get("builtin", "")) == "legende"
+        dice = random.randint(1, 20) if (self._game_dice and not lg_on) else 0  # v41.6 : la Légende a ses propres dés
         st["_dice"] = dice
         user_core = text + game_dice_hint(dice)
         st["log"].append({"who": "you", "text": display or text})
         self._game_w(f"▶ {display or text}\n", "you")
         if dice:
             self._game_w(f"🎲 d20 lancé par Padawan : {dice}\n", "sys")
+        lg_hint = ""
+        if lg_on:
+            try:
+                lg_hint = self._lg_turn_hint(st, text)  # épreuve, effets, quêtes, mémoire (avant le ⌛)
+            except Exception as e:
+                log(f"lg hint: {e}")
         self._game_set_choices([])
         T = self.game_txt
         T.configure(state="normal")
@@ -11687,7 +13326,8 @@ class Padawan(tk.Tk):
         self.game_hint.config(text="⌛ Le maître du jeu écrit… (Échap = annuler)")
         self.lock(True, "🎮 le maître du jeu écrit…")
         hist, memo = game_trim_history(st)
-        user = (memo + user_core) + game_state_line(st.get("status", "")) + game_reminder(st.get("builtin", ""))
+        user = (memo + user_core) + game_state_line(st.get("status", ""), st.get("builtin", "")) \
+            + self._gx_turn_hint(st) + lg_hint + game_reminder(st.get("builtin", ""))
         threading.Thread(target=self._game_worker, args=(user, user_core, hist, display or text, count),
                          daemon=True).start()
 
@@ -11737,6 +13377,7 @@ class Padawan(tk.Tk):
         T.configure(state="disabled")
         if st["log"] and st["log"][-1].get("who") == "you":
             st["log"].pop()
+            self._game_rerender()  # v41.3 : plus de « ▶ action » fantôme d'un tour qui n'a pas eu lieu
         self._game_sys(f"⚠ {err}")
         self._game_set_choices(st.get("choices") or [])
 
@@ -11757,6 +13398,12 @@ class Padawan(tk.Tk):
             self._game_sys("Tour annulé." if self._cancel.is_set() or ans == "(annulé)" else f"{ans or '(réponse vide)'}")
             return
         ans = game_strip_template(game_clean_reply(clean(ans)))
+        ans = re.sub(r"^(\s*#{1,4}\s*)\**\s*Titre de (la )?sc[èe]ne\s*:\s*", r"\1", ans, flags=re.M | re.I)  # v41.6 : gabarit recopié
+        if GAME_ART_FAMILY.get(st.get("builtin", "")) == "legende":
+            try:
+                ans = lg_clean_reply(ans)  # v41.7 : pas de feuille brute ni de rappels dans le récit
+            except Exception as e:
+                log(f"lg clean: {e}")
         st["msgs"].append({"role": "user", "content": user_core})
         st["msgs"].append({"role": "assistant", "content": ans})
         st["log"].append({"who": "mj", "text": ans})
@@ -11765,6 +13412,9 @@ class Padawan(tk.Tk):
             st["chronicle"].append(f"T{st['turn']} · {display}"[:140])
             st["chronicle"] = st["chronicle"][-60:]
         g = game_parse(ans)
+        gx_before = self._gx_where(st) if self._game_fam() == "galaxie" else ("", "", "")
+        if gx_before[0] or self._game_fam() == "galaxie":
+            st["_gx_prev"] = st.get("status", "")
         # v39.4: moteur d'état — statut tolérant + inventaire / jauges déduits de la narration
         try:
             res = game_apply_turn(st.get("status", ""), ans, dice=int(st.pop("_dice", 0) or 0), tick=count)
@@ -11785,12 +13435,17 @@ class Padawan(tk.Tk):
             if not st["quests"] or st["quests"][-1] != qv:
                 st["quests"] = [q for q in st["quests"] if q != qv] + [qv]
                 st["quests"] = st["quests"][-20:]
+        self._gx_after_turn(st, gx_before)  # v41.5 🚀 missions + effet de saut
+        self._lg_after_turn(st)  # v41.6 📜 la feuille de Padawan fait foi (chiffres, quêtes, combat, voyage, mémoire)
         fx = []
-        if res["gained"]:
-            fx.append("+" + ", +".join(res["gained"]))
+        gained_fx = [x for x in res["gained"] if x in (st.get("inv_new") or [])]  # v41.6 : sans le bric-à-brac retiré
+        if gained_fx:
+            fx.append("+" + ", +".join(gained_fx))
         if res["lost"]:
             fx.append("−" + ", −".join(res["lost"]))
         fx += res["stat_changes"] + res["notes"]
+        fx += st.pop("_gx_fx", [])  # v41.5 🚀 saut / mission / récompense
+        fx += st.pop("_lg_fx", [])  # v41.6 📜
         auto = False
         if game_reply_incomplete(ans, g["choices"]):  # v41.1 : réponse coupée ou sans choix
             if not st.get("_autocont"):
@@ -11803,6 +13458,18 @@ class Padawan(tk.Tk):
         else:
             st["_autocont"] = 0
         st["choices"] = g["choices"]
+        if self._game_fam() == "galaxie":
+            try:
+                self._gx_offer(st)  # v41.5 : mission proposée à la starbase (+ choix Accepter / Refuser)
+                fx += st.pop("_gx_fx", [])
+            except Exception as e:
+                log(f"gx offer: {e}")
+        if self._game_fam() == "legende":
+            try:
+                self._lg_post_choices(st)  # v41.6 : actions de combat ou quête proposée
+                fx += st.pop("_lg_fx", [])
+            except Exception as e:
+                log(f"lg choices: {e}")
         start = self.game_txt.index("end-1c")
         ikey = ""
         if self._game_img_on():
@@ -11811,11 +13478,11 @@ class Padawan(tk.Tk):
             except Exception as e:
                 log(f"game_img_plan: {e}")
         li = len(st["log"]) - 1
-        if ikey and self._game_gen_on():
-            self._game_gen_request(st, li, ikey, ans)
+        if self._game_img_on() and self._game_gen_on():  # v41.3 : le modèle de jeu décide si la scène change
+            self._game_gen_request(st, li, ans)
         self._game_render_reply(ans, st["log"][-1].get("status", ""), img_key=ikey, animate=bool(ikey), li=li)
         if fx:
-            line = "🎒 Pip-Boy : " + " · ".join(fx)
+            line = self._gskin()["fx"] + " : " + " · ".join(fx)
             st["log"].append({"who": "fx", "text": line})
             self._game_w(line + "\n\n", "check")
         self._game_scroll_to(start)
@@ -11837,7 +13504,7 @@ class Padawan(tk.Tk):
         st = self.game or {}
         info = game_parse_status(st.get("status", "")) if st.get("status") else {"title": "", "fields": [], "bars": []}
         self._pip_info = info
-        self.pip_title.config(text=f"▓▓ {info['title'] or 'PIP-BOY 3000'} ▓▓"[:34])
+        self.pip_title.config(text=f"▓▓ {info['title'] or self._gskin()['panel']} ▓▓"[:34])
         self._game_draw_bars()
         P = self.pip_txt
         P.configure(state="normal")
@@ -11845,8 +13512,18 @@ class Padawan(tk.Tk):
         barred = {b[0] for b in info["bars"]}
         if not info["fields"]:
             P.insert("end", "En attente du premier statut…\n", "k")
+        gx = self._game_fam() == "galaxie"
+        lgf = self._game_fam() == "legende"
+        if lgf and (st.get("lg") or {}).get("combat"):
+            c_ = st["lg"]["combat"]
+            P.insert("end", f"⚔ COMBAT : {c_['name']}\n", "h")
+            P.insert("end", f"  HABILETÉ {c_['hab']} · ENDURANCE {c_['end']}/{c_['end0']} · round {c_.get('round', 0)}\n", "cur")
         for k, v in info["fields"]:
             if k in barred:
+                continue
+            if gx and game_norm_key(k) == "MISSIONS":  # v41.5 : journal des missions plus bas
+                continue
+            if lgf and game_norm_key(k) == "JOURNAL":  # v41.6 : quêtes d'auberge plus bas
                 continue
             if k.startswith("INVENTAIRE") or k.startswith("INDICES"):
                 P.insert("end", f"\n{k}\n", "h")
@@ -11860,7 +13537,35 @@ class Padawan(tk.Tk):
                 continue
             P.insert("end", f"{k}: ", "k")
             P.insert("end", f"{v}\n", "v")
-        if st.get("quests"):
+        if gx:
+            P.insert("end", "\n📋 MISSIONS\n", "h")
+            ms = st.get("missions") or []
+            if not ms:
+                P.insert("end", " (aucune — les starbases en proposent)\n", "k")
+            ico = {"active": "▶", "proposée": "?", "terminée": "✓", "échouée": "✗", "refusée": "–"}
+            for m in ms[-10:]:
+                tagm = "cur" if m.get("status") == "active" else ("old" if m.get("status") in ("échouée", "refusée") else "v")
+                P.insert("end", f" {ico.get(m.get('status'), '•')} {m.get('title', '')}  [{m.get('status', '')}]\n", tagm)
+                if m.get("reward"):
+                    P.insert("end", f"     💰 {m['reward']}\n", "k")
+        if lgf:
+            lg_ = st.get("lg") or {}
+            P.insert("end", "\n📜 QUÊTES D'AUBERGE\n", "h")
+            ms = lg_.get("quests") or []
+            if not ms:
+                P.insert("end", " (aucune — auberges et villages en proposent)\n", "k")
+            ico = {"active": "▶", "proposée": "?", "terminée": "✓", "échouée": "✗", "refusée": "–"}
+            for m in ms[-10:]:
+                tagm = "cur" if m.get("status") == "active" else ("old" if m.get("status") in ("échouée", "refusée") else "v")
+                P.insert("end", f" {ico.get(m.get('status'), '•')} {m.get('title', '')}  [{m.get('status', '')}]\n", tagm)
+                if m.get("reward"):
+                    P.insert("end", f"     🏆 {m['reward']}\n", "k")
+            if lg_.get("faits"):
+                P.insert("end", "\n🧠 LE MONDE SE SOUVIENT\n", "h")
+                for f_ in lg_["faits"][-6:]:
+                    P.insert("end", f" • {f_.get('t', '')}\n", "v")
+            P.insert("end", f"\n🗺 Royaumes découverts : {len(lg_.get('seen') or [])}/{len(LEGENDE_REALMS)}  (F9)\n", "k")
+        if st.get("quests") and not lgf:
             P.insert("end", "\n📓 JOURNAL DE QUÊTES\n", "h")
             qs = st["quests"]
             for i, q in enumerate(qs[-8:]):
@@ -11872,6 +13577,1866 @@ class Padawan(tk.Tk):
                 P.insert("end", f" {c}\n", "k")
         P.configure(state="disabled")
 
+    # ══ v41.5 🚀 GALAXIE 42 : thème, ordinateur de bord, missions, carte stellaire, étoiles ═══════════════════
+    def _game_fam(self) -> str:
+        return GAME_ART_FAMILY.get((self.game or {}).get("builtin", ""), "")
+
+    def _gskin(self) -> Dict[str, str]:
+        return GAME_SKIN.get(self._game_fam(), GAME_SKIN_DEFAULT)
+
+    def _game_apply_theme(self, fam: Optional[str] = None) -> None:
+        """Couleurs du jeu : on remplace les couleurs déjà posées (widgets + tags) par celles du thème voulu."""
+        fam = self._game_fam() if fam is None else fam
+        want = GAME_THEMES.get(fam) or GAME_THEMES["fallout"]
+        cur = dict(GAME_COLORS)
+        try:
+            self.game_txt.tag_configure("bold", foreground="#5a1622" if fam == "legende" else "#ffffff")  # v41.6
+        except Exception:
+            pass
+        if all(cur.get(k) == v for k, v in want.items()):
+            self._gx_sky_show(fam in ("galaxie", "legende"))
+            return
+        mp = {str(cur[k]).lower(): want[k] for k in want if k in cur}
+        GAME_COLORS.update(want)
+        opts = ("bg", "fg", "activebackground", "activeforeground", "highlightbackground", "highlightcolor",
+                "insertbackground", "selectbackground", "disabledforeground")
+
+        def walk(w):
+            for o in opts:
+                try:
+                    v = str(w.cget(o)).lower()
+                except Exception:
+                    continue
+                if v in mp:
+                    try:
+                        w.configure(**{o: mp[v]})
+                    except Exception:
+                        pass
+            for c in w.winfo_children():
+                walk(c)
+        try:
+            walk(self.game_wrap)
+            for T in (self.game_txt, self.pip_txt):
+                for tg in T.tag_names():
+                    for o in ("foreground", "background"):
+                        try:
+                            v = str(T.tag_cget(tg, o)).lower()
+                        except Exception:
+                            continue
+                        if v in mp:
+                            T.tag_configure(tg, **{o: mp[v]})
+        except Exception as e:
+            log(f"game theme: {e}")
+        self._gx_sky_show(fam in ("galaxie", "legende"))
+        try:
+            self._game_draw_bars()
+        except Exception:
+            pass
+
+    # ---- ciel étoilé animé (panneau de droite) + effet de saut
+    def _gx_sky_show(self, on: bool) -> None:
+        cv = getattr(self, "gx_sky", None)
+        if cv is None:
+            return
+        try:
+            cv.configure(bg="#3b2415" if self._game_fam() == "legende" else "#03050f")  # v41.6 : torche sur bois sombre
+        except Exception:
+            pass
+        cb = (getattr(self, "game_btns", {}) or {}).get("chron")
+        if cb is not None:
+            try:
+                lgon = on and self._game_fam() == "legende"
+                if lgon and not cb.winfo_manager():
+                    cb.pack(side="right", padx=2, before=self.game_btns["images"])
+                elif not lgon and cb.winfo_manager():
+                    cb.pack_forget()
+            except Exception:
+                pass
+        try:
+            if on and not cv.winfo_ismapped():
+                cv.pack(fill="x", before=self.pip_title)
+            elif not on and cv.winfo_manager():
+                cv.pack_forget()
+        except Exception:
+            pass
+        mb = (getattr(self, "game_btns", {}) or {}).get("map")
+        if mb is not None:
+            try:
+                if on and not mb.winfo_manager():
+                    mb.pack(side="right", padx=2, before=self.game_btns["images"])
+                elif not on and mb.winfo_manager():
+                    mb.pack_forget()
+            except Exception:
+                pass
+        if on and not getattr(self, "_gx_sky_on", False):
+            self._gx_sky_on = True
+            self.after(60, self._gx_sky_tick)
+
+    def _gx_sky_tick(self) -> None:
+        cv = getattr(self, "gx_sky", None)
+        if cv is None or self._game_fam() not in ("galaxie", "legende") or not getattr(self, "_game_ui_on", False):
+            self._gx_sky_on = False
+            return
+        if self._game_fam() == "legende":  # v41.6 🔥 torche + page qui tourne
+            try:
+                if cv.winfo_ismapped() and self.state() not in ("iconic", "withdrawn"):
+                    self._lg_sky_draw(cv, max(60, cv.winfo_width()), max(20, cv.winfo_height()))
+            except Exception:
+                pass
+            self.after(60 if getattr(self, "_lg_page_left", 0) else 140, self._gx_sky_tick)
+            return
+        try:
+            if cv.winfo_ismapped() and self.state() not in ("iconic", "withdrawn"):
+                w, h = max(60, cv.winfo_width()), max(20, cv.winfo_height())
+                stars = getattr(self, "_gx_stars", None)
+                if not stars or len(stars) < 40:
+                    rnd = random.Random(42)
+                    stars = self._gx_stars = [[rnd.uniform(0, w), rnd.uniform(0, h), rnd.choice((0.4, 0.8, 1.6))]
+                                              for _ in range(46)]
+                warp = max(0, getattr(self, "_gx_warp_left", 0))
+                cv.delete("all")
+                G = GAME_COLORS
+                for s_ in stars:
+                    sp = s_[2] * (9 if warp else 1)
+                    s_[0] -= sp
+                    if s_[0] < 0:
+                        s_[0], s_[1] = w + random.uniform(0, 20), random.uniform(0, h)
+                    col = (G["green"], "#ffffff", G["amber"])[int(s_[2] * 10) % 3]
+                    if warp:
+                        cv.create_line(s_[0], s_[1], s_[0] + sp * 3, s_[1], fill=col)
+                    else:
+                        r = 1 if s_[2] > 1 else 0.6
+                        cv.create_oval(s_[0] - r, s_[1] - r, s_[0] + r, s_[1] + r, fill=col, outline="")
+                lab = "⟫⟫ SAUT EN COURS ⟫⟫" if warp else "✦ " + ((self.game or {}).get("_gx_where") or "en orbite")[:34]
+                cv.create_text(w // 2, h - 9, text=lab, fill=G["fg"] if not warp else G["green"],
+                               font=("Consolas", 8, "bold"))
+                if warp:
+                    self._gx_warp_left = warp - 1
+        except Exception:
+            pass
+        self.after(70 if getattr(self, "_gx_warp_left", 0) else 110, self._gx_sky_tick)
+
+    def _gx_warp(self, label: str = "") -> None:
+        """Petit effet de saut (≈ 1,5 s) : étoiles étirées dans le panneau + bandeau."""
+        self._gx_warp_left = 22
+        if label:
+            self._game_flash(f"🚀 Saut : {label}", GAME_COLORS["green"])
+
+    # ---- position / missions
+    @staticmethod
+    def _gx_dest_for(text: str) -> Optional[Tuple[Any, ...]]:
+        f = _fold(text or "").lower()
+        best = None
+        for d in GALAXIE_DEST:
+            n = _fold(d[0]).lower()
+            key = n.split(" (")[0].split(" — ")[0].strip()
+            if key and key in f:
+                if best is None or len(key) > len(_fold(best[0]).lower().split(" (")[0].split(" — ")[0]):
+                    best = d
+        return best
+
+    def _gx_where(self, st) -> Tuple[str, str, str]:
+        d = game_status_dict(st.get("status", ""))[1]
+        return d.get("SYSTÈME", ""), d.get("PLANÈTE", ""), d.get("LIEU", "")
+
+    def _gx_cur_dest(self, st):
+        sy, pl, li = self._gx_where(st)
+        return self._gx_dest_for(pl + " " + li) or self._gx_dest_for(li) or \
+            next((d for d in GALAXIE_DEST if d[0] == st.get("_gx_dest")), GALAXIE_DEST[0])
+
+    @staticmethod
+    def _gx_cost(a, b) -> int:
+        if a is None or b is None or a[0] == b[0]:
+            return 0
+        return max(2, abs(int(b[2]) - int(a[2])))
+
+    _GX_MSTAT = (("échouée", r"echou|rate|perdu|failed|abandon"), ("refusée", r"refus|decline"),
+                 ("terminée", r"termin|reuss|complet|accompli|livre[e]?\b|done|succes"),
+                 ("proposée", r"propos|offert|disponible|en attente"),
+                 ("active", r"activ|accept|en cours|engag"))
+
+    def _gx_mission_parse(self, v: str) -> List[Dict[str, str]]:
+        out = []
+        if not v or _fold(v).strip(" .").lower() in ("aucune", "aucun", "rien", "n/a", "-", "(aucune)"):
+            return out
+        for seg in re.split(r";|\n", v):
+            seg = seg.strip(" .•-")
+            fs = _fold(seg).lower()
+            if len(seg) < 4 or re.match(r"^(m\d+\s*-\s*)?aucun", fs) or "/active/" in fs or "proposee/" in fs \
+                    or fs.startswith("(") or "une mission par segment" in fs:
+                continue  # gabarit recopié par le modèle
+            parts = [x.strip() for x in re.split(r"\s[-–—]\s", seg) if x.strip()]
+            mid = ""
+            if parts and re.match(r"^(ID\s*)?[MQ]\d{1,2}$", parts[0], re.I):
+                mid = re.sub(r"\D", "", parts[0])
+                parts = parts[1:]
+            f = _fold(seg).lower()
+            status = ""
+            for lab, rx in self._GX_MSTAT:
+                if re.search(rx, f):
+                    status = lab
+                    break
+            rew = ""
+            m = re.search(r"r[ée]compense\s*:?\s*([^;]+)$", seg, re.I)
+            if m:
+                rew = m.group(1).strip(" .")
+            title = next((x for x in parts if not re.search(r"r[ée]compense|^(propos|activ|termin|[ée]chou|refus|en cours|accept)", _fold(x).lower())), seg)[:80]
+            out.append({"id": mid, "title": title, "status": status or "active", "reward": rew[:60]})
+        return out[:10]
+
+    def _gx_missions_update(self, st) -> None:
+        """Journal des missions persistant (sauvegardé avec la partie) : fusion des MISSIONS du statut."""
+        title, d = game_status_dict(st.get("status", ""))
+        new = self._gx_mission_parse(d.get("MISSIONS", ""))
+        ms = list(st.get("missions") or [])
+        for m in new:
+            key = " ".join(game_item_words(m["title"]))[:40]
+            hit = next((x for x in ms if " ".join(game_item_words(x.get("title", "")))[:40] == key), None)
+            if hit is None and m["id"] and m["id"].isdigit() and 0 < int(m["id"]) <= len(ms):
+                hit = ms[int(m["id"]) - 1]  # même numéro M que le journal affiché (titre reformulé)
+            if hit:
+                old = hit.get("status")
+                if old in ("terminée", "échouée") and m["status"] in ("proposée", "active"):
+                    continue  # une mission finie ne revient pas en arrière
+                if old == "proposée" and m["status"] == "terminée":
+                    continue  # pas terminée sans avoir été acceptée
+                if old == "active" and m["status"] == "proposée":
+                    m["status"] = "active"
+                hit.update({k: v for k, v in m.items() if v and k != "reward" or (k == "reward" and v and not hit.get("reward"))})
+                if old != hit.get("status"):
+                    hit["turn"] = st.get("turn", 0)
+                    if hit.get("status") == "terminée":
+                        self._gx_reward(st, hit)
+            else:
+                m["turn"] = st.get("turn", 0)
+                ms.append(m)
+        ms = [x for x in ms if not (x.get("status") in ("proposée", "refusée") and
+                                    int(st.get("turn", 0)) - int(x.get("turn", 0)) > 6)]
+        st["missions"] = ms[-12:]
+        self._gx_missions_to_status(st)  # le statut garde toutes les missions (le MJ ne les oublie pas)
+
+    def _gx_after_turn(self, st, before: Tuple[str, str, str]) -> None:
+        if self._game_fam() != "galaxie" or st is not self.game:
+            return
+        try:
+            self._gx_fix_status(st, st.pop("_gx_prev", ""))
+        except Exception as e:
+            log(f"gx status: {e}")
+        try:
+            self._gx_missions_update(st)
+        except Exception as e:
+            log(f"gx missions: {e}")
+        now = self._gx_where(st)
+        st["_gx_where"] = " · ".join(x for x in (now[1], now[2]) if x)[:60]
+        d = self._gx_cur_dest(st)
+        if d:
+            st["_gx_dest"] = d[0]
+        if before[0] and (before[0], before[1]) != (now[0], now[1]) and now[1]:
+            self._gx_warp(f"{before[1] or before[0]} → {now[1]}")
+
+    def _gx_turn_hint(self, st) -> str:
+        """Faits vérifiés + rappel des missions, envoyés au MJ (pas gardés dans l'historique)."""
+        if GAME_ART_FAMILY.get(st.get("builtin", "")) != "galaxie":
+            return ""
+        out = ""
+        you = next((e.get("text", "") for e in reversed(st.get("log") or []) if e.get("who") == "you"), "")
+        fy = _fold(you).lower()
+        props = [m for m in (st.get("missions") or []) if m.get("status") == "proposée"]
+        if props and re.search(r"\baccept", fy):
+            m = next((x for x in props if _fold(x["title"]).lower() in fy), props[-1])
+            m["status"], m["turn"] = "active", st.get("turn", 0)
+            self._gx_missions_to_status(st)
+            out += (f"\n[Le joueur ACCEPTE la mission « {m['title']} »" + (f" de {m['giver']}" if m.get("giver") else "")
+                    + (f" : {m['goal']}" if m.get("goal") else "") + f". Récompense promise : {m.get('reward', '?')}. "
+                    "Raconte l'accord et le départ ; dans MISSIONS elle passe à active. Padawan versera la récompense "
+                    "quand elle sera terminée : ne l'ajoute pas toi-même.]")
+        elif props and re.search(r"\brefus|decline", fy):
+            m = props[-1]
+            m["status"], m["turn"] = "refusée", st.get("turn", 0)
+            self._gx_missions_to_status(st)
+            out += f"\n[Le joueur REFUSE la mission « {m['title']} » : réaction du donneur, puis la suite.]"
+        d = self._gx_cur_dest(st)
+        if d and st.get("_gx_fact_for") != d[0]:
+            st["_gx_fact_for"] = d[0]
+            lab = "NOTE DE FICTION" if "fiction" in d[1] else "FAIT VÉRIFIÉ"
+            out += f"\n[{lab} sur {d[0]} à glisser avec humour : {d[4]}]"
+        offer = next((m for m in (st.get("missions") or []) if m.get("status") == "proposée" and m.get("giver")
+                      and m.get("turn") == st.get("turn", 0)), None)
+        if offer and not re.search(r"accept|refus", fy):
+            out += (f"\n[À la starbase, {offer['giver']} propose la mission « {offer['title']} » : {offer.get('goal', '')} "
+                    f"(récompense {offer['reward']}). Fais-la présenter dans la scène si ce n'est pas déjà fait.]")
+        act = [m for m in (st.get("missions") or []) if m.get("status") in ("active", "proposée")]
+        if act:
+            out += "\n[MISSIONS À SUIVRE : " + " ; ".join(f"{m['title']} ({m['status']}" + (f", {m['reward']}" if m.get('reward') else "") + ")" for m in act[:5]) + "]"
+        return out
+
+    # ---- v41.5 : missions des starbases (offres de Padawan, acceptation, récompenses) et sauts fiables
+    GX_GIVERS = ("la cheffe de quai Okonkwo", "un marchand zorblaxien à trois bras", "la mécanicienne Ti-Lou",
+                 "un robot-douanier très fatigué", "une colonie de champignons diplomates",
+                 "le capitaine Bouchard du cargo Poutine Express", "une archiviste qui collectionne les questions")
+    GX_OFFERS = (("livraison", "Cornichons pour Titan", "livrer 40 pots de cornichons cosmiques sur Titan", "300 crédits"),
+                 ("sauvetage", "Le chat de la ceinture", "récupérer un chat-robot coincé dans la ceinture d'astéroïdes",
+                  "1 membre d'équipage : Moustache, chat-robot navigateur"),
+                 ("enquête", "Le sandwich disparu", "découvrir qui vole les sandwichs de la starbase", "150 crédits"),
+                 ("escorte", "Convoi de sirop", "escorter un cargo de sirop d'érable jusqu'à Mars", "40 carburant"),
+                 ("négociation", "La guerre du banc", "réconcilier deux ambassadeurs qui se disputent un banc de parc", "200 crédits"),
+                 ("mystère", "Le signal 42", "trouver l'origine d'un signal qui répète « 42 » près d'Europe",
+                  "pièce rare : antenne quantique"),
+                 ("réparation", "Panne de gravité", "réparer la gravité du quartier B avant le souper", "120 crédits"),
+                 ("livraison", "Colis pour Pluton", "livrer sur Pluton un colis qui fait tic-tac", "500 crédits"))
+
+    @staticmethod
+    def _gx_clean_num(v: str, gauge: bool) -> str:
+        s_ = str(v or "")
+        if "=" in s_:
+            s_ = s_.rsplit("=", 1)[1]
+        s_ = re.sub(r"\(.*?\)", "", s_)
+        m = re.search(r"-?\d+", s_)
+        if not m:
+            return v
+        n = max(0, int(m.group(0)))
+        return f"{min(100, n)}/100" if gauge else str(n)
+
+    def _gx_fix_status(self, st, prev_status: str) -> None:
+        """Chiffres propres (« 300 - 50 = 250 » → 250), saut appliqué UNE fois par Padawan, récompenses versées."""
+        title, d = game_status_dict(st.get("status", ""))
+        if not d:
+            return
+        _t0, pd = game_status_dict(prev_status or "")
+        ch = False
+        for k in ("COQUE", "CARBURANT", "OXYGÈNE", "ÉNERGIE", "CRÉDITS"):
+            if k in d:
+                nv = self._gx_clean_num(d[k], k != "CRÉDITS")
+                if nv != d[k]:
+                    d[k], ch = nv, True
+        j = st.pop("_gx_jump", None)
+        if j:
+            d["CARBURANT"] = f"{max(0, int(j['fuel']) - int(j['cost']))}/100"
+            if pd.get("CRÉDITS") and d.get("CRÉDITS") != pd.get("CRÉDITS"):
+                d["CRÉDITS"] = pd["CRÉDITS"]  # un saut ne coûte que du carburant
+            short = j["dest"].split(" (")[0].split(" — ")[0]
+            d["SYSTÈME"] = j["sys"]
+            d["PLANÈTE"] = short if "fiction" not in j["sys"] else j["dest"].split(" — ")[0]
+            if _fold(short).lower() not in _fold(d.get("LIEU", "")).lower():
+                d["LIEU"] = j["dest"]
+            elif re.match(r"(in\s+)?orbit(ing)?\b", d.get("LIEU", ""), re.I):
+                d["LIEU"] = f"Orbite de {short}"  # le modèle glisse parfois de l'anglais
+            ch = True
+            st.setdefault("_gx_fx", []).append(f"🚀 Saut vers {j['dest']} : −{j['cost']} carburant")
+        inv = game_inv_list(d.get("INVENTAIRE", ""))  # v41.6 : « 3 Missions » n'est pas un objet
+        inv2 = [(q, n) for q, n in inv if (game_item_words(n) or [""])[0] not in ("mission", "missions", "quete", "quetes")]
+        if len(inv2) != len(inv):
+            d["INVENTAIRE"] = ", ".join(game_item_fmt(q, n) for q, n in inv2) if inv2 else "(vide)"
+            st["inv_new"] = [x for x in (st.get("inv_new") or []) if not re.match(r"(\d+\s+)?(missions?|quetes?)\b",
+                                                                                    _fold(x).lower())]
+            ch = True
+        last = next((e for e in reversed(st.get("log") or []) if e.get("who") == "mj"), {})
+        g_ = game_parse(last.get("text", ""))
+        ftxt = _fold(" ".join([g_.get("scene") or "", g_.get("title") or "", (last.get("text") or "")[:600]])).lower()
+        if not j and re.search(r"starbase|station", _fold(g_.get("scene") or "") + " " + _fold(g_.get("title") or "").lower()) \
+                and not re.search(r"starbase|station|quai|dock", _fold(d.get("LIEU", "")).lower()):
+            d["LIEU"] = "Starbase Rond-Point de Lagrange" if "lagrange" in ftxt else \
+                f"Starbase ({d.get('PLANÈTE') or 'orbite'})"  # v41.6 : LIEU suit l'accostage
+            ch = True
+        if ch:
+            st["status"] = game_status_text(title or "ORDINATEUR DE BORD", d, st.get("status", ""))
+            if st.get("log") and st["log"][-1].get("who") == "mj":
+                st["log"][-1]["status"] = st["status"]
+
+    def _gx_reward(self, st, m: Dict[str, Any]) -> None:
+        if m.get("rewarded") or not m.get("reward"):
+            return
+        m["rewarded"] = True
+        title, d = game_status_dict(st.get("status", ""))
+        r = m["reward"]
+        f = _fold(r).lower()
+        n = re.search(r"\d+", r)
+        if n and "credit" in f and "CRÉDITS" in d:
+            d["CRÉDITS"] = str(int(self._gx_clean_num(d["CRÉDITS"], False) or 0) + int(n.group(0)))
+            got = f"+{n.group(0)} crédits"
+        elif n and "carburant" in f and "CARBURANT" in d:
+            v = int(self._gx_clean_num(d["CARBURANT"], True).split("/")[0])
+            d["CARBURANT"] = f"{min(100, v + int(n.group(0)))}/100"
+            got = f"+{n.group(0)} carburant"
+        elif "equipage" in f:
+            who = r.split(":", 1)[1].strip() if ":" in r else r
+            d["ÉQUIPAGE"] = (d.get("ÉQUIPAGE", "") + ", " + who).strip(", ")
+            got = f"nouvel équipier : {who}"
+        else:
+            it = r.split(":", 1)[1].strip() if ":" in r else r
+            d["INVENTAIRE"] = (d.get("INVENTAIRE", "") + ", " + it).strip(", ")
+            got = it
+        st["status"] = game_status_text(title or "ORDINATEUR DE BORD", d, st.get("status", ""))
+        if st.get("log") and st["log"][-1].get("who") == "mj":
+            st["log"][-1]["status"] = st["status"]
+        st.setdefault("_gx_fx", []).append(f"💰 Mission « {m.get('title', '')} » terminée : {got}")
+
+    def _gx_offer(self, st) -> None:
+        """Arrivée à une starbase : quelqu'un propose une mission (choix Accepter / Refuser ajoutés)."""
+        sy, pl, li = self._gx_where(st)
+        last = next((e for e in reversed(st.get("log") or []) if e.get("who") == "mj"), {})
+        txt = _fold(li + " " + (game_parse(last.get("text", "")).get("title") or "") + " " +
+                    (game_parse(last.get("text", "")).get("scene") or "")).lower()
+        if not re.search(r"starbase|station|\bbase\b|quai|spatioport", txt):
+            return
+        ms = st.get("missions") or []
+        if any(m.get("status") == "proposée" for m in ms):
+            m = next(m for m in ms if m.get("status") == "proposée")
+        else:
+            if int(st.get("turn", 0)) - int(st.get("_gx_offer_turn", -99)) < 3:
+                return
+            used = {m.get("title") for m in ms}
+            rnd = random.Random(f"{st.get('created', '')}{st.get('turn', 0)}{li}")
+            pool = [o for o in self.GX_OFFERS if o[1] not in used] or list(self.GX_OFFERS)
+            o = rnd.choice(pool)
+            m = {"id": "", "title": o[1], "status": "proposée", "reward": o[3], "goal": o[2], "type": o[0],
+                 "giver": rnd.choice(self.GX_GIVERS), "where": li, "turn": st.get("turn", 0)}
+            ms.append(m)
+            st["missions"] = ms[-12:]
+            st["_gx_offer_turn"] = st.get("turn", 0)
+            st.setdefault("_gx_fx", []).append(
+                f"📡 Mission proposée par {m['giver']} : « {m['title']} » — {m.get('goal', '')} — 💰 {m['reward']}")
+            self._gx_missions_to_status(st)
+        chs = list(st.get("choices") or [])
+        labs = [_fold(c[1]).lower() for c in chs]
+        if not any("accepter la mission" in x for x in labs):
+            chs = chs[:4]
+            chs.append((len(chs) + 1, f"Accepter la mission « {m['title']} »"))
+            chs.append((len(chs) + 1, "Refuser la mission poliment"))
+            st["choices"][:] = chs
+
+    def _gx_missions_to_status(self, st) -> None:
+        title, d = game_status_dict(st.get("status", ""))
+        if not d or not st.get("missions"):
+            return
+        txt = "; ".join(f"M{i + 1} - {x['title']} - {x['status']}" + (f" - récompense : {x['reward']}" if x.get("reward") else "")
+                        for i, x in enumerate(st["missions"]))
+        if txt != d.get("MISSIONS", ""):
+            d["MISSIONS"] = txt
+            st["status"] = game_status_text(title or "ORDINATEUR DE BORD", d, st.get("status", ""))
+            if st.get("log") and st["log"][-1].get("who") == "mj":
+                st["log"][-1]["status"] = st["status"]
+
+    # ══ v41.6 📜 LA LÉGENDE S'ÉCRIT : feuille d'aventure, dés, combats, voyages, quêtes, mémoire, chronique ══════════
+    LG_REALM = {r[0]: r for r in LEGENDE_REALMS}
+    LG_COMBAT_SPELLS = ("Trait de feu", "Bouclier", "Bénédiction", "Soin", "Charme", "Chant apaisant")
+
+    def _lg(self, st=None) -> Dict[str, Any]:
+        st = self.game if st is None else st
+        lg = st.setdefault("lg", {})
+        for k, v in (("sheet", {}), ("seen", []), ("faits", []), ("rep", {}), ("quests", []), ("buffs", {}),
+                     ("companions", []), ("spells", []), ("realm_info", [])):
+            lg.setdefault(k, v)
+        lg.setdefault("combat", None)
+        lg.setdefault("royaume", "Val-Clairon")
+        if not lg["sheet"]:
+            d = game_status_dict(st.get("status", ""))[1]
+
+            def n_(k, dflt, i=0):
+                v = _num(d.get(k, ""))
+                return (v[i] if v and (i == 0 or v[1]) else dflt) if v else dflt
+            lg["sheet"] = {"hab": n_("HABILETÉ", 9), "hab0": n_("HABILETÉ", 9, 1), "end": n_("ENDURANCE", 18),
+                           "end0": n_("ENDURANCE", 18, 1), "cha": n_("CHANCE", 8), "cha0": n_("CHANCE", 8, 1),
+                           "mag": n_("MAGIE", 4), "mag0": n_("MAGIE", 4, 1), "or": n_("OR", 10),
+                           "prov": n_("PROVISIONS", 4), "pot": n_("POTIONS", 1)}
+        return lg
+
+    @staticmethod
+    def _lg_d6(n: int = 1) -> List[int]:
+        return [random.randint(1, 6) for _ in range(n)]
+
+    @staticmethod
+    def _lg_spell_txt(spells) -> str:
+        return ", ".join(f"{s} ({LEGENDE_SPELLS.get(s, (1,))[0]})" for s in spells) or "aucun"
+
+    def _lg_fact(self, st, text: str) -> None:
+        lg = self._lg(st)
+        t = re.sub(r"\s+", " ", str(text)).strip()[:160]
+        if t and (not lg["faits"] or lg["faits"][-1].get("t") != t):
+            lg["faits"].append({"turn": st.get("turn", 0), "t": t})
+            lg["faits"] = lg["faits"][-40:]
+
+    def _lg_rep_txt(self, lg) -> str:
+        items = [f"{k} {v:+d}" for k, v in lg.get("rep", {}).items() if v]
+        return ", ".join(items) if items else "neutre partout"
+
+    def _lg_rep(self, st, faction: str, n: int) -> None:
+        if not faction or not n:
+            return
+        lg = self._lg(st)
+        lg["rep"][faction] = max(-5, min(5, int(lg["rep"].get(faction, 0)) + int(n)))
+        st.setdefault("_lg_fx", []).append(f"⚜ Réputation : {faction} {n:+d}")
+
+    def _lg_known(self, lg) -> set:
+        seen = set(lg.get("seen") or [])
+        known = set(seen)
+        for a, b, _m, _d in LEGENDE_ROUTES:
+            if a in seen:
+                known.add(b)
+            if b in seen:
+                known.add(a)
+        return known
+
+    def _lg_routes_from(self, realm: str):
+        out = []
+        for a, b, m, dd in LEGENDE_ROUTES:
+            if a == realm:
+                out.append((b, m, dd))
+            elif b == realm:
+                out.append((a, m, dd))
+        if realm == "Pays-d'en-Haut":  # clin d'œil : la Chasse-galerie vole partout en une nuit
+            out += [(r[0], "canot", 1) for r in LEGENDE_REALMS if r[0] != realm]
+        return out
+
+    def _lg_sheet_to_status(self, st) -> None:
+        """La feuille de Padawan fait foi : réécrit les chiffres et listes dans le bloc ▓▓."""
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        title, d = game_status_dict(st.get("status", ""))
+        if not d:
+            return
+        sh["end"] = max(0, min(int(sh["end"]), int(sh["end0"])))
+        sh["cha"] = max(0, min(int(sh["cha"]), int(sh["cha0"])))
+        sh["mag"] = max(0, min(int(sh["mag"]), int(sh["mag0"])))
+        sh["or"], sh["prov"], sh["pot"] = max(0, min(9999, int(sh["or"]))), max(0, min(30, int(sh["prov"]))), \
+            max(0, min(12, int(sh["pot"])))
+        d.pop("ADVERSAIRE", None)
+        d["HABILETÉ"] = f"{sh['hab']}/{sh['hab0']}"
+        d["ENDURANCE"] = f"{sh['end']}/{sh['end0']}"
+        d["CHANCE"] = f"{sh['cha']}/{sh['cha0']}"
+        d["MAGIE"] = f"{sh['mag']}/{sh['mag0']}"
+        d["OR"], d["PROVISIONS"], d["POTIONS"] = str(sh["or"]), str(sh["prov"]), str(sh["pot"])
+        d["SORTS"] = self._lg_spell_txt(lg["spells"])
+        d["ROYAUME"] = lg["royaume"]
+        d["RÉPUTATION"] = self._lg_rep_txt(lg)
+        if lg["companions"]:
+            d["COMPAGNONS"] = ", ".join(lg["companions"])
+        if lg["quests"]:
+            d["JOURNAL"] = "; ".join(f"Q{i + 1} - {x['title']} - {x['status']}" +
+                                     (f" - récompense : {x['reward']}" if x.get("reward") else "")
+                                     for i, x in enumerate(lg["quests"]))
+        st["status"] = game_status_text(title or "FEUILLE D'AVENTURE", d, st.get("status", ""))
+        if st.get("log") and st["log"][-1].get("who") == "mj":
+            st["log"][-1]["status"] = st["status"]
+
+    # ---- 🎲 dés animés (petite fenêtre parchemin, non bloquante)
+    def _lg_dice_show(self, title: str, groups, verdict: str = "", then=None, ms: int = 1300) -> None:
+        done = {"ok": False}
+        top = None
+
+        def fin():
+            if done["ok"]:
+                return
+            done["ok"] = True
+            try:
+                if top is not None:
+                    top.destroy()
+            except Exception:
+                pass
+            if then:
+                try:
+                    then()
+                except Exception as e:
+                    log(f"lg dice then: {e}")
+        try:
+            top = tk.Toplevel(self)
+            top.overrideredirect(True)
+            try:
+                top.attributes("-topmost", True)
+            except Exception:
+                pass
+            W, H = 560, 92 + 56 * max(1, len(groups)) + (30 if verdict else 0)
+            x = self.winfo_rootx() + max(0, (self.winfo_width() - W) // 2)
+            y = self.winfo_rooty() + max(0, (self.winfo_height() - H) // 3)
+            top.geometry(f"{W}x{H}+{x}+{y}")
+            self._lg_dice_win = top
+            cv = tk.Canvas(top, width=W, height=H, bg="#f3e4bf", highlightthickness=4, highlightbackground="#b8862b")
+            cv.pack(fill="both", expand=True)
+        except Exception as e:
+            log(f"lg dice: {e}")
+            top = None
+            fin()
+            return
+        N = 11
+        step = {"n": 0}
+        PIPS = {1: [(.5, .5)], 2: [(.27, .27), (.73, .73)], 3: [(.25, .25), (.5, .5), (.75, .75)],
+                4: [(.27, .27), (.73, .27), (.27, .73), (.73, .73)], 5: [(.25, .25), (.75, .25), (.5, .5), (.25, .75), (.75, .75)],
+                6: [(.27, .2), (.73, .2), (.27, .5), (.73, .5), (.27, .8), (.73, .8)]}
+
+        def face(x0, y0, v, s=40, rot=0):
+            cv.create_rectangle(x0 + rot, y0 - rot, x0 + s + rot, y0 + s - rot, fill="#fffaf0", outline="#5a1622", width=2)
+            for px, py in PIPS.get(v, PIPS[1]):
+                r = s * .09
+                cv.create_oval(x0 + px * s - r + rot, y0 + py * s - r - rot, x0 + px * s + r + rot, y0 + py * s + r - rot,
+                               fill="#5a1622", outline="")
+
+        def draw():
+            try:
+                if not top.winfo_exists():
+                    return
+            except Exception:
+                return
+            k = step["n"]
+            cv.delete("all")
+            cv.create_rectangle(8, 8, W - 8, H - 8, outline="#d4a53c", width=1)
+            cv.create_text(W // 2, 24, text="🎲 " + title, fill="#5a1622", font=("Georgia", 14, "bold"))
+            for i, (lab, dice, bonus, total) in enumerate(groups):
+                y0 = 48 + i * 56
+                cv.create_text(18, y0 + 20, text=str(lab)[:20], anchor="w", fill="#3a2414", font=("Georgia", 11, "bold"))
+                for j, v in enumerate(dice):
+                    fin_ = k >= N
+                    face(200 + j * 52, y0 + (0 if fin_ else random.randint(-5, 5)), v if fin_ else random.randint(1, 6),
+                         rot=0 if fin_ else random.randint(-3, 3))
+                if k >= N:
+                    txt = "+".join(map(str, dice)) + (f" {'+' if bonus >= 0 else '−'} {abs(bonus)}" if bonus else "") + f" = {total}"
+                    cv.create_text(W - 18, y0 + 20, text=txt, anchor="e", fill="#5a1622", font=("Consolas", 13, "bold"))
+            if k >= N and verdict:
+                cv.create_text(W // 2, H - 26, text=verdict, fill="#8b1a2b", font=("Georgia", 12, "bold italic"), width=W - 40)
+            step["n"] += 1
+            if k < N:
+                self.after(60, draw)  # (pas top.after : top est détruite dans fin)
+            elif k == N:
+                self.after(ms, fin)
+        draw()
+        top.bind("<Button-1>", lambda e: fin())
+        self.after(ms + 3000, fin)  # filet de sécurité
+
+    # ---- création du héros (dés)
+    def _lg_intro_pick(self, n: int, custom_text: str = ""):
+        from tkinter import simpledialog
+        st = self.game
+        meta = GAME_META.get(st.get("builtin", ""), {})
+        arch = meta.get("archetypes", [])
+        extra = ""
+        if 1 <= n <= len(arch) and not custom_text:
+            a = dict(arch[n - 1])
+            name = simpledialog.askstring("📜 " + a["label"], f"Nom de ton héros ({a['label']}) :",
+                                          initialvalue=a["name"], parent=self)
+            if name is None:
+                return
+            name = name.strip()[:40] or a["name"]
+            disp = f"{n}. {a['label']} — {name}"
+        else:
+            desc = custom_text or simpledialog.askstring(
+                "📜 " + meta.get("custom", "Mon héros"), "Décris ton héros (nom, peuple, métier, style, forces, faiblesses…) :",
+                parent=self)
+            if not desc or not desc.strip():
+                return
+            desc = desc.strip()[:400]
+            name = re.split(r"[,.;:(]", desc)[0].strip()[:30] or "Héros"
+            a = {"label": "Héros libre", "inv": "torche, corde, gourde", "bonus": {"hab": 0, "end": 0, "cha": 0, "mag": 3, "or": 10},
+                 "arme": "épée courte", "armure": "cuir", "sorts": ["Soin"], "royaume": "Val-Clairon",
+                 "lieu": "Auberge du Sanglier doré", "prov": 5, "pot": 1}
+            disp = "✍ " + desc[:120]
+            extra = " Mon héros tel que je le décris : " + desc + "."
+        b = a.get("bonus", {})
+        r = {"hab": self._lg_d6(1), "end": self._lg_d6(2), "cha": self._lg_d6(1), "mag": self._lg_d6(1), "or": self._lg_d6(2)}
+        hab = max(5, min(13, sum(r["hab"]) + 6 + b.get("hab", 0)))
+        end = sum(r["end"]) + 12 + b.get("end", 0)
+        cha = sum(r["cha"]) + 6 + b.get("cha", 0)
+        mag = max(1, sum(r["mag"]) + b.get("mag", 0))
+        or_ = sum(r["or"]) + b.get("or", 0)
+        lg = self._lg(st)
+        lg.update(sheet={"hab": hab, "hab0": hab, "end": end, "end0": end, "cha": cha, "cha0": cha, "mag": mag, "mag0": mag,
+                         "or": or_, "prov": a["prov"], "pot": a["pot"]},
+                  seen=[a["royaume"]], royaume=a["royaume"], spells=list(a["sorts"]), combat=None, faits=[], quests=[],
+                  rep={}, companions=[], realm_info=[a["royaume"]])
+        fmt = dict(a, name=name, hab=hab, end=end, cha=cha, mag=mag, or_=or_, sorts=self._lg_spell_txt(a["sorts"]))
+        msg = meta["start"].format(**fmt) + extra
+        st["status"] = meta["status0"].format(**fmt)
+        self._lg_fact(st, f"{name}, {a['label']}, commence sa légende : {a['lieu']} ({a['royaume']}).")
+        st["phase"] = "play"
+        st["choices"] = []
+        self._game_update_pip()
+        groups = [("HABILETÉ", r["hab"], 6 + b.get("hab", 0), hab), ("ENDURANCE", r["end"], 12 + b.get("end", 0), end),
+                  ("CHANCE", r["cha"], 6 + b.get("cha", 0), cha), ("MAGIE", r["mag"], b.get("mag", 0), mag),
+                  ("OR", r["or"], b.get("or", 0), or_)]
+        line = "🎲 Les dés écrivent ta feuille : " + " · ".join(f"{g[0]} {g[3]}" for g in groups)
+        st["log"].append({"who": "sys", "text": line})
+        self._game_w(line + "\n", "check")
+        self._lg_dice_show("Les dés écrivent ta légende", groups, f"{name} — {a['label']}",
+                           then=lambda: self._game_send(msg, display=disp))
+
+    # ---- ⚔ combats (Padawan lance les dés et tient les chiffres)
+    def _lg_foe_find(self, text: str):
+        f = _fold(text or "").lower()
+        best, blen = None, 0
+        for b in LEGENDE_BESTIARY:
+            for m in re.finditer(b[1], f):
+                if len(m.group(0)) > blen:
+                    best, blen = b, len(m.group(0))
+        return best
+
+    def _lg_combat_start(self, st, name: str, hab: int, end: int) -> None:
+        lg = self._lg(st)
+        hab, end = max(3, min(13, int(hab))), max(2, min(30, int(end)))
+        lg["combat"] = {"name": str(name).strip(" .:-")[:40] or "Adversaire", "hab": hab, "end": end, "end0": end, "round": 0}
+        st.setdefault("_lg_fx", []).append(f"⚔ COMBAT : {lg['combat']['name']} — HABILETÉ {hab} · ENDURANCE {end}")
+        self._lg_fact(st, f"Combat contre {lg['combat']['name']} ({lg['royaume']}).")
+
+    def _lg_combat_choices(self, st) -> None:
+        lg = self._lg(st)
+        c, sh = lg["combat"], lg["sheet"]
+        if not c:
+            return
+        chs, mp = [], {}
+
+        def add(lab, kind, sp=""):
+            n = len(chs) + 1
+            chs.append((n, lab))
+            mp[str(n)] = [kind, sp]
+        add(f"⚔ Assaut contre {c['name']} (2d6 + HABILETÉ {sh['hab']})", "assaut")
+        add(f"🍀 Assaut en tentant ta chance (CHANCE {sh['cha']})", "chance")
+        for sp in [s for s in lg["spells"] if s in self.LG_COMBAT_SPELLS][:2]:
+            cost = LEGENDE_SPELLS[sp][0]
+            if sh["mag"] >= cost:
+                add(f"✨ Sort : {sp} (−{cost} MAGIE) — {LEGENDE_SPELLS[sp][1]}", "sort", sp)
+        if sh["pot"] > 0:
+            add(f"🧪 Boire une potion (+6 ENDURANCE, reste {sh['pot']})", "potion")
+        add("🗣 Parlementer (2d6 + réputation ≥ 9)", "parole")
+        add("🏃 Fuir (−2 ENDURANCE)", "fuite")
+        add("⚔⚔ Combattre jusqu'au bout (dés rapides)", "auto")
+        lg["combat_map"] = mp
+        if isinstance(st.get("choices"), list):
+            st["choices"][:] = chs
+        else:
+            st["choices"] = chs
+
+    def _lg_pick(self, n: int, label: str) -> bool:
+        st = self.game
+        lg = self._lg(st)
+        if not lg.get("combat"):
+            return False
+        act = (lg.get("combat_map") or {}).get(str(n))
+        if not act:
+            return False
+        self._lg_combat_act(act[0], spell=act[1], label=f"{n}. {label}")
+        return True
+
+    def _lg_combat_act(self, kind: str, spell: str = "", tactic: str = "", label: str = "") -> None:
+        st = self.game
+        if not st or self.busy:
+            return
+        lg = self._lg(st)
+        c, sh, buffs = lg["combat"], lg["sheet"], lg["buffs"]
+        if not c:
+            return
+        groups: List[Any] = []
+        lines: List[str] = []
+        D = self._lg_d6
+
+        def luck() -> bool:
+            r = D(2)
+            ok = sum(r) <= sh["cha"]
+            groups.append(("Chance", r, 0, sum(r)))
+            lines.append(f"tu tentes ta chance : {sum(r)} {'≤' if ok else '>'} {sh['cha']} → {'CHANCEUX' if ok else 'MALCHANCEUX'} (CHANCE −1)")
+            sh["cha"] = max(0, sh["cha"] - 1)
+            return ok
+
+        def hurt_me(dmg: int, why: str = ""):
+            if buffs.pop("bouclier", 0):
+                lines.append("ton Bouclier arrête le coup")
+                return
+            sh["end"] = max(0, sh["end"] - dmg)
+            lines.append(f"{c['name']} te touche{why} : −{dmg} ENDURANCE ({sh['end']}/{sh['end0']})")
+
+        def hurt_foe(dmg: int, why: str = ""):
+            c["end"] = max(0, c["end"] - dmg)
+            lines.append(f"tu touches {c['name']}{why} : −{dmg} ENDURANCE ({c['end']}/{c['end0']})")
+
+        def assault(bonus: int = 0, try_luck: bool = False, win: int = 2, show: bool = True):
+            a, m = D(2), D(2)
+            hb = sh["hab"] + bonus + buffs.pop("benediction", 0)
+            ta, tm = sum(a) + hb, sum(m) + c["hab"]
+            if show:
+                groups.extend([("Toi", a, hb, ta), (c["name"][:20], m, c["hab"], tm)])
+            lines.append(f"assaut {ta} contre {tm}")
+            if ta > tm:
+                dmg = win
+                if try_luck:
+                    dmg = win + 2 if luck() else max(1, win - 1)
+                hurt_foe(dmg)
+            elif tm > ta:
+                dmg = 2
+                if try_luck:
+                    dmg = 1 if luck() else 3
+                hurt_me(dmg)
+            else:
+                lines.append("les armes se croisent : personne n'est touché")
+
+        def riposte():
+            if c["end"] <= 0:
+                return
+            a, m = D(2), D(2)
+            ta, tm = sum(a) + sh["hab"], sum(m) + c["hab"]
+            groups.extend([("Ta garde", a, sh["hab"], ta), (c["name"][:20], m, c["hab"], tm)])
+            if tm > ta:
+                hurt_me(2, " en ripostant")
+            else:
+                lines.append(f"tu pares la riposte ({ta} contre {tm})")
+        c["round"] = int(c.get("round", 0)) + 1
+        title = f"Round {c['round']} — {c['name']}"
+        ended = ""
+        if kind == "assaut":
+            assault()
+        elif kind == "chance":
+            assault(try_luck=True)
+        elif kind == "tactique":
+            lines.append(f"tactique libre : « {tactic[:120]} » (+2 à l'assaut, 3 dégâts si elle réussit)")
+            assault(bonus=2, win=3)
+        elif kind == "sort":
+            cost = LEGENDE_SPELLS.get(spell, (2,))[0]
+            if sh["mag"] < cost:
+                c["round"] -= 1
+                return self._game_flash(f"Pas assez de MAGIE pour {spell}.")
+            sh["mag"] -= cost
+            lines.append(f"sort {spell} : −{cost} MAGIE ({sh['mag']}/{sh['mag0']})")
+            if spell == "Trait de feu":
+                hurt_foe(3, " avec le trait de feu")
+                riposte()
+            elif spell == "Soin":
+                h_ = min(5, sh["end0"] - sh["end"])
+                sh["end"] += h_
+                lines.append(f"+{h_} ENDURANCE ({sh['end']}/{sh['end0']})")
+                riposte()
+            elif spell == "Bouclier":
+                buffs["bouclier"] = 1
+                assault()
+            elif spell == "Bénédiction":
+                buffs["benediction"] = 2
+                assault()
+            else:  # Charme, Chant apaisant
+                kind, buffs["parole"] = "parole", 4 if spell == "Charme" else 3
+        elif kind == "potion":
+            if sh["pot"] <= 0:
+                c["round"] -= 1
+                return self._game_flash("Plus de potion.")
+            sh["pot"] -= 1
+            h_ = min(6, sh["end0"] - sh["end"])
+            sh["end"] += h_
+            lines.append(f"tu bois une potion : +{h_} ENDURANCE ({sh['end']}/{sh['end0']}), POTIONS {sh['pot']}")
+            riposte()
+        elif kind == "fuite":
+            sh["end"] = max(0, sh["end"] - 2)
+            lines.append(f"tu prends la fuite : −2 ENDURANCE ({sh['end']}/{sh['end0']})")
+            ended = "fuite"
+        elif kind == "auto":
+            n = 0
+            while c["end"] > 0 and sh["end"] > 0 and n < 14:
+                n += 1
+                assault(show=(n == 1))
+            title = f"Combat jusqu'au bout — {n} assaut(s)"
+            if len(lines) > 8:
+                lines = lines[:3] + [f"… {n} assauts en tout …"] + lines[-3:]
+        if kind == "parole":
+            r = D(2)
+            bonus = buffs.pop("parole", 0) + max(-2, min(3, sum(lg["rep"].values()) // 2 if lg["rep"] else 0))
+            tot = sum(r) + bonus
+            groups.append(("Parole", r, bonus, tot))
+            if tot >= 9:
+                lines.append(f"parlementer : {tot} ≥ 9 → {c['name']} baisse sa garde")
+                ended = "paix"
+            else:
+                lines.append(f"parlementer : {tot} < 9 → les mots ne suffisent pas")
+                hurt_me(2, " pendant que tu parles")
+        if not ended and c["end"] <= 0:
+            ended = "victoire"
+        if not ended and sh["end"] <= 0:
+            ended = "defaite"
+        name = c["name"]
+        end_txt = ""
+        if ended == "victoire":
+            loot = random.randint(8, 22) if c["hab"] >= 10 else random.randint(2, 9)
+            sh["or"] += loot
+            lines.append(f"VICTOIRE ! butin : {loot} pièces d'or")
+            end_txt = f"le héros a vaincu {name} ; butin {loot} pièces d'or"
+            self._lg_fact(st, f"Tu as vaincu {name} ({lg['royaume']}).")
+        elif ended == "defaite":
+            lost = sh["or"] // 2
+            sh["or"] -= lost
+            sh["end"], sh["cha"] = max(1, sh["end0"] // 3), max(0, sh["cha"] - 1)
+            lines.append(f"tu t'effondres… recueilli de justesse : −{lost} OR, CHANCE −1, ENDURANCE {sh['end']}")
+            end_txt = (f"le héros est vaincu par {name}, puis recueilli de justesse par quelqu'un (perd {lost} pièces d'or) ; "
+                       "la légende continue")
+            self._lg_fact(st, f"{name} t'a vaincu ; tu as été recueilli de justesse.")
+        elif ended == "paix":
+            end_txt = f"{name} accepte de parler : le combat cesse"
+            self._lg_fact(st, f"Tu as fait baisser les armes à {name} par la parole.")
+        elif ended == "fuite":
+            end_txt = f"le héros fuit devant {name}"
+            self._lg_fact(st, f"Tu as fui devant {name}.")
+        rnd_no = c["round"]
+        if ended:
+            lg["combat"] = None
+            lg["buffs"] = {}
+        self._lg_sheet_to_status(st)
+        self._game_update_pip()
+        summary = "🎲 " + " · ".join(lines)
+        st["log"].append({"who": "fx", "text": summary})
+        self._game_w(summary + "\n", "check")
+        verdict = {"victoire": f"⚔ Victoire sur {name} !", "defaite": "☠ Tu tombes… mais la légende continue",
+                   "paix": "🗣 Les armes se baissent", "fuite": "🏃 Tu t'échappes"}.get(ended, lines[-1][:90] if lines else "")
+        msg = (f"[COMBAT résolu par Padawan, round {rnd_no} contre {name} : " + " ; ".join(lines)
+               + (f". COMBAT TERMINÉ : {end_txt}" if ended else f". Le combat continue ({name} ENDURANCE {c['end']}/{c['end0']})")
+               + f". Feuille : ENDURANCE {sh['end']}/{sh['end0']}, CHANCE {sh['cha']}/{sh['cha0']}, MAGIE {sh['mag']}/{sh['mag0']}, "
+               f"OR {sh['or']}, POTIONS {sh['pot']}. Raconte CE moment en 60 à 130 mots avec ces résultats exacts, sans les changer"
+               + (", puis 3 à 5 choix pour la suite de l'aventure.]" if ended else
+                  ", sans terminer le combat ; finis par 3 choix tactiques courts.]"))
+        if tactic:
+            msg = f"Ma tactique : {tactic}. " + msg
+        st["_lg_combat_turn"] = True
+        disp = label or {"tactique": f"✍ Tactique : {tactic[:80]}", "auto": "⚔⚔ Combat jusqu'au bout"}.get(kind, f"⚔ {kind}")
+        self._lg_dice_show(title, groups[:6], verdict, then=lambda: self._game_send(msg, display=disp))
+
+    # ---- effets que Padawan applique lui-même (potion, repas, repos, sorts hors combat)
+    def _lg_effects(self, st, text: str) -> str:
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        f = _fold(text).lower()
+        out, applied = [], set()
+        if re.search(r"\b(bois|boire|avale|avaler|utilise|prends?|prendre)\b.{0,25}\bpotion", f) and sh["pot"] > 0:
+            sh["pot"] -= 1
+            h_ = min(6, sh["end0"] - sh["end"])
+            sh["end"] += h_
+            out.append(f"potion bue : +{h_} ENDURANCE, POTIONS {sh['pot']}")
+            applied |= {"pot", "end"}
+        if re.search(r"\b(mange|manger|repas|provision|casse-croute|ration)\b", f) and sh["prov"] > 0 and "end" not in applied:
+            sh["prov"] -= 1
+            h_ = min(4, sh["end0"] - sh["end"])
+            sh["end"] += h_
+            out.append(f"provision mangée : +{h_} ENDURANCE, PROVISIONS {sh['prov']}")
+            applied |= {"prov", "end"}
+        if re.search(r"\b(dormir|dors|repos|reposer|nuit a l.auberge|bivouac|camper|une chambre)\b", f):
+            h_ = min(3, sh["end0"] - sh["end"])
+            sh["end"] += h_
+            sh["mag"] = sh["mag0"]
+            out.append(f"repos : +{h_} ENDURANCE, MAGIE restaurée ({sh['mag']}/{sh['mag0']})")
+            applied |= {"end", "mag"}
+        for sp in lg["spells"]:
+            if _fold(sp).lower() in f and re.search(r"\b(lance|lancer|incante|sort|invoque|utilise)\b", f):
+                cost = LEGENDE_SPELLS.get(sp, (1,))[0]
+                if sh["mag"] < cost:
+                    out.append(f"sort {sp} impossible : MAGIE {sh['mag']} (il en faut {cost})")
+                    continue
+                sh["mag"] -= cost
+                ef = ""
+                if sp == "Soin":
+                    h_ = min(5, sh["end0"] - sh["end"])
+                    sh["end"] += h_
+                    ef = f", +{h_} ENDURANCE"
+                    applied.add("end")
+                elif sp == "Lumière":
+                    lg["buffs"]["lumiere"] = 1
+                out.append(f"sort {sp} lancé : −{cost} MAGIE ({sh['mag']}/{sh['mag0']}){ef}")
+                applied.add("mag")
+                break
+        if not out:
+            return ""
+        st["_lg_applied"] = sorted(applied | set(st.get("_lg_applied") or []))
+        self._lg_sheet_to_status(st)
+        self._game_update_pip()
+        line = "📜 " + " · ".join(out)
+        st["log"].append({"who": "fx", "text": line})
+        self._game_w(line + "\n", "check")
+        return "\n[EFFET appliqué par Padawan : " + " ; ".join(out) + ". Raconte-le ; recopie ces chiffres.]"
+
+    def _lg_turn_hint(self, st, text: str) -> str:
+        """Indices du tour pour le MJ (pas gardés dans l'historique) : épreuve, effets, quêtes, mémoire, royaume."""
+        if GAME_ART_FAMILY.get(st.get("builtin", "")) != "legende":
+            return ""
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        out = ""
+        st["_lg_prev"] = st.get("status", "")
+        special = text.lstrip().startswith(("[COMBAT", "Ma tactique", "Je voyage", "(Hors jeu", "(suite"))
+        if not special:
+            out += self._lg_effects(st, text)
+            st["_lg_prev"] = st.get("status", "")
+            r = self._lg_d6(2)
+            ok = sum(r) <= sh["hab"]
+            self._game_w(f"🎲 Épreuve d'Habileté (2d6) : {r[0]}+{r[1]} = {sum(r)} {'≤' if ok else '>'} {sh['hab']} → "
+                         f"{'réussite' if ok else 'échec'} (si l'action est risquée)\n", "sys")
+            out += (f"\n[ÉPREUVE D'HABILETÉ lancée par Padawan : 2d6 = {sum(r)} contre HABILETÉ {sh['hab']} → "
+                    f"{'RÉUSSITE' if ok else 'ÉCHEC'}. Ne l'utilise QUE si l'action est risquée.]")
+        fy = _fold(text).lower()
+        props = [m for m in lg["quests"] if m.get("status") == "proposée"]
+        if props and re.search(r"\baccept", fy):
+            m = next((x for x in props if _fold(x["title"]).lower() in fy), props[-1])
+            m["status"], m["turn"] = "active", st.get("turn", 0)
+            self._lg_fact(st, f"Tu as accepté la quête « {m['title']} »" + (f" ({m['giver']})" if m.get("giver") else "") + ".")
+            self._lg_sheet_to_status(st)
+            st["_lg_prev"] = st.get("status", "")
+            out += (f"\n[Le joueur ACCEPTE la quête « {m['title']} »" + (f" de {m['giver']}" if m.get("giver") else "")
+                    + (f" : {m['goal']}" if m.get("goal") else "") + (f". Récompense promise : {m['reward']}. " if m.get("reward") else
+                                                                ". Fais fixer une récompense précise (or, objet ou compagnon). ")
+                    + "Raconte l'accord et le départ ; au JOURNAL elle passe à active. Padawan versera la récompense.]")
+        elif props and re.search(r"\brefus|decline", fy):
+            m = props[-1]
+            m["status"], m["turn"] = "refusée", st.get("turn", 0)
+            self._lg_fact(st, f"Tu as refusé la quête « {m['title']} ».")
+            self._lg_sheet_to_status(st)
+            st["_lg_prev"] = st.get("status", "")
+            out += f"\n[Le joueur REFUSE la quête « {m['title']} » : réaction du donneur (il s'en souviendra), puis la suite.]"
+        if re.search(r"\bje (te |vous |lui |leur )?propose|j.offre mes services|je me propose|ma propre quete", fy):
+            out += ("\n[Le joueur PROPOSE SA PROPRE QUÊTE : fais réagir le PNJ de façon crédible ; si elle est acceptée, "
+                    "ajoute-la au JOURNAL (active) avec une récompense précise.]")
+        realm = lg["royaume"]
+        if realm not in lg["realm_info"] and realm in self.LG_REALM:
+            lg["realm_info"].append(realm)
+            r_ = self.LG_REALM[realm]
+            out += f"\n[ROYAUME {realm} ({r_[1]}) : {r_[4]} ; créatures possibles : {r_[7]}.]"
+        offer = next((m for m in lg["quests"] if m.get("status") == "proposée" and m.get("giver")
+                      and m.get("turn") == st.get("turn", 0)), None)
+        if offer and not re.search(r"accept|refus", fy):
+            out += (f"\n[Ici, {offer['giver']} propose la quête « {offer['title']} » : {offer.get('goal', '')} "
+                    f"(récompense {offer['reward']}). Fais-la présenter dans la scène.]")
+        act = [m for m in lg["quests"] if m.get("status") in ("active", "proposée")]
+        if act:
+            out += "\n[QUÊTES À SUIVRE : " + " ; ".join(f"{m['title']} ({m['status']})" for m in act[:5]) + "]"
+        facts = [x["t"].rstrip(" .") for x in lg["faits"][-6:]]
+        mem = facts + ([f"compagnons : {', '.join(lg['companions'])}"] if lg["companions"] else []) + \
+            ([f"réputation : {self._lg_rep_txt(lg)}"] if any(lg["rep"].values()) else [])
+        if mem:
+            out += "\n[LE MONDE SE SOUVIENT : " + " ; ".join(mem) + ". Les PNJ peuvent y faire allusion.]"
+        if lg.get("combat"):
+            c = lg["combat"]
+            out += f"\n[COMBAT EN COURS contre {c['name']} (HABILETÉ {c['hab']}, ENDURANCE {c['end']}/{c['end0']}).]"
+        return out
+
+    # ---- après chaque réponse du MJ : la feuille de Padawan fait foi
+    def _lg_after_turn(self, st) -> None:
+        if self._game_fam() != "legende" or st is not self.game:
+            return
+        try:
+            self._lg_after_turn2(st)
+        except Exception as e:
+            log(f"lg after turn: {e}")
+
+    def _lg_after_turn2(self, st) -> None:
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        title, d = game_status_dict(st.get("status", ""))
+        if not d:
+            return
+        lg_last = st["log"][-1] if st.get("log") else {}
+        reply = lg_last.get("text", "") if lg_last.get("who") == "mj" else ""
+        you = next((e.get("text", "") for e in reversed(st.get("log") or []) if e.get("who") == "you"), "")
+        narr_only = re.sub(FENCE + r"[\s\S]*?(" + FENCE + r"|$)", " ", reply)
+        narr_only = "\n".join(x for x in narr_only.split("\n") if not _status_kv_known(x) and "▓▓" not in x)
+        fy, fr = _fold(you).lower(), _fold(narr_only).lower()  # narration seulement (pas le bloc ▓▓)
+        g = game_parse(reply)
+        applied = set(st.pop("_lg_applied", []) or [])
+        combat_turn = bool(st.pop("_lg_combat_turn", False))
+        prev = game_status_dict(st.pop("_lg_prev", "") or "")[1]
+        adv = d.get("ADVERSAIRE", "")
+        # 1. objets « comptés » gagnés ce tour → compteurs ; bric-à-brac (« 3 Missions ») retiré
+        newl = list(st.get("inv_new") or [])
+        gained = {" ".join(game_item_words(x)) for x in newl}
+        inv, keep = game_inv_list(d.get("INVENTAIRE", "")), []
+        for q, n in inv:
+            w = game_item_words(n)
+            f0 = _fold(n).lower()
+            new = " ".join(w) in gained or any(game_item_match([(1, n)], x) == 0 for x in newl)
+            if not w or w[0] in ("mission", "quete", "tache", "journal"):
+                continue
+            kk = "pot" if re.search(r"\bpotions?\b|\bfioles?\b|\belixirs?\b", f0) else (
+                "prov" if re.search(r"\bprovisions?\b|\brations?\b|\bvivres\b", f0) else (
+                    "or" if re.search(r"pieces? d.or|\becus?\b|bourse d.or|\bpieces?\b", f0) else ""))
+            if kk:
+                num = re.search(r"\d+", f0)
+                q = q if q > 1 else (int(num.group(0)) if num and kk == "or" else q)
+                got = re.search(r"obtiens|trouves?|recois|recu|ramass|te (donne|tend|offre|remet|glisse)|achete|recuper|"
+                                r"gagnes?|butin|recompense|tu prends", fr)
+                if new and got and not combat_turn and kk not in applied:
+                    sh[kk] += min(q, 60) if (kk != "or" or q > 1) else random.randint(3, 10)
+                    applied.add(kk)
+                    st.setdefault("_lg_fx", []).append(f"+{game_item_fmt(q, n)} (compteur)")
+                continue
+            keep.append((q, n))
+        d["INVENTAIRE"] = ", ".join(game_item_fmt(q, n) for q, n in keep) if keep else "(vide)"
+        st["inv_new"] = [x for x in newl if not re.match(
+            r"(\d+\s+)?(potions?|provisions?|rations?|pieces? d.or|missions?|quetes?)\b", _fold(x).lower())]
+        # 2. chiffres : le MJ ne peut les bouger que d'un pas raisonnable (jamais pendant un combat résolu par Padawan)
+        if not combat_turn:
+            heal = bool(re.search(r"repos|dors|dormi|soign|gueri|banquet|repas|potion|baume", fr))
+            why = {"end": (r"bless|perds|degat|touche|mord|griff|frapp|douleur|saign|brul|tombe|chute|epuis|empoison|coup",
+                           r"repos|dors|dormi|soign|gueri|banquet|repas|potion|baume|regagn|recuper"),
+                   "or": (r"paie|payes?|pay[eé]|donnes?|depens|vole|perds|achete|coute|offre|pourboire|tarif|prix|\bpieces?",
+                          r"pieces?|\bor\b|ecus?|bourse|tresor|recompense|butin|paie|gagn|vend"),
+                   "prov": (r"mange|repas|provision|ration|vivres", r"provision|ration|vivres|pain|viande|fromage|nourriture"),
+                   "pot": (r"potion|fiole|elixir", r"potion|fiole|elixir")}
+            for key, sk, lo, hi in (("ENDURANCE", "end", -4, 3), ("OR", "or", -40, 40), ("PROVISIONS", "prov", -2, 4),
+                                    ("POTIONS", "pot", -1, 2)):
+                if sk in applied:
+                    continue
+                v = _num(d.get(key, ""))
+                pv = _num(prev.get(key, "")) if prev else None
+                if v is None or (pv is not None and v[0] == pv[0]):
+                    continue  # recopié tel quel
+                delta = max(lo, min(6 if (sk == "end" and heal) else hi, v[0] - int(sh[sk])))
+                if delta and not re.search(why[sk][0 if delta < 0 else 1], fr):
+                    delta = 0  # chiffre changé sans que la narration le justifie : Padawan garde le sien
+                if delta:
+                    sh[sk] = max(0, int(sh[sk]) + delta)
+        # 3. royaume / lieu / voyage
+        t = st.pop("_lg_travel", None)
+        if t:
+            lg["royaume"] = t["dest"]
+            if t["dest"] not in lg["seen"]:
+                lg["seen"].append(t["dest"])
+            if not d.get("LIEU") or d.get("LIEU") == prev.get("LIEU") or \
+                    (t["from"] != t["dest"] and _fold(t["from"]).lower() in _fold(d.get("LIEU", "")).lower()):
+                d["LIEU"] = f"{t['dest']} — arrivée"
+            self._lg_fact(st, f"Tu as voyagé {LEGENDE_MODES[t['mode']][1]} de {t['from']} jusqu'à {t['dest']}.")
+            if t.get("foe") and not lg.get("combat"):
+                b = next((x for x in LEGENDE_BESTIARY if x[0] == t["foe"]), None)
+                if b:
+                    self._lg_combat_start(st, b[0], b[2], b[3])
+        else:
+            rv = _fold(d.get("ROYAUME", "")).lower()
+            hit = next((r[0] for r in LEGENDE_REALMS if _fold(r[0]).lower() in rv), "")
+            if hit and hit != lg["royaume"]:
+                lg["royaume"] = hit
+                if hit not in lg["seen"]:
+                    lg["seen"].append(hit)
+                    self._lg_fact(st, f"Tu es arrivé en {hit}.")
+        if not d.get("LIEU") and prev.get("LIEU"):
+            d["LIEU"] = prev["LIEU"]
+        # 4. compagnons et sorts appris
+        cv = d.get("COMPAGNONS", "")
+        if cv and not re.match(r"^\s*(aucun|personne|-|n/a|\(aucun|nul)", _fold(cv)):
+            for part in re.split(r"\s*;\s*|,\s*(?=[A-ZÀ-Ü])", cv):  # « Ti-Jos, bûcheron volant » = 1 compagnon
+                p = part.strip(" .")
+                if len(p) > 2 and not re.match(r"^(aucun|personne)", _fold(p)) and \
+                        not any(_fold(p.split(" (")[0]).lower() in _fold(x).lower() for x in lg["companions"]):
+                    lg["companions"].append(p[:60])
+                    lg["companions"] = lg["companions"][-6:]
+                    self._lg_fact(st, f"{p.split(' (')[0][:40]} s'est joint à toi.")
+                    st.setdefault("_lg_fx", []).append(f"🤝 Compagnon : {p[:50]}")
+        for sp in LEGENDE_SPELLS:
+            if sp not in lg["spells"] and _fold(sp).lower() in _fold(d.get("SORTS", "")).lower():
+                lg["spells"].append(sp)
+                self._lg_fact(st, f"Tu as appris le sort {sp}.")
+                st.setdefault("_lg_fx", []).append(f"✨ Nouveau sort : {sp}")
+        # 5. quêtes du JOURNAL (statuts du MJ, récompenses versées par Padawan)
+        self._lg_quests_update(st, d.get("JOURNAL", ""))
+        # 6. début de combat (ligne ADVERSAIRE, ou scène de combat avec une créature du bestiaire)
+        if not lg.get("combat") and not combat_turn:
+            foe = None
+            if adv:
+                fa = _fold(adv)
+                nm = re.split(r"[(,;|]", adv)[0].strip(" .-")
+                h_ = re.search(r"habilet\w*\s*:?\s*(\d+)", fa, re.I)
+                e_ = re.search(r"endurance\s*:?\s*(\d+)", fa, re.I)
+                b = self._lg_foe_find(nm)
+                if nm and not re.match(r"^(aucun|personne|-|n/a|rien)", _fold(nm)):
+                    foe = (nm, int(h_.group(1)) if h_ else (b[2] if b else 7), int(e_.group(1)) if e_ else (b[3] if b else 8))
+            if not foe:
+                fight = (_art_norm(g.get("scene", "")) == "combat" or re.search(
+                    r"t.attaque|se jette sur toi|bondit sur toi|fonce sur toi|charge sur toi|degaine|engage le combat|"
+                    r"\bcombat commence|attaque !", fr)) and not re.search(r"\bfui|\bfuir", fy)
+                if fight or re.search(r"\b(j.attaque|attaquer|je frappe|je degaine|je charge|je combats)\b", fy):
+                    b = self._lg_foe_find(reply) or (self._lg_foe_find(you) if fight else None)
+                    if b:
+                        foe = (b[0], b[2], b[3])
+            if foe:
+                self._lg_combat_start(st, *foe)
+        if sh["end"] <= 0 and not lg.get("combat"):
+            sh["end"] = max(1, sh["end0"] // 3)
+            sh["cha"] = max(0, sh["cha"] - 1)
+            st.setdefault("_lg_fx", []).append("☠ ENDURANCE à zéro : tu survis de justesse (CHANCE −1)")
+        # 7. ton action libre devient un souvenir du monde
+        if you.startswith("✍"):
+            self._lg_fact(st, "Tu as osé : " + you.lstrip("✍ ")[:110])
+        st["status"] = game_status_text(title or "FEUILLE D'AVENTURE", d, st.get("status", ""))
+        self._lg_sheet_to_status(st)
+        self._lg_page_left = 16  # page qui tourne
+
+    def _lg_quests_update(self, st, v: str) -> None:
+        lg = self._lg(st)
+        ms = lg["quests"]
+        for m in self._gx_mission_parse(v or ""):
+            key = " ".join(game_item_words(m["title"]))[:40]
+            hit = next((x for x in ms if " ".join(game_item_words(x.get("title", "")))[:40] == key), None)
+            if hit is None and m["id"] and m["id"].isdigit() and 0 < int(m["id"]) <= len(ms):
+                hit = ms[int(m["id"]) - 1]
+            if hit is None:  # quête du MJ inscrite sous le titre de la scène : on garde le titre du JOURNAL
+                hit = next((x for x in ms if x.get("type") == "mj" and not x.get("jtitle") and x.get("status") in
+                            ("proposée", "active") and int(st.get("turn", 0)) - int(x.get("turn", 0)) <= 3), None)
+                if hit is not None:
+                    hit["title"], hit["jtitle"] = m["title"][:70], True
+            if hit:
+                old = hit.get("status")
+                if old in ("terminée", "échouée", "refusée") and m["status"] in ("proposée", "active"):
+                    continue
+                if old == "proposée" and m["status"] == "terminée":
+                    continue
+                if old == "active" and m["status"] == "proposée":
+                    m["status"] = "active"
+                if not hit.get("reward") and m.get("reward"):
+                    hit["reward"] = m["reward"]
+                hit["status"] = m["status"]
+                if old != hit["status"]:
+                    hit["turn"] = st.get("turn", 0)
+                    if hit["status"] == "terminée":
+                        self._lg_reward(st, hit)
+                    elif hit["status"] == "échouée":
+                        self._lg_rep(st, hit.get("faction", ""), -1)
+                        self._lg_fact(st, f"Tu as échoué la quête « {hit['title']} ».")
+                    elif hit["status"] == "active":
+                        self._lg_fact(st, f"Tu as accepté la quête « {hit['title']} ».")
+            elif m["status"] in ("proposée", "active"):
+                m["turn"] = st.get("turn", 0)
+                ms.append(m)
+                if m["status"] == "active":
+                    self._lg_fact(st, f"Nouvelle quête : « {m['title']} ».")
+        lg["quests"] = [x for x in ms if not (x.get("status") in ("proposée", "refusée") and
+                                              int(st.get("turn", 0)) - int(x.get("turn", 0)) > 6)][-12:]
+
+    def _lg_reward(self, st, m: Dict[str, Any]) -> None:
+        if m.get("rewarded"):
+            return
+        m["rewarded"] = True
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        r = m.get("reward") or ""
+        f = _fold(r).lower()
+        n = re.search(r"\d+", r)
+        if n and re.search(r"\bor\b|piece|ecu", f):
+            sh["or"] += int(n.group(0))
+            got = f"+{n.group(0)} pièces d'or"
+        elif "potion" in f:
+            k = int(n.group(0)) if n else 1
+            sh["pot"] += k
+            got = f"+{k} potion(s)"
+        elif "compagnon" in f:
+            who = r.split(":", 1)[1].strip() if ":" in r else r
+            lg["companions"].append(who[:60])
+            got = f"nouveau compagnon : {who}"
+        elif r:
+            it = r.split(":", 1)[1].strip() if ":" in r else r
+            title, d = game_status_dict(st.get("status", ""))
+            d["INVENTAIRE"] = (d.get("INVENTAIRE", "").replace("(vide)", "") + ", " + it).strip(", ")
+            st["status"] = game_status_text(title or "FEUILLE D'AVENTURE", d, st.get("status", ""))
+            got = it
+        else:
+            got = "la gratitude des gens"
+        self._lg_rep(st, m.get("faction", "") or (self.LG_REALM.get(lg["royaume"]) or ("",) * 6)[5], 1)
+        self._lg_fact(st, f"Quête « {m.get('title', '')} » accomplie : {got}.")
+        st.setdefault("_lg_fx", []).append(f"🏆 Quête « {m.get('title', '')} » accomplie : {got}")
+
+    def _lg_offer(self, st) -> None:
+        """À l'auberge, au village, au marché, au château… quelqu'un propose une quête (choix Accepter / Refuser)."""
+        lg = self._lg(st)
+        d = game_status_dict(st.get("status", ""))[1]
+        last = next((e for e in reversed(st.get("log") or []) if e.get("who") == "mj"), {})
+        g = game_parse(last.get("text", ""))
+        txt = _fold((d.get("LIEU", "") + " " + (g.get("title") or "") + " " + (g.get("scene") or ""))).lower()
+        ms = lg["quests"]
+        chs0 = list(st.get("choices") or [])
+        mj_c = next((c for c in chs0 if re.search(r"\baccept\w*\s+(la |cette |sa |leur |son |l.)?(quete|mission|offre|proposition|"
+                                                  r"marche|defi|requete|demande|tache)", _fold(c[1]).lower())), None)
+        if mj_c is not None:  # le MJ propose déjà sa propre quête : Padawan l'inscrit au journal (pas de 2e offre)
+            if not any(x.get("status") == "proposée" for x in ms):
+                title = (g.get("title") or "").strip(" #*") or f"Quête de {d.get('LIEU', '') or lg['royaume']}"
+                if not any(x.get("title") == title[:70] for x in ms):
+                    ms.append({"id": "", "title": title[:70], "status": "proposée", "reward": "", "goal": mj_c[1][:140].rstrip(" ."),
+                               "type": "mj", "faction": (self.LG_REALM.get(lg["royaume"]) or ("",) * 6)[5], "giver": "",
+                               "where": d.get("LIEU", ""), "turn": st.get("turn", 0)})
+                    lg["offer_turn"] = st.get("turn", 0)
+                    st.setdefault("_lg_fx", []).append(f"📜 Quête proposée : « {title[:70]} »")
+                    self._lg_sheet_to_status(st)
+            return
+        if not re.search(r"auberge|taverne|village|marche|chateau|place|veillee|chantier|\bport\b|phare|tour de|hameau", txt):
+            return
+        m = next((x for x in ms if x.get("status") == "proposée"), None)
+        if m is None:
+            if int(st.get("turn", 0)) - int(lg.get("offer_turn", -99)) < 3:
+                return
+            used = {x.get("title") for x in ms}
+            rnd = random.Random(f"{st.get('created', '')}{st.get('turn', 0)}{d.get('LIEU', '')}")
+            pool = [o for o in LEGENDE_OFFERS if o[1] not in used] or list(LEGENDE_OFFERS)
+            o = rnd.choice(pool)
+            m = {"id": "", "title": o[1], "status": "proposée", "reward": o[3], "goal": o[2], "type": o[0], "faction": o[4],
+                 "giver": rnd.choice(LEGENDE_GIVERS), "where": d.get("LIEU", ""), "turn": st.get("turn", 0)}
+            ms.append(m)
+            lg["offer_turn"] = st.get("turn", 0)
+            st.setdefault("_lg_fx", []).append(
+                f"📜 Quête proposée par {m['giver']} : « {m['title']} » — {m['goal']} — 🏆 {m['reward']}")
+            self._lg_sheet_to_status(st)
+        chs = list(st.get("choices") or [])
+        if not any("accepter la quete" in _fold(c[1]).lower() for c in chs):
+            chs = chs[:4]
+            chs.append((len(chs) + 1, f"Accepter la quête « {m['title']} »"))
+            chs.append((len(chs) + 1, "Refuser la quête poliment"))
+            st["choices"][:] = chs
+
+    def _lg_post_choices(self, st) -> None:
+        """Après le tour : actions de combat si un combat est en cours, sinon quête proposée au bon endroit."""
+        lg = self._lg(st)
+        if lg.get("combat"):
+            self._lg_combat_choices(st)
+        else:
+            lg["combat_map"] = {}
+            self._lg_offer(st)
+
+    # ---- 🗺 carte des royaumes (F9) : parchemin, brouillard, routes à cheval / navire / souterraines
+    def lg_map(self, event=None):
+        st = self.game
+        if not st or self._game_fam() != "legende":
+            return None
+        w = getattr(self, "_lg_map_win", None)
+        try:
+            if w is not None and w.winfo_exists():
+                w.lift()
+                return "break"
+        except Exception:
+            pass
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        cur = lg["royaume"] if lg["royaume"] in self.LG_REALM else "Val-Clairon"
+        if cur not in lg["seen"]:
+            lg["seen"].append(cur)
+        known = self._lg_known(lg)
+        routes = self._lg_routes_from(cur)
+        top = tk.Toplevel(self)
+        self._lg_map_win = top
+        top.title("🗺 Carte des royaumes — La Légende s'écrit")
+        top.configure(bg="#e9d8b0")
+        top.transient(self)
+        W, H = 1020, 600
+        try:
+            x = self.winfo_rootx() + max(0, (self.winfo_width() - W) // 2)
+            y = self.winfo_rooty() + max(0, (self.winfo_height() - H) // 2)
+            top.geometry(f"{W}x{H}+{x}+{y}")
+        except Exception:
+            top.geometry(f"{W}x{H}")
+        side = tk.Frame(top, bg="#efe0bb", width=340, highlightbackground="#b8924a", highlightthickness=2)
+        side.pack(side="right", fill="y")
+        side.pack_propagate(False)
+        tk.Label(side, text="⚜ ROUTES DEPUIS ICI", bg="#efe0bb", fg="#8b1a2b", font=("Georgia", 12, "bold")).pack(
+            fill="x", pady=(8, 2))
+        tk.Label(side, text=f"Tu es en : {cur}\nProvisions {sh['prov']} · Or {sh['or']} · Endurance {sh['end']}/{sh['end0']}\n"
+                            f"Royaumes découverts : {len(lg['seen'])}/{len(LEGENDE_REALMS)}",
+                 bg="#efe0bb", fg="#3a2414", font=("Georgia", 9, "bold"), justify="left").pack(fill="x", padx=8)
+        lb = tk.Listbox(side, bg="#f4e8cc", fg="#3a2414", selectbackground="#c9a463", selectforeground="#2b1b10",
+                        font=("Consolas", 9), relief="flat", highlightthickness=0, activestyle="none")
+        lb.pack(fill="both", expand=True, padx=8, pady=6)
+        fact = tk.Label(side, text="Choisis une route (ou clique un royaume sur la carte).", bg="#efe0bb", fg="#8a6a48",
+                        font=("Georgia", 9, "italic"), wraplength=320, justify="left", anchor="w")
+        fact.pack(fill="x", padx=8)
+        go_b = tk.Button(side, text="🐎 Partir", bg="#dcc493", fg="#8b1a2b", relief="flat", bd=0, font=("Georgia", 11, "bold"),
+                         activebackground="#c9a463", cursor="hand2", pady=5, state="disabled")
+        go_b.pack(fill="x", padx=8, pady=8)
+        cv = tk.Canvas(top, bg="#e4cf9c", highlightthickness=0)
+        cv.pack(side="left", fill="both", expand=True)
+        for dest, mode, days in routes:
+            ic, lab = LEGENDE_MODES.get(mode, ("•", mode))
+            lb.insert("end", f"{ic} {dest[:24]:<24} {days} j · {lab[:14]}")
+        sel = {"i": None, "anim": -1}
+        rnd = random.Random(3)
+        blots = [(rnd.uniform(0, 1), rnd.uniform(0, 1), rnd.uniform(20, 70)) for _ in range(28)]
+        ICON = {"village": "🏰", "foret": "🌲", "montagne": "⛰", "caverne": "🕳", "desert": "🏜", "ile": "🏝", "temple": "🏛",
+                "lac": "🗡", "nord": "❄", "neige": "🛶"}
+        MCOL = {"cheval": "#7a4a1a", "navire": "#1f4e79", "souterrain": "#4a3a5a", "canot": "#8b1a2b"}
+
+        def pos(r, w_, h_):
+            return 40 + r[2] * (w_ - 80), 40 + r[3] * (h_ - 90)
+
+        def draw():
+            if not top.winfo_exists():
+                return
+            w_, h_ = max(300, cv.winfo_width()), max(300, cv.winfo_height())
+            cv.delete("all")
+            for bx, by, br in blots:
+                cv.create_oval(bx * w_ - br, by * h_ - br * .6, bx * w_ + br, by * h_ + br * .6, fill="#dcc48e", outline="")
+            cv.create_rectangle(8, 8, w_ - 8, h_ - 8, outline="#8a5a12", width=3)
+            cv.create_rectangle(14, 14, w_ - 14, h_ - 14, outline="#b8924a", width=1)
+            cv.create_text(w_ // 2, 28, text="✠  Carte des Royaumes  ✠", fill="#5a1622", font=("Georgia", 16, "bold italic"))
+            # rose des vents
+            cx, cy = w_ - 60, h_ - 80
+            cv.create_polygon(cx, cy - 30, cx + 7, cy, cx, cy + 30, cx - 7, cy, fill="#8b1a2b", outline="#5a1622")
+            cv.create_polygon(cx - 30, cy, cx, cy - 7, cx + 30, cy, cx, cy + 7, fill="#b8924a", outline="#5a1622")
+            cv.create_text(cx, cy - 40, text="N", fill="#5a1622", font=("Georgia", 10, "bold"))
+            for a, b, m, dd in LEGENDE_ROUTES:
+                if a in known and b in known and (a in lg["seen"] or b in lg["seen"]):
+                    x1, y1 = pos(self.LG_REALM[a], w_, h_)
+                    x2, y2 = pos(self.LG_REALM[b], w_, h_)
+                    cv.create_line(x1, y1, x2, y2, fill=MCOL.get(m, "#7a4a1a"), dash=(6, 4) if m != "cheval" else (2, 3),
+                                   width=2)
+            for r in LEGENDE_REALMS:
+                x_, y_ = pos(r, w_, h_)
+                if r[0] not in known:
+                    for k in range(3):
+                        cv.create_oval(x_ - 34 + k * 6, y_ - 22 + k * 3, x_ + 34 - k * 6, y_ + 22 - k * 3, fill="#cdb88a",
+                                       outline="", stipple="gray50")
+                    cv.create_text(x_, y_, text="?", fill="#8a6a48", font=("Georgia", 16, "bold"))
+                    continue
+                here = r[0] == cur
+                chosen = sel["i"] is not None and routes[sel["i"]][0] == r[0]
+                col = "#8b1a2b" if here else ("#1f4e79" if chosen else ("#3a2414" if r[0] in lg["seen"] else "#8a6a48"))
+                cv.create_oval(x_ - 16, y_ - 16, x_ + 16, y_ + 16, fill="#f4e8cc", outline=col, width=3 if (here or chosen) else 1)
+                cv.create_text(x_, y_, text=ICON.get(r[1], "•"), font=("Segoe UI Emoji", 12))
+                cv.create_text(x_, y_ + 26, text=r[0], fill=col, font=("Georgia", 9, "bold" if (here or chosen) else "normal"))
+                if chosen:
+                    cx_, cy_ = pos(self.LG_REALM[cur], w_, h_)
+                    cv.create_line(cx_, cy_, x_, y_, fill=MCOL.get(routes[sel["i"]][1], "#7a4a1a"), width=3, arrow="last")
+            if sel["anim"] >= 0:
+                dest, mode = routes[sel["i"]][0], routes[sel["i"]][1]
+                x1, y1 = pos(self.LG_REALM[cur], w_, h_)
+                x2, y2 = pos(self.LG_REALM.get(dest, self.LG_REALM[cur]), w_, h_)
+                import math
+                t = sel["anim"] / 30.0
+                tx, ty = x1 + (x2 - x1) * t, y1 + (y2 - y1) * t - 30 * math.sin(math.pi * t) * (1.5 if mode == "canot" else 0.4)
+                cv.create_text(tx, ty, text=LEGENDE_MODES.get(mode, ("🐎",))[0], font=("Segoe UI Emoji", 20))
+                sel["anim"] += 1
+                if sel["anim"] > 30:
+                    finish()
+                    return
+            cv.create_text(20, h_ - 22, anchor="w", fill="#8a6a48", font=("Georgia", 8, "italic"),
+                           text="Le brouillard se lève à mesure que tu voyages.  Routes : ··· cheval  – – navire  – – souterrain  ⚑ canot volant")
+            self.after(40 if sel["anim"] >= 0 else 400, draw)
+
+        def pick(e=None):
+            s_ = lb.curselection()
+            if not s_:
+                return
+            sel["i"] = s_[0]
+            dest, mode, days = routes[s_[0]]
+            r = self.LG_REALM[dest]
+            cost = f"{days} provision(s)" + (f" + {3 * days} or (passage)" if mode == "navire" else "") + \
+                (" + torche / Lumière" if mode == "souterrain" else "") + (" — test de CHANCE" if mode == "canot" else "")
+            fact.config(text=f"📜 {dest} : {r[4] if dest in known else 'terres inconnues, sous le brouillard…'}\n"
+                             f"Coût : {cost}")
+            ok = not (mode == "navire" and sh["or"] < 3 * days)
+            go_b.config(text=(f"{LEGENDE_MODES[mode][0]} Partir vers {dest[:20]}" if ok else "Pas assez d'or pour le passage"),
+                        state="normal" if ok else "disabled")
+            draw()
+
+        def click(e):
+            w_, h_ = max(300, cv.winfo_width()), max(300, cv.winfo_height())
+            for i, (dest, _m, _d) in enumerate(routes):
+                x_, y_ = pos(self.LG_REALM[dest], w_, h_)
+                if abs(x_ - e.x) + abs(y_ - e.y) < 34:
+                    lb.selection_clear(0, "end")
+                    lb.selection_set(i)
+                    lb.see(i)
+                    pick()
+                    return
+
+        def finish():
+            dest, mode, days = routes[sel["i"]]
+            try:
+                top.destroy()
+            except Exception:
+                pass
+            self._lg_travel(dest, mode, days)
+
+        def go():
+            if sel["i"] is None or self.busy or sel["anim"] >= 0:
+                return
+            go_b.config(state="disabled")
+            sel["anim"] = 0
+            draw()
+
+        lb.bind("<<ListboxSelect>>", pick)
+        lb.bind("<Double-Button-1>", lambda e: go())
+        cv.bind("<Button-1>", click)
+        go_b.config(command=go)
+        top.bind("<Escape>", lambda e: top.destroy())
+        top.bind("<Return>", lambda e: go())
+        self.after(60, draw)
+        self._lg_map_go = lambda i: (lb.selection_clear(0, "end"), lb.selection_set(i), pick(), go())  # pour les tests
+        return "break"
+
+    def _lg_travel(self, dest: str, mode: str, days: int) -> None:
+        st = self.game
+        if not st or self.busy:
+            return
+        lg = self._lg(st)
+        sh = lg["sheet"]
+        frm = lg["royaume"]
+        lines = []
+        miss = max(0, days - sh["prov"])
+        sh["prov"] = max(0, sh["prov"] - days)
+        lines.append(f"{days} jour(s) de route : −{days - miss} PROVISIONS" + (f", faim : −{2 * miss} ENDURANCE" if miss else ""))
+        sh["end"] = max(1, sh["end"] - 2 * miss)
+        if mode == "navire":
+            sh["or"] = max(0, sh["or"] - 3 * days)
+            lines.append(f"passage à bord : −{3 * days} OR")
+        if mode == "souterrain":
+            title, d = game_status_dict(st.get("status", ""))
+            inv = game_inv_list(d.get("INVENTAIRE", ""))
+            if lg["buffs"].pop("lumiere", 0):
+                lines.append("ta Lumière magique éclaire les galeries")
+            elif "Lumière" in lg["spells"] and sh["mag"] >= 1:
+                sh["mag"] -= 1
+                lines.append("sort Lumière : −1 MAGIE")
+            elif game_item_match(inv, "torche") >= 0:
+                lines.append("une torche se consume dans les galeries")
+                i = game_item_match(inv, "torche")
+                q, n = inv[i]
+                if q > 1:
+                    inv[i] = (q - 1, n)
+                else:
+                    inv.pop(i)
+                d["INVENTAIRE"] = ", ".join(game_item_fmt(q, n) for q, n in inv) if inv else "(vide)"
+                st["status"] = game_status_text(title or "FEUILLE D'AVENTURE", d, st.get("status", ""))
+            else:
+                sh["end"] = max(1, sh["end"] - 2)
+                lines.append("dans le noir complet : −2 ENDURANCE")
+        groups = []
+        if mode == "canot":
+            r = self._lg_d6(2)
+            ok = sum(r) <= sh["cha"]
+            sh["cha"] = max(0, sh["cha"] - 1)
+            groups.append(("Chance", r, 0, sum(r)))
+            lines.append(f"pacte de la Chasse-galerie, test de CHANCE {sum(r)} {'≤' if ok else '>'} → "
+                         f"{'le canot vole droit' if ok else 'le canot dévie !'} (CHANCE −1)")
+            if not ok:
+                dest = random.choice([r_[0] for r_ in LEGENDE_REALMS if r_[0] not in (frm, dest)])
+                lines.append(f"atterrissage forcé en {dest}")
+        ev, foe = random.choice(LEGENDE_EVENTS.get(mode, LEGENDE_EVENTS["cheval"]))
+        r2 = self._lg_d6(1)
+        groups.append(("Rencontre", r2, 0, r2[0]))
+        if r2[0] <= 3 and not foe:
+            ev, foe = random.choice([e for e in LEGENDE_EVENTS.get(mode, []) if e[1]] or [(ev, foe)])
+        if r2[0] >= 5:
+            foe = ""
+        st["_lg_travel"] = {"from": frm, "dest": dest, "mode": mode, "foe": foe}
+        self._lg_sheet_to_status(st)
+        self._game_update_pip()
+        ic, lab = LEGENDE_MODES.get(mode, ("🐎", mode))
+        line = f"{ic} Voyage {lab} : {frm} → {dest} · " + " · ".join(lines) + f" · en route : {ev}"
+        st["log"].append({"who": "fx", "text": line})
+        self._game_w(line + "\n", "check")
+        info = self.LG_REALM.get(dest)
+        msg = (f"Je voyage {lab} de {frm} jusqu'à {dest}. [VOYAGE résolu par Padawan : " + " ; ".join(lines)
+               + f". Événement en route : {ev}"
+               + (f" — RENCONTRE : {foe} surgit et attaque ! Décris son apparition menaçante, écris la ligne "
+                  f"ADVERSAIRE: {foe} et arrête la scène au début du combat (Padawan lancera les dés)" if foe else "") + ". "
+               + (f"À l'arrivée, ROYAUME : {dest} ({info[4]})" if info else "") +
+               f". Raconte la traversée et l'arrivée en 90 à 170 mots ; ROYAUME: {dest}.]")
+        self._lg_page_left = 16
+        self._lg_dice_show(f"Voyage {lab}", groups, f"{ic} {frm} → {dest}",
+                           then=lambda: self._game_send(msg, display=f"{ic} Voyage {lab} vers {dest}"), ms=900)
+
+    # ---- 🔥 torche animée + page qui tourne (panneau de droite)
+    def _lg_sky_draw(self, cv, w: int, h: int) -> None:
+        st = self.game or {}
+        lg = st.get("lg") or {}
+        cv.delete("all")
+        for y in range(0, h, 3):
+            t = y / max(1, h)
+            cv.create_rectangle(0, y, w, y + 3, fill="#%02x%02x%02x" % (int(59 + 20 * t), int(36 + 12 * t), int(21 + 6 * t)),
+                                outline="")
+        under = re.search(r"cav|souterr|crypt|mine|donjon|galer|ombreterre", _fold(
+            (lg.get("royaume", "") + " " + game_status_dict(st.get("status", ""))[1].get("LIEU", "")).lower()))
+        k = 1.5 if under else 1.0
+        for tx in (22, w - 22):
+            cv.create_rectangle(tx - 3, h - 30, tx + 3, h - 6, fill="#5a3a1a", outline="")
+            fl = random.uniform(0.75, 1.15) * k
+            cv.create_oval(tx - 9 * fl, h - 30 - 22 * fl, tx + 9 * fl, h - 26, fill="#ff8c1a", outline="")
+            cv.create_oval(tx - 5 * fl, h - 30 - 14 * fl, tx + 5 * fl, h - 27, fill="#ffd34d", outline="")
+            cv.create_oval(tx - 2 * fl, h - 30 - 7 * fl, tx + 2 * fl, h - 28, fill="#fff6c8", outline="")
+        c = lg.get("combat")
+        lieu = (game_status_dict(st.get("status", ""))[1].get("LIEU", "") or "").split(" — ")[0]
+        mx = max(10, (w - 70) // 7)
+        lab = f"⚔ {c['name']}  {c['end']}/{c['end0']}" if c else "⚜ " + (lg.get("royaume") or "Val-Clairon")
+        cv.create_text(w // 2, h // 2 - 8, text=lab[:mx], fill="#f3d58a" if not c else "#ff9a8a", font=("Georgia", 9, "bold"))
+        if lieu and not c:
+            cv.create_text(w // 2, h // 2 + 9, text=lieu[:mx], fill="#e9d8b0", font=("Georgia", 8, "italic"))
+        p = getattr(self, "_lg_page_left", 0)
+        if p > 0:
+            x = w * (1 - p / 16.0)
+            cv.create_polygon(x, 2, x + 26, 2, x + 12, h - 2, x - 14, h - 2, fill="#f4e8cc", outline="#b8924a")
+            cv.create_line(x + 12, h - 2, x - 14, h - 2, fill="#8a6a48")
+            self._lg_page_left = p - 1
+
+    def _lg_title_card(self):
+        """Enluminure couleur procédurale (jamais ANSI) pour l'écran d'intro de La Légende s'écrit."""
+        try:
+            from PIL import Image as _I, ImageDraw as _D, ImageFont as _F
+            W, H, _cw = self._game_gen_size("")
+            im = _I.new("RGB", (W, H), (40, 22, 14))
+            dr = _D.Draw(im)
+            for y in range(H):
+                t = y / max(1, H)
+                dr.line([(0, y), (W, y)], fill=(int(250 - 120 * t), int(170 - 90 * t), int(90 - 50 * t)))
+            for i in range(5):  # montagnes
+                x0 = int(W * (i / 4.0)) - W // 5
+                dr.polygon([(x0, H), (x0 + W // 4, int(H * (0.42 + 0.06 * (i % 2)))), (x0 + W // 2, H)],
+                           fill=(int(70 + 15 * i), int(40 + 8 * i), int(52 + 6 * i)))
+            cx, cy = int(W * 0.74), int(H * 0.36)  # château
+            for dx, hh in ((-60, 0.30), (-25, 0.42), (15, 0.36), (50, 0.28)):
+                dr.rectangle([cx + dx, cy - int(H * hh) + H // 3, cx + dx + 26, int(H * 0.8)], fill=(58, 30, 26))
+                dr.polygon([(cx + dx - 4, cy - int(H * hh) + H // 3), (cx + dx + 13, cy - int(H * hh) + H // 3 - 30),
+                            (cx + dx + 30, cy - int(H * hh) + H // 3)], fill=(139, 26, 43))
+            dr.ellipse([int(W * 0.12), int(H * 0.08), int(W * 0.12) + H // 6, int(H * 0.08) + H // 6], fill=(255, 236, 170))
+            for k in range(3):  # cadre doré
+                dr.rectangle([6 + k * 5, 6 + k * 5, W - 7 - k * 5, H - 7 - k * 5], outline=(212, 165, 60) if k != 1 else (139, 26, 43),
+                             width=3)
+            try:
+                f1 = _F.truetype("georgiab.ttf", max(22, H // 8))
+                f2 = _F.truetype("georgiai.ttf", max(12, H // 22))
+            except Exception:
+                f1 = f2 = _F.load_default()
+            dr.text((int(W * 0.07) + 2, int(H * 0.56) + 2), "LA LÉGENDE S'ÉCRIT", fill=(40, 20, 10), font=f1)
+            dr.text((int(W * 0.07), int(H * 0.56)), "LA LÉGENDE S'ÉCRIT", fill=(255, 214, 120), font=f1)
+            dr.text((int(W * 0.075), int(H * 0.56) + max(22, H // 8) + 10), "La Plume d'Aube — ta plume, ton destin",
+                    fill=(255, 240, 210), font=f2)
+            im = self._game_badge(im, "⚜ LA LÉGENDE S'ÉCRIT")
+            ph = _ANSI.ImageTk.PhotoImage(im, master=self.game_txt)
+        except Exception as e:
+            log(f"lg title: {e}")
+            return False
+        T = self.game_txt
+        T.configure(state="normal")
+        T.insert("end", " ", ("gimgline",))
+        T.image_create("end", image=ph, padx=0, pady=4)
+        T.tag_add("gimgline", "end-2c")
+        T.insert("end", "\n", ("gimgline",))
+        T.configure(state="disabled")
+        self._game_imgs.append(ph)
+        return True
+
+    # ---- 📖 Chronique : la partie devient un livre illustré (HTML)
+    def lg_chronicle(self, event=None, open_after: bool = True) -> Optional[str]:
+        st = self.game
+        if not st or self._game_fam() != "legende":
+            return None
+        try:
+            html_txt = game_chronicle_html(st)
+            d = os.path.join(GAME_PARTIES_DIR, "chroniques")
+            os.makedirs(d, exist_ok=True)
+            hero = game_status_dict(st.get("status", ""))[1].get("NOM", "") or "heros"
+            slug = re.sub(r"[^a-z0-9]+", "_", _fold(hero).lower()).strip("_")[:30] or "heros"
+            path = os.path.join(d, f"chronique_{slug}_{time.strftime('%Y%m%d_%H%M')}.html")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(html_txt)
+        except Exception as e:
+            log(f"chronique: {e}")
+            self._game_flash(f"📖 Chronique impossible : {e}", GAME_COLORS["bad"])
+            return None
+        self._game_flash(f"📖 Chronique écrite : {os.path.basename(path)}", GAME_COLORS["green"])
+        self._game_w(f"📖 Chronique enregistrée : {path}\n", "sys")
+        if open_after:
+            try:
+                import webbrowser
+                webbrowser.open("file:///" + path.replace("\\", "/"))
+            except Exception:
+                pass
+        return path
+
+    # ---- 🗺 carte stellaire (F9)
+    def gx_map(self, event=None):
+        st = self.game
+        if st and self._game_fam() == "legende":  # v41.6 : F9 = carte des royaumes
+            return self.lg_map(event)
+        if not st or self._game_fam() != "galaxie":
+            return None
+        w = getattr(self, "_gx_map_win", None)
+        try:
+            if w is not None and w.winfo_exists():
+                w.lift()
+                return "break"
+        except Exception:
+            pass
+        G = GAME_COLORS
+        top = tk.Toplevel(self)
+        self._gx_map_win = top
+        top.title("🗺 Carte stellaire — Galaxie 42")
+        top.configure(bg=G["bg"])
+        top.transient(self)
+        W, H = 980, 560
+        try:
+            x = self.winfo_rootx() + max(0, (self.winfo_width() - W) // 2)
+            y = self.winfo_rooty() + max(0, (self.winfo_height() - H) // 2)
+            top.geometry(f"{W}x{H}+{x}+{y}")
+        except Exception:
+            top.geometry(f"{W}x{H}")
+        cur = self._gx_cur_dest(st)
+        fuel = (_num(game_status_dict(st.get("status", ""))[1].get("CARBURANT", "")) or (100, 100))[0]
+        side = tk.Frame(top, bg=G["pip"], width=330, highlightbackground=G["line"], highlightthickness=1)
+        side.pack(side="right", fill="y")
+        side.pack_propagate(False)
+        tk.Label(side, text="✦ DESTINATIONS CONNUES", bg=G["pip"], fg=G["green"], font=("Consolas", 11, "bold")).pack(
+            fill="x", pady=(8, 2))
+        tk.Label(side, text=f"Position : {cur[0]}\nCarburant : {fuel}", bg=G["pip"], fg=G["amber"],
+                 font=("Consolas", 9, "bold"), justify="left").pack(fill="x", padx=8)
+        lb = tk.Listbox(side, bg=G["panel"], fg=G["fg"], selectbackground=G["btnh"], selectforeground="#ffffff",
+                        font=("Consolas", 9), relief="flat", highlightthickness=0, activestyle="none")
+        lb.pack(fill="both", expand=True, padx=8, pady=6)
+        fact = tk.Label(side, text="", bg=G["pip"], fg=G["dim"], font=("Segoe UI", 9, "italic"), wraplength=310,
+                        justify="left", anchor="w")
+        fact.pack(fill="x", padx=8)
+        go_b = tk.Button(side, text="🚀 Sauter", bg=G["btn"], fg=G["green"], relief="flat", bd=0, font=("Segoe UI", 10, "bold"),
+                         activebackground=G["btnh"], cursor="hand2", pady=5)
+        go_b.pack(fill="x", padx=8, pady=8)
+        cv = tk.Canvas(top, bg="#03050f", highlightthickness=0)
+        cv.pack(side="left", fill="both", expand=True)
+        dests = list(GALAXIE_DEST)
+        for i, d in enumerate(dests):
+            c = self._gx_cost(cur, d)
+            lb.insert("end", ("➤ " if d[0] == cur[0] else "   ") + f"{d[0][:30]:<30} {('ici' if not c else str(c) + ' ⛽'):>5}")
+            if c > fuel:
+                lb.itemconfigure(i, fg=G["bad"])
+        rnd = random.Random(7)
+        stars = [[rnd.uniform(0, 650), rnd.uniform(0, 560), rnd.choice((0.3, 0.6, 1.2))] for _ in range(130)]
+        sel = {"i": None, "warp": 0}
+
+        def pos(d, w_, h_):
+            return 40 + (d[5] / 10.0) * (w_ - 80), h_ / 2 - (d[6] / 4.0) * (h_ / 2 - 50)
+
+        def draw():
+            if not top.winfo_exists():
+                return
+            w_, h_ = max(200, cv.winfo_width()), max(200, cv.winfo_height())
+            cv.delete("all")
+            wv = sel["warp"]
+            for s_ in stars:
+                sp = s_[2] * (14 if wv else 1)
+                s_[0] -= sp
+                if s_[0] < 0:
+                    s_[0], s_[1] = w_ + rnd.uniform(0, 30), rnd.uniform(0, h_)
+                if wv:
+                    cv.create_line(s_[0], s_[1], s_[0] + sp * 4, s_[1], fill=G["green"])
+                else:
+                    cv.create_oval(s_[0], s_[1], s_[0] + 1.6 * s_[2], s_[1] + 1.6 * s_[2], fill="#ffffff", outline="")
+            if not wv:
+                sx, sy = pos(GALAXIE_DEST[0], w_, h_)
+                cv.create_oval(sx - 9 - 30, sy - 9, sx - 30 + 9, sy + 9, fill="#ffd36b", outline="")
+                cv.create_text(sx - 30, sy + 18, text="Soleil", fill="#ffd36b", font=("Consolas", 8))
+                for i, d in enumerate(dests):
+                    x_, y_ = pos(d, w_, h_)
+                    here, chosen = d[0] == cur[0], i == sel["i"]
+                    col = G["amber"] if here else (G["green"] if chosen else (G["cyan"] if d[1] == "Soleil" else "#ff9ad5"))
+                    r = 7 if (here or chosen) else 5
+                    cv.create_oval(x_ - r, y_ - r, x_ + r, y_ + r, fill=col, outline="#ffffff" if chosen else "")
+                    cv.create_text(x_, y_ - 13, text=d[0].split(" (")[0].split(" — ")[0][:22], fill=col,
+                                   font=("Consolas", 8, "bold" if (here or chosen) else "normal"))
+                    if chosen:
+                        cx, cy = pos(cur, w_, h_)
+                        cv.create_line(cx, cy, x_, y_, fill=G["green"], dash=(4, 3), width=2)
+                cv.create_text(12, h_ - 14, anchor="w", fill=G["dim"], font=("Segoe UI", 8, "italic"),
+                               text="Carte de jeu schématique : positions et coûts fictifs (le voyage supraluminique n'existe pas… encore).")
+            else:
+                cv.create_text(w_ // 2, h_ // 2, text="⟫⟫  SAUT EN COURS  ⟫⟫", fill=G["green"], font=("Consolas", 18, "bold"))
+                sel["warp"] -= 1
+                if sel["warp"] == 0:
+                    finish()
+                    return
+            top.after(40 if wv else 90, draw)
+
+        def pick(e=None):
+            s_ = lb.curselection()
+            if not s_:
+                return
+            sel["i"] = s_[0]
+            d = dests[s_[0]]
+            c = self._gx_cost(cur, d)
+            fact.config(text="🔭 " + d[4])
+            if not c:
+                go_b.config(text="Tu es déjà ici", state="disabled")
+            elif c > fuel:
+                go_b.config(text=f"⛽ Pas assez de carburant ({c} requis)", state="disabled")
+            else:
+                go_b.config(text=f"🚀 Sauter vers {d[0].split(' (')[0][:24]}  (−{c} ⛽)", state="normal")
+
+        def click(e):
+            w_, h_ = max(200, cv.winfo_width()), max(200, cv.winfo_height())
+            best, bd = None, 999
+            for i, d in enumerate(dests):
+                x_, y_ = pos(d, w_, h_)
+                dd = abs(x_ - e.x) + abs(y_ - e.y)
+                if dd < bd:
+                    best, bd = i, dd
+            if best is not None and bd < 30:
+                lb.selection_clear(0, "end")
+                lb.selection_set(best)
+                lb.see(best)
+                pick()
+
+        def finish():
+            d = dests[sel["i"]]
+            c = self._gx_cost(cur, d)
+            try:
+                top.destroy()
+            except Exception:
+                pass
+            self._gx_warp(f"{cur[0].split(' (')[0]} → {d[0].split(' (')[0]}")
+            st["_gx_fact_for"] = d[0]  # le fait est déjà dans le message du saut
+            st["_gx_jump"] = {"dest": d[0], "sys": d[1], "cost": c, "fuel": fuel}  # appliqué une fois par Padawan
+            self._game_send(
+                f"Je mets le cap sur {d[0]} avec la carte stellaire. [SAUT {cur[0]} → {d[0]} · coût {c} CARBURANT, "
+                f"à soustraire une seule fois si le saut réussit ; SYSTÈME: {d[1]} ; "
+                f"{'NOTE DE FICTION' if 'fiction' in d[1] else 'FAIT VÉRIFIÉ'} : {d[4]}]",
+                display=f"🚀 Saut vers {d[0]} (−{c} carburant)")
+
+        def go():
+            if sel["i"] is None or self.busy:
+                return
+            d = dests[sel["i"]]
+            c = self._gx_cost(cur, d)
+            if not c or c > fuel:
+                return
+            go_b.config(state="disabled")
+            sel["warp"] = 26
+
+        lb.bind("<<ListboxSelect>>", pick)
+        lb.bind("<Double-Button-1>", lambda e: go())
+        cv.bind("<Button-1>", click)
+        go_b.config(command=go)
+        top.bind("<Escape>", lambda e: top.destroy())
+        top.bind("<Return>", lambda e: go())
+        top.after(60, draw)
+        return "break"
+
+    def _gx_title_card(self):
+        """Image-titre couleur (procédurale, jamais en ANSI) pour l'écran d'intro de Galaxie 42."""
+        try:
+            from PIL import Image as _I, ImageDraw as _D, ImageFont as _F
+            W, H, _cw = self._game_gen_size("")
+            im = _I.new("RGB", (W, H), (4, 6, 22))
+            dr = _D.Draw(im)
+            for y in range(H):
+                t = y / max(1, H)
+                dr.line([(0, y), (W, y)], fill=(int(6 + 30 * t), int(8 + 4 * t), int(30 + 40 * t)))
+            rnd = random.Random(42)
+            for _ in range(W * H // 900):
+                x, y = rnd.randrange(W), rnd.randrange(H)
+                c = rnd.choice([(255, 255, 255), (150, 230, 255), (210, 170, 255)])
+                r = rnd.choice((0, 0, 1))
+                dr.ellipse([x - r, y - r, x + r, y + r], fill=c)
+            cx, cy, R = int(W * 0.74), int(H * 0.62), int(H * 0.30)
+            for i in range(R, 0, -1):
+                t = i / R
+                dr.ellipse([cx - i, cy - i, cx + i, cy + i],
+                           fill=(int(240 - 120 * t), int(170 - 90 * t), int(255 - 60 * t)))
+            dr.ellipse([cx - R * 1.9, cy - R * 0.42, cx + R * 1.9, cy + R * 0.42], outline=(120, 230, 255), width=4)
+            try:
+                f1 = _F.truetype("segoeuib.ttf", max(24, H // 6))
+                f2 = _F.truetype("segoeui.ttf", max(12, H // 22))
+            except Exception:
+                f1 = f2 = _F.load_default()
+            dr.text((int(W * 0.06), int(H * 0.16)), "GALAXIE 42", fill=(77, 232, 255), font=f1)
+            dr.text((int(W * 0.065), int(H * 0.16) + max(24, H // 6) + 12), "La Question reste à trouver",
+                    fill=(199, 146, 255), font=f2)
+            im = self._game_badge(im, "✦ GALAXIE 42")
+            ph = _ANSI.ImageTk.PhotoImage(im, master=self.game_txt)
+        except Exception as e:
+            log(f"gx title: {e}")
+            return False
+        T = self.game_txt
+        T.configure(state="normal")
+        T.insert("end", " ", ("gimgline",))
+        T.image_create("end", image=ph, padx=0, pady=4)
+        T.tag_add("gimgline", "end-2c")
+        T.insert("end", "\n", ("gimgline",))
+        T.configure(state="disabled")
+        self._game_imgs.append(ph)
+        return True
+
     def _game_draw_bars(self):
         G = GAME_COLORS
         cv = self.pip_bars
@@ -11879,13 +15444,21 @@ class Padawan(tk.Tk):
         bars = (getattr(self, "_pip_info", None) or {}).get("bars", [])
         w = max(120, cv.winfo_width() or 250)
         y = 4
+        fnt = ("Consolas", 9, "bold")
+        try:  # v41.6 : la colonne des libellés s'élargit au besoin (Fallout garde 58 px)
+            import tkinter.font as _tkf
+            fo = _tkf.Font(root=cv, family="Consolas", size=9, weight="bold")
+            lab_w = max([fo.measure(k[:10]) for k, _v, _m in bars[:6]] or [0])
+        except Exception:
+            lab_w = 7 * max([len(k[:10]) for k, _v, _m in bars[:6]] or [0])
+        x0 = max(58, int(lab_w) + 8)
         for k, v, mx in bars[:6]:
             r = max(0.0, min(1.0, v / mx if mx else 0))
             bad_high = k.startswith(("RAD", "FAIM", "SOIF"))
             danger = r if bad_high else 1 - r
             col = G["green"] if danger < 0.4 else (G["amber"] if danger < 0.7 else G["bad"])
-            cv.create_text(2, y + 7, text=k[:6], anchor="w", fill=G["fg"], font=("Consolas", 9, "bold"))
-            x0, x1 = 58, w - 64
+            cv.create_text(2, y + 7, text=k[:10], anchor="w", fill=G["fg"], font=fnt)
+            x1 = w - 64
             cv.create_rectangle(x0, y + 1, x1, y + 13, outline=G["line"], fill=G["art"])
             if r > 0:
                 cv.create_rectangle(x0 + 1, y + 2, x0 + 1 + (x1 - x0 - 2) * r, y + 12, outline="", fill=col)
@@ -12472,6 +16045,7 @@ class Padawan(tk.Tk):
         try:
             self.update_idletasks()
             self.state("zoomed")
+            self.after(900, self._recheck_zoomed)  # v41.4 : certains démarrages Windows ignorent le 1er zoom
         except Exception:
             try:
                 self.attributes("-zoomed", True)
@@ -12481,6 +16055,13 @@ class Padawan(tk.Tk):
                     self.geometry(f"{sw}x{sh}+0+0")
                 except Exception:
                     pass
+
+    def _recheck_zoomed(self):
+        try:
+            if self.cfg.get("fullscreen", True) and self.state() == "normal":
+                self.state("zoomed")
+        except Exception:
+            pass
 
     def _sync_windows_startup(self):
         """Applique cfg start_with_windows (HKCU Run seulement; purge Startup .bat) → shell:Startup + HKCU Run."""

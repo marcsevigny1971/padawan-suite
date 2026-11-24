@@ -15,6 +15,22 @@ Ce paquet installe toute la famille Padawan sur un PC Windows 10 ou 11 :
 
 Aucun droit administrateur n'est nécessaire.
 
+NOUVEAU DANS LA VERSION 1.7.0 (24 novembre 2026)
+-----------------------------------------------
+Padawan v41.7 : les jeux deviennent illustrés et bien plus vivants.
+  - Fallout : une image en COULEUR générée à chaque action (ComfyUI +
+    SD-Turbo sur ton PC), menu Images (Générées / Banque / Fixes / NON, à chaque
+    action ou au changement de scène), « Autre action » libre, choix qui
+    défilent, fenêtre de jeu maximisée.
+  - Nouveau jeu Galaxie 42 : aventure spatiale humoristique, ordinateur de
+    bord, missions des starbases, carte stellaire (F9).
+  - Nouveau jeu La Légende s'écrit : aventure médiévale-fantastique, feuille
+    d'aventure tirée aux dés, combats aux dés, carte des royaumes (F9),
+    quêtes d'auberge, compagnons, et la Chronique (ta partie en livre HTML).
+  - Correctif : les jeux manquants réapparaissent dans le menu Jouer.
+  Les images générées demandent ComfyUI installé sur ton PC (non inclus).
+  Sans ComfyUI, les jeux utilisent leur banque d'images incluse.
+
 INSTALLER
 ---------
 1. Version .zip (recommandée) : clic droit > Extraire tout, puis double-clic

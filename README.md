@@ -141,12 +141,21 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 - 📖 **Le code est ouvert** : tout ce que fait l'installateur est lisible dans ce dépôt ([`installer/`](installer/), [`INSTALLER.bat`](INSTALLER.bat)).
 - 🗜️ **Plan B sans .exe** : `Padawan-Projet.zip`, à extraire puis `INSTALLER.bat`.
 
-| Fichier (version 1.6.0) | SHA256 |
+| Fichier (version 1.7.0) | SHA256 |
 |---|---|
-| `Padawan-Setup.exe` | `D07AE7CD794500B75CD8BAFC5E977D2AA740DE17CC5595F7A2F174E421EA1027` |
-| `Padawan-Projet.zip` | `196FC7526C669B3376C13CBE5E4CA98FE4AC186BC0F3C5D6163E59750296A540` |
+| `Padawan-Setup.exe` | `AC5A234001C1A01FDAE520E81D5BFBD6691BC9A66360491B8C4FC4755D6EA43C` |
+| `Padawan-Projet.zip` | `7FD9B7DF4B156F941C88CDCA3A60C65BEE4D5E223D409F7E6F713BC4640A1E0C` |
 
 <sub>Les empreintes changent à chaque nouvelle version ; celles de la version la plus récente sont aussi indiquées dans les notes de la release.</sub>
+
+## ✨ Nouveautés v1.7.0 : jeux illustrés, Galaxie 42 et La Légende s'écrit (24 novembre 2026)
+- 🖼 **Fallout en images couleur** : une image est générée **à chaque action** (choix cliqué ou action libre, gros plan quand tu examines un objet) avec ComfyUI + SD-Turbo, sur ton PC. Menu **🖼** : Générées / Banque / Fixes / NON, à chaque action ou seulement au changement de scène. L'image précédente reste affichée pendant le dessin.
+- ✍️ **« Autre action »** : écris ce que tu veux faire, en plus des choix proposés. Les choix défilent quand ils sont nombreux, et la fenêtre de jeu s'ouvre maximisée.
+- 🚀 **Nouveau jeu Galaxie 42** : aventure spatiale humoristique. Ordinateur de bord (coque, carburant, oxygène, énergie), missions des starbases au journal, carte stellaire (`F9`) avec coût de saut, ciel étoilé animé, images de SF rétro.
+- 📜 **Nouveau jeu La Légende s'écrit** : aventure médiévale-fantastique sans numéros de page. Feuille d'aventure tirée aux dés (HABILETÉ, ENDURANCE, CHANCE, MAGIE), combats aux dés animés arbitrés par Padawan, carte des royaumes (`F9`) avec brouillard, voyages à cheval, en navire ou en canot volant, quêtes d'auberge, réputation, compagnons, et un monde qui se souvient de tes actes.
+- 📖 **Chronique** : ta partie de La Légende s'écrit devient un livre illustré en HTML, à garder ou à partager.
+- 🩹 **Correctif** : les jeux qui manquaient au menu **Jouer** (Galaxie 42, La Légende s'écrit) y sont ajoutés automatiquement, sans toucher à tes prompts.
+- ⚠️ **Les images générées demandent ComfyUI installé sur ton PC** (il n'est pas inclus dans le setup, voir le Studio `Ctrl+G`). Sans ComfyUI, les jeux utilisent leur **banque d'images incluse** et tout le reste fonctionne.
 
 ## ✨ Nouveautés v1.6.0 : Studio, ANSI et Atelier 1.4 (23 novembre 2026)
 - 🎨 **Studio d'images** (`Ctrl+G`) : ton idée en français devient une image générée sur ton PC (ComfyUI + SD-Turbo, local). 6 styles, variations, galerie, et la version ANSI à côté. ComfyUI et les modèles d'images s'installent à part.

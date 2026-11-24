@@ -36,7 +36,7 @@ try:
 except Exception:
     _ANSI = None
 
-VERSION = "1.0"
+VERSION = "1.4"  # v41.6 : style La Légende s'écrit (peinture fantasy années 80, couverture de livre-jeu, enluminure dorée) ; v41.5 : style Galaxie 42 (SF rétro années 70-80) ; v41.4 : image à chaque action (gros plan sur un examen), annulation des images périmées ; v41.3 : scènes de jeu résumées par le modèle de jeu (JSON), images couleur, VRAM
 
 # ───────────────────────────────────────────────────────────── réglages ──
 DEFAULTS: Dict[str, Any] = {
@@ -115,7 +115,53 @@ STYLES: List[Tuple[str, str, str, str]] = [
 STYLE_IDS = [s[0] for s in STYLES]
 
 # jeux → style d'image + palette ANSI de la banque
-GAME_STYLE = {"fallout": ("postapo", "pipboy"), "donjon": ("pixel", "dos16"), "polar": ("noir", "noir")}
+GAME_STYLE = {"fallout": ("postapo", "pipboy"), "donjon": ("pixel", "dos16"), "polar": ("noir", "noir"),
+              "galaxie": ("libre", "truecolor"), "legende": ("libre", "truecolor")}
+
+# v41.3 : scènes générées en COULEUR — une touche d'ambiance légère (le sujet passe d'abord : CLIP coupe à 77 jetons)
+GAME_GEN_LOOK = {
+    "fallout": "retro-futuristic 1950s atomic age wasteland, vibrant colors, detailed",
+    "donjon": "dark fantasy dungeon adventure, torchlight, rich colors, detailed illustration",
+    "galaxie": "planets, spaceships, starbases and aliens, deep space, vibrant colors, detailed",
+    "legende": "medieval fantasy kingdom, knights, castles, dragons and magic, rich warm vibrant colors, detailed",
+    "polar": "1940s noir city, moody cinematic color, rain, neon reflections, detailed illustration",
+}
+GAME_GEN_ANSI = "truecolor"   # ANSI couleur (▀▄ 24 bits) : bien différent des 31 illustrations de la banque
+GAME_GEN_COLS = 84
+
+
+# v41.4 : style BD léger à la Fallout, placé en tête (CLIP coupe à 77 jetons, la fin du sujet saute en premier)
+GAME_GEN_PRE = {"fallout": "comic book illustration, retro-futuristic, inked lines, vibrant colors",
+                "galaxie": "retro 1970s 1980s science fiction paperback cover art, inked outlines, vibrant colors",
+                "legende": "1980s fantasy oil painting, gamebook cover art, gilded illuminated border, rich colors"}
+
+
+def game_full_prompt(subject: str, fam: str, closeup: bool = False) -> str:
+    look = GAME_GEN_LOOK.get(fam, "cinematic color, detailed illustration")
+    pre = GAME_GEN_PRE.get(fam, "")
+    if closeup:  # v41.4 : un examen = gros plan de l'objet (en tête : c'est ce que SD-Turbo respecte le mieux)
+        pre = "extreme close-up of a single object filling the frame, " + pre
+    return sanitize_prompt((f"{pre}, " if pre else "") + f"{subject.strip(' ,.')}, {look}")
+
+
+def _json_obj(txt: str) -> Dict[str, Any]:
+    t = (txt or "").strip()
+    try:
+        d = json.loads(t)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        pass
+    m = re.search(r"\{.*\}", t, re.S)
+    if m:
+        try:
+            d = json.loads(m.group(0))
+            return d if isinstance(d, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+BRIEF_KINDS = ("lieu", "combat", "personnage", "evenement", "aucun")
 
 # pas de marques ni de personnages protégés dans les prompts envoyés au moteur
 _TM = [(r"\bfallout\b", "post-apocalyptic"), (r"\bvault[- ]?tec\b", "retro corporation"),
@@ -390,7 +436,11 @@ class Engine:
                 "model": ["1", 0], "add_noise": True, "noise_seed": int(seed) & 0xFFFFFFFFFFFF, "cfg": m["cfg"],
                 "positive": ["4", 0], "negative": ["5", 0], "sampler": ["8", 0], "sigmas": ["7", 0],
                 "latent_image": ["6", 0]}},
-            "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["3", 0]}},
+            # v41.4 : décodage par tuiles — pic de VRAM bien plus bas (8 Go partagés avec le modèle de jeu)
+            "10": ({"class_type": "VAEDecodeTiled", "inputs": {"samples": ["9", 0], "vae": ["3", 0], "tile_size": 320,
+                                                                "overlap": 64, "temporal_size": 64, "temporal_overlap": 8}}
+                   if self.cfg.get("vae_tiled", True) else
+                   {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["3", 0]}}),
             "11": {"class_type": "PreviewImage", "inputs": {"images": ["10", 0]}},
         }
 
@@ -515,6 +565,67 @@ class Ollama:
         out = re.sub(r"(?is)^.*?prompt\s*:\s*", "", out) if re.match(r"(?is)^.{0,40}prompt\s*:", out) else out
         out = out.strip().strip("\"'`").split("\n\n")[0].replace("\n", ", ")
         return sanitize_prompt(out)
+
+
+    def scene_brief(self, model: str, scene: str, prev: str = "", hero: str = "", lieu: str = "",
+                    timeout: float = 45.0, num_ctx: int = 0, keep_alive: Any = "30m", action: str = "") -> Dict[str, Any]:
+        """v41.3 : le modèle de JEU lit la scène (FR) et répond en JSON : la scène a-t-elle vraiment changé ?
+        + prompt visuel anglais (lieu, personnages, action, heure, ambiance, éléments clés) + fiche du héros."""
+        sys_p = (
+            "You are the art director of a French text adventure game. You read the NEW SCENE and answer ONLY a JSON "
+            "object with these keys:\n"
+            '"change": true if the picture must change compared with PREVIOUS PICTURE: a new location, a fight starts, '
+            "an important new character appears, or a major event happens; false for talk, small actions or the "
+            "same place.\n"
+            '"kind": one of "lieu", "combat", "personnage", "evenement", "aucun".\n'
+            '"place": the location in 2 to 6 English words.\n'
+            '"time": time of day and light in 1 to 4 English words.\n'
+            '"prompt": ONE English image description of what is visible now, 20 to 40 words, comma-separated phrases, '
+            "most important first: location, characters (describe the player character with HERO when visible), "
+            "action, time of day, lighting, mood, key objects. No names, no brands, no text or letters, "
+            "no art style words, never game statistics (HP, caps, SPECIAL, hunger, thirst, levels, hull, fuel, oxygen, "
+            "energy, credits, skill, stamina, luck, gold, provisions).\n"
+            '"hero": the player character appearance in 8 to 20 English words (sex, age, hair, clothes, gear). '
+            "Keep HERO unchanged unless the scene clearly changes it; if HERO is unknown, deduce it from the story.\n"
+            '"closeup": true when the picture should be a close-up of an object.')
+        if action:  # v41.4 : une image par action — fidèle à ce qui vient d'arriver
+            sys_p += ("\nPLAYER ACTION is what the player just did (French). The prompt must show the RESULT of that "
+                      "action right now, in this scene. If the player examines, reads, opens, searches, hacks or uses an "
+                      "object (terminal, console, chest, safe, locker, door, note, map, weapon, body, machine...), describe "
+                      "a CLOSE-UP of that object filling the frame, with its visible details, and set closeup to true. "
+                      "Describe ONLY what the NEW SCENE text shows now: never reuse objects or places "
+                      "from earlier pictures that the NEW SCENE does not mention.")
+        user = ((f"PLAYER ACTION: {action.strip()[:300]}\n" if action else "")
+                + ("" if action else f"PREVIOUS PICTURE: {prev or 'none, this is the first picture'}\n")
+                + f"HERO: {hero or 'unknown'}\n"
+                + (f"LOCATION FIELD: {lieu}\n" if lieu else "")
+                + f"NEW SCENE:\n{scene.strip()[:1500]}")
+        data: Dict[str, Any] = {"model": model, "system": sys_p, "prompt": user, "stream": False, "format": "json",
+                                "options": {"temperature": 0.2, "num_predict": 260}}
+        if num_ctx:  # même contexte que le jeu : pas de rechargement du modèle
+            data["options"]["num_ctx"] = int(num_ctx)
+        if keep_alive is not None:  # même durée que Padawan (sinon Ollama la ramène à 5 min)
+            data["keep_alive"] = keep_alive
+        t0 = time.time()
+        r = self._req("/api/generate", data, timeout=timeout)
+        d = _json_obj(r.get("response") or "")
+        ch = d.get("change")
+        if isinstance(ch, str):
+            ch = ch.strip().lower() in ("true", "yes", "oui", "1")
+        kind = fold(str(d.get("kind") or "")).strip()
+        kind = kind if kind in BRIEF_KINDS else ("aucun" if not ch else "evenement")
+        cu = d.get("closeup")
+        if isinstance(cu, str):
+            cu = cu.strip().lower() in ("true", "yes", "oui", "1")
+        out = {"change": bool(ch), "kind": kind, "closeup": bool(cu),
+               "place": sanitize_prompt(str(d.get("place") or ""))[:80],
+               "time": sanitize_prompt(str(d.get("time") or ""))[:40],
+               "prompt": sanitize_prompt(str(d.get("prompt") or "").replace("\n", ", "))[:420],
+               "hero": sanitize_prompt(str(d.get("hero") or ""))[:160],
+               "secs": round(time.time() - t0, 1)}
+        if not out["prompt"]:
+            raise ValueError("résumé de scène vide")
+        return out
 
 
 # ─────────────────────────────────────────────── image → ANSI (jeux) ──
@@ -647,7 +758,8 @@ class Studio:
 
     def generate(self, prompt: str, *, seed: int = -1, size: str = "", steps: int = 0, batch: int = 1,
                  cancel: Optional[threading.Event] = None, status: Callable[[str], None] = lambda s: None,
-                 timeout: float = 300.0, free_after: bool = False, vram: str = "") -> Tuple[List[Any], Dict[str, Any]]:
+                 timeout: float = 300.0, free_after: bool = False, vram: str = "",
+                 start_cancel: bool = True) -> Tuple[List[Any], Dict[str, Any]]:
         """→ ([images PIL], infos). Libère Ollama si besoin, démarre le moteur si besoin. Bloquant."""
         from PIL import Image
         with self.gen_lock:
@@ -658,7 +770,7 @@ class Studio:
                                                          else "sans modèle : " + ", ".join(self.engine.missing_models())))
             if not self.engine.alive():
                 status("🚀 démarrage du moteur d'images…")
-                self.engine.start(cancel=cancel)
+                self.engine.start(cancel=cancel if start_cancel else None)  # v41.4 : une image périmée n'arrête pas le démarrage
                 info["start_s"] = round(self.engine.started_s, 1)
             if self.need_unload(vram):
                 status("⏳ libère la carte graphique…")
@@ -693,7 +805,8 @@ class Studio:
             return None
         try:
             with open(p, "r", encoding="utf-8") as f:
-                return _ANSI.art_from_dict(json.load(f)["art"])
+                d = json.load(f).get("art")
+            return _ANSI.art_from_dict(d) if d else None
         except Exception:
             return None
 
@@ -701,7 +814,36 @@ class Studio:
         os.makedirs(self.cache_dir, exist_ok=True)
         with open(os.path.join(self.cache_dir, h + ".png"), "wb") as f:
             f.write(png)
-        save_json(os.path.join(self.cache_dir, h + ".json"), {"art": _ANSI.art_to_dict(art), "meta": meta})
+        save_json(os.path.join(self.cache_dir, h + ".json"),
+                  {"art": _ANSI.art_to_dict(art) if art is not None else None, "meta": meta})
+
+    def cache_png(self, h: str) -> str:
+        p = os.path.join(self.cache_dir, h + ".png")
+        return p if h and os.path.isfile(p) else ""
+
+    def game_brief(self, model: str, scene: str, prev: str = "", hero: str = "", lieu: str = "",
+                   action: str = "") -> Dict[str, Any]:
+        """v41.3 : résumé visuel de la scène par le modèle de jeu (lève une exception si indisponible)."""
+        if not self.cfg.get("game_enhance", True):
+            raise ValueError("résumé désactivé (game_enhance)")
+        return self.ollama.scene_brief(model, scene, prev, hero, lieu, timeout=45, num_ctx=self.num_ctx(),
+                                       action=action)
+
+    def vram_report(self) -> Dict[str, Any]:
+        """v41.3 : mémoire vidéo (nvidia-smi) + part tenue par Ollama, en Mo — pour la surveiller pendant les jeux."""
+        rep: Dict[str, Any] = {}
+        try:
+            exe = shutil.which("nvidia-smi")
+            if exe:
+                out = subprocess.run([exe, "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+                                     capture_output=True, text=True, timeout=5,
+                                     creationflags=0x08000000 if os.name == "nt" else 0).stdout
+                u, t = [int(float(x)) for x in out.strip().splitlines()[0].split(",")[:2]]
+                rep.update(used_mb=u, total_mb=t, free_mb=t - u)
+        except Exception:
+            pass
+        rep["ollama_mb"] = int(sum(v for _, v in self.ollama.loaded()) / 1048576)
+        return rep
 
     def game_prompt(self, fam: str, scene_text: str, key: str, lieu: str, model: str = "") -> Tuple[str, str]:
         """Prompt anglais pour une scène de jeu : le modèle de texte résume la scène (s'il répond), sinon modèle-type."""
@@ -711,7 +853,7 @@ class Studio:
         if model and self.cfg.get("game_enhance", True) and scene_text.strip():
             try:
                 subj = self.ollama.enhance(model, scene_text[:900], "", timeout=40,
-                                           num_ctx=self.num_ctx())
+                                           num_ctx=self.num_ctx(), keep_alive="30m")
                 how = "résumé par " + model
             except Exception as e:
                 self.log(f"studio jeu prompt: {e}")
@@ -734,6 +876,23 @@ GAME_SUBJECT: Dict[str, Dict[str, str]] = {
                 "campement": "survivors camp with campfire at night", "metro": "flooded subway station, emergency lights",
                 "combat": "wasteland firefight, laser beams, explosions", "cabane": "abandoned sugar shack in snowy woods",
                 "_": "post-apocalyptic wasteland scene"},
+    "galaxie": {"espace": "small battered retro spaceship near a colorful ringed planet, starfield",
+                "vaisseau": "cramped retro spaceship cockpit with blinking consoles", "planete": "alien planet surface, two moons",
+                "starbase": "huge rotating space station with docking bays", "alien": "friendly bizarre alien merchant",
+                "combat": "space battle, laser beams between small spaceships", "hyperespace": "spaceship jumping to hyperspace, light streaks",
+                "asteroides": "spaceship flying through an asteroid belt", "_": "retro spaceship in deep space near a planet"},
+    "legende": {"titre": "fantasy kingdom at golden sunrise, castle on a hill, dragon in the sky",
+                "auberge": "cozy medieval inn interior, roaring fireplace, adventurers at wooden tables",
+                "village": "medieval village square, half-timbered houses, market stalls",
+                "chateau": "majestic medieval castle with banners, drawbridge", "foret": "enchanted elven forest, giant oaks, glowing fireflies",
+                "montagne": "dwarven mountain fortress carved in rock, snowy peaks", "caverne": "torchlit underground cavern, glittering crystals",
+                "desert": "amber desert dunes, camel caravan, ancient ruins", "mer": "wooden sailing ship on a stormy sea, giant sea serpent",
+                "ile": "misty tropical island with pirate cove", "temple": "ancient greek marble temple, oracle, golden light",
+                "lac": "misty lake at dawn, hand holding a sword from the water", "nord": "frozen viking fjord, longships, northern lights",
+                "neige": "flying canoe over snowy quebec forest at night, full moon",
+                "combat": "knight fighting a fierce monster, sword clash, sparks", "dragon": "huge red dragon breathing fire over a castle",
+                "monstre": "fearsome troll under a stone bridge", "magie": "wizard casting a glowing spell, magic runes",
+                "route": "medieval road through green hills, rider on horseback", "_": "medieval fantasy adventure scene"},
     "donjon": {"titre": "fantasy castle on a hill at night, full moon", "porte": "massive dungeon gate with torches",
                "couloir": "stone dungeon corridor lit by torches", "coffre": "treasure chest in a dark crypt",
                "monstre": "red dragon in a cavern", "squelette": "skeleton warrior with sword",
