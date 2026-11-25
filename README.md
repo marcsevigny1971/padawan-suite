@@ -5,7 +5,7 @@
 **Ta trousse d'outils Windows, 100 % locale, gratuite et en français.**
 Une IA qui tourne sur ton PC, un archiveur de vidéos et de pages web, un journal de bord privé, des jeux illustrés… derrière une seule petite icône.
 
-*A free, local-first Windows toolkit in French: offline AI assistant (Ollama), video & web archiver, private journal. No account, no subscription.*
+*A free, local-first Windows toolkit in French: offline AI assistant (Ollama), video & web archiver, private journal, illustrated games, coding workshop. No account, no subscription.*
 
 [![Dernière version](https://img.shields.io/github/v/release/marcsevigny1971/padawan-suite?label=version&color=38d4c4)](https://github.com/marcsevigny1971/padawan-suite/releases/latest)
 [![Licence MIT](https://img.shields.io/github/license/marcsevigny1971/padawan-suite?color=blue)](LICENSE)
@@ -27,6 +27,23 @@ Une IA qui tourne sur ton PC, un archiveur de vidéos et de pages web, un journa
 
 > **Tes outils, ton PC, tes données. Gratuit, en français, sans compte et sans abonnement, pour toujours.**
 
+
+## ✨ Nouveautés (v1.7.0 — 24 novembre 2026)
+
+Padawan, ce n'est plus seulement l'assistant, l'archiveur et le journal. Tu peux aussi **jouer**, **programmer** et **générer des images** — toujours en local, en français, sans compte.
+
+- 🎮 **Jeux illustrés.** Dans **Fallout**, une image en couleur est générée **à chaque action** sur ton PC (ComfyUI + SD-Turbo). Menu **🖼** (Générées, banque, fixes…), **« Autre action »** libre, inventaire et barres qui se mettent à jour. Deux nouveaux jeux : **Galaxie 42** (aventure spatiale humoristique, ordinateur de bord, carte stellaire `F9`) et **La Légende s'écrit** (médiéval-fantastique sans numéros de page, combats aux dés, magie, carte des royaumes `F9`, compagnons, et **📖 Chronique** : ta partie en livre illustré HTML). Sans ComfyUI, les **banques d'images incluses** prennent le relais.
+- 💻 **Atelier** (`Ctrl+K`). Chat à gauche, éditeur de code à droite (onglets, numéros de ligne, couleurs). Aperçu web qui se recharge, Python exécuté dans un panneau, déploiement vers le dossier Python (`C:\py` s'il existe), un dossier web local, ou FTP / FTPS / SFTP. Les changements de l'IA passent par un diff (Appliquer / Refuser) et une copie `.bak`. Bouton **📋 Copier le code** sous chaque bloc, outil **🖼→ANSI** dans l'Atelier.
+- 🎨 **Studio d'images** (`Ctrl+G`, optionnel). Ton idée en français devient une image générée sur ton PC (ComfyUI + SD-Turbo). 6 styles, variations, galerie, version ANSI à côté. ComfyUI et les modèles d'images ne sont pas inclus dans le setup.
+- 🧠 **Gestionnaire de modèles** (`Ctrl+M`) et 📜 **Prompts** (`Ctrl+P`). Ce que ton PC peut faire tourner, installation et activation des modèles Ollama en un clic, banc d'essai. Tes prompts favoris, un prompt actif par rôle.
+
+| | |
+|---|---|
+| <img src="docs/img/jeu-fallout.jpg" alt="Fallout : image couleur générée à chaque action, Pip-Boy et Autre action"><br><sub>Fallout : image générée à chaque action, inventaire et « Autre action »</sub> | <img src="docs/img/jeu-galaxie42.jpg" alt="Galaxie 42 : accostage à la starbase, ordinateur de bord et carte stellaire"><br><sub>Galaxie 42 : starbase, ordinateur de bord et carte stellaire (F9)</sub> |
+| <img src="docs/img/jeu-legende.jpg" alt="La Légende s'écrit : auberge illustrée, feuille d'aventure et Chronique"><br><sub>La Légende s'écrit : auberge, feuille d'aventure, carte et Chronique</sub> | <img src="docs/img/atelier.jpg" alt="Atelier : chat à gauche, éditeur à droite, boutons Aperçu, ANSI et Déployer"><br><sub>Atelier (Ctrl+K) : éditeur, aperçu, 🖼→ANSI et déploiement</sub> |
+
+Le détail de chaque version est plus bas, à partir de [Nouveautés v1.7.0](#-nouveautés-v170--jeux-illustrés-galaxie-42-et-la-légende-sécrit-24-novembre-2026).
+
 ## 🙋 Pour qui ?
 
 Padawan est fait pour toi si tu te reconnais dans une de ces phrases :
@@ -36,6 +53,7 @@ Padawan est fait pour toi si tu te reconnais dans une de ces phrases :
 - 📓 **« Je veux un carnet ou un journal à moi, pas une appli dans le nuage. »** Le Journal de bord et le Grimoire sont privés par défaut.
 - 🧰 **« J'aime les bons vieux outils Windows, rapides, au clavier. »** Gestionnaire de fichiers à la Norton Commander, Arsenal d'outils Windows, Facteur qui range tes téléchargements.
 - 🕹️ **« Le Commodore 64, MS-DOS et Windows 98 me rappellent de bons souvenirs. »** Le coin Rétro, avec des jeux gratuits et légaux seulement.
+- 🎮 **« Je veux jouer ou programmer, sans quitter Padawan. »** Des jeux illustrés en couleur (Fallout, Galaxie 42, La Légende s'écrit), un Atelier de code et un Studio d'images, le tout en local.
 - 🇫🇷🇨🇦 **« Je veux que ce soit en français, du début à la fin. »** Interface, aide `F1` et guides sont en français, faits au Québec.
 
 Pas besoin d'être programmeur ni d'avoir un compte GitHub : tu télécharges un fichier, tu double-cliques, et c'est parti.
@@ -88,6 +106,41 @@ Parce qu'on n'a pas besoin d'un abonnement et d'un compte en ligne pour avoir de
 - **Tout retrouver** avec la recherche éclair, la chronologie, le calendrier et « Ce jour-là ».
 - **Partager seulement ce que tu choisis.** Une entrée ou un simple passage part en page HTML autonome, PDF, .zip ou texte. Les autres entrées ne suivent jamais.
 - **Code facultatif** et **entrées scellées** (chiffrées) en mode avancé. `F11` passe en plein écran, avec des animations qu'on peut couper.
+
+
+## 🎮 Jeux, Atelier, Studio et gestionnaires
+
+Ces fonctions font partie de **Padawan IA**. Elles ont leur propre fenêtre, leurs raccourcis, et elles restent 100 % locales.
+
+### 🎮 Jeux illustrés
+
+- **Fallout** (Terres désolées du Québec) : une image en couleur à chaque action (choix cliqué ou action libre, gros plan quand tu examines un objet), menu **🖼**, fenêtre maximisée, **inventaire et jauges qui se mettent à jour**, dés, quêtes.
+- **Galaxie 42** : aventure spatiale humoristique, ordinateur de bord (coque, carburant, oxygène, énergie), missions des starbases, **carte stellaire (`F9`)** avec coût de saut, ciel étoilé animé.
+- **La Légende s'écrit** : aventure médiévale-fantastique continue, sans numéros de page. Feuille d'aventure tirée aux dés (HABILETÉ, ENDURANCE, CHANCE, MAGIE), **combats aux dés** (assaut, chance, sort, potion, parlementer, fuir), voyages, quêtes d'auberge, réputation, compagnons, monde qui se souvient, **carte des royaumes (`F9`)**, et **📖 Chronique** (livre illustré HTML).
+- Aussi : **Polar**, **Donjon**, et **Créer un jeu**. Tu peux rouvrir une partie sauvegardée.
+- ⚠️ Les images générées demandent **ComfyUI + SD-Turbo** sur ton PC (non inclus). Sans eux, chaque jeu utilise sa **banque d'images incluse**.
+
+### 💻 Atelier (`Ctrl+K`)
+
+- Chat à gauche, **éditeur de code** à droite : onglets, numéros de ligne, couleurs pour HTML, CSS, JavaScript, Python, PHP, Arduino, JSON.
+- Le modèle de code s'active le temps de l'Atelier, puis le modèle d'avant revient.
+- **Aperçu** : page web rechargée toute seule dans le navigateur, Python exécuté dans un panneau, PHP local s'il est présent, 🩺 « Corriger l'erreur ».
+- « Change le fond en rouge » **modifie vraiment ton fichier** : diff avec gros boutons Appliquer / Refuser, copie `.bak` avant chaque écriture.
+- **Déploiement** vers le dossier Python (`C:\py` s'il existe, sinon un dossier `py` dans ton profil), un dossier web local, ou un serveur FTP / FTPS / SFTP (mot de passe chiffré par Windows).
+- 📋 **Copier le code** sous chaque bloc des réponses, clic droit dans les zones de texte, 📎 insérer un fichier (`Ctrl+I` ou glisser-déposer).
+- 🖼→**ANSI** : convertisseur d'image vers ANSI / ASCII (16 couleurs DOS, truecolor, Pip-Boy, etc.).
+
+### 🎨 Studio d'images (`Ctrl+G`)
+
+- Ton idée en français est traduite en prompt, puis l'image est générée **sur ton PC** (ComfyUI + SD-Turbo, démarré à la demande).
+- 6 styles, graine, variations, image et art ANSI côte à côte, export .png / .ans / .html, galerie.
+- En v1.7.0 : styles des jeux (BD Fallout, SF rétro, peinture fantasy).
+- **Optionnel** : ComfyUI et les modèles d'images s'installent à part ; le reste de la suite fonctionne sans eux.
+
+### 🧠 Gestionnaire de modèles (`Ctrl+M`) et 📜 Prompts (`Ctrl+P`)
+
+- **Modèles** : diagnostic de ce que ton PC peut faire tourner (carte graphique, mémoire, disque), tes modèles Ollama (activer, effacer), catalogue, **installation en un clic**, banc d'essai pour comparer. Un prompt ou un jeu peut avoir son propre modèle.
+- **Prompts** : tes prompts favoris, modifiables, un prompt actif par rôle (remplacer ou ajouter). Copie de sécurité avant chaque écriture.
 
 ## 🖼️ Galerie
 
@@ -218,6 +271,11 @@ Au premier lancement, Windows peut afficher un écran bleu « **Windows a proté
 | Outil | En deux mots |
 |---|---|
 | 🤖 **Padawan IA** | Un assistant vivant qui discute avec toi grâce à une IA installée sur ton PC (Ollama, dolphin3:8b par défaut). Réponses courtes, équilibrées ou développées, avec un « 💡 Pour aller plus loin ». Tes questions restent chez toi. |
+| 🎮 **Jeux illustrés** | Fallout, Galaxie 42, La Légende s'écrit : images en couleur à chaque action, combats, cartes, Chronique HTML. Banques d'images incluses ; ComfyUI optionnel. |
+| 💻 **Atelier** | `Ctrl+K` : éditeur de code, aperçu web, Python, déploiement (`C:\py`, web local, FTP/SFTP), 🖼→ANSI, copier-coller partout. |
+| 🎨 **Studio d'images** | `Ctrl+G` : images générées en local (ComfyUI + SD-Turbo), 6 styles, galerie. Optionnel, ComfyUI à part. |
+| 🧠 **Modèles** | `Ctrl+M` : ce que ton PC peut faire tourner, installation et activation Ollama en un clic, banc d'essai. |
+| 📜 **Prompts** | `Ctrl+P` : tes prompts favoris, un prompt actif par rôle. |
 | 🧭 **Tableau de bord** | La vue d'ensemble : ce qui tourne, les mises à jour et un bouton « Rapport de problème ». |
 | 🚀 **Premiers pas** | Un guide de 5 minutes, avec des boutons qui ouvrent le bon outil au bon endroit. |
 | 🔎 **Recherche Padawan** | `Ctrl+Alt+R` : cherche partout à la fois (Grimoire, archives, Arsenal, dossiers). |
