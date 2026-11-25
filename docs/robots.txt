@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://marcsevigny1971.github.io/padawan-suite/sitemap.xml

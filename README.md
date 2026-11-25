@@ -3,7 +3,7 @@
 # 🧰 Padawan Suite
 
 **Ta trousse d'outils Windows, 100 % locale, gratuite et en français.**
-Une IA qui tourne sur ton PC, un archiveur de vidéos et de pages web, un journal de bord privé… derrière une seule petite icône.
+Une IA qui tourne sur ton PC, un archiveur de vidéos et de pages web, un journal de bord privé, des jeux illustrés… derrière une seule petite icône.
 
 *A free, local-first Windows toolkit in French: offline AI assistant (Ollama), video & web archiver, private journal. No account, no subscription.*
 
